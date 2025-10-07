@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>NetraGPT Chat</title>
+    <style>
+        body { font-family: Arial; background: #f5f5f5; display: flex; justify-content: center; margin-top: 50px; }
+        #chatbox { width: 400px; border: 1px solid #ccc; background: white; padding: 15px; border-radius: 10px; }
+        #messages { height: 300px; overflow-y: auto; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
+        .message { margin-bottom: 10px; }
+        .user { color: blue; }
+        .bot { color: green; }
+        #input-area { display: flex; margin-top: 10px; }
+        #input { flex: 1; padding: 5px; }
+        button { padding: 5px 10px; }
+    </style>
+</head>
+<body>
+    <div id="chatbox">
+        <div id="messages"></div>
+        <div id="input-area">
+            <input id="input" type="text" placeholder="Type a message">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        async function sendMessage() {
+            const inputEl = document.getElementById("input");
+            const msg = inputEl.value.trim();
+            if (!msg) return;
+
+            const messagesDiv = document.getElementById("messages");
+            messagesDiv.innerHTML += `<div class="message user"><b>You:</b> ${msg}</div>`;
+            inputEl.value = "";
+
+            try {
+                const res = await fetch("/chat", {
+
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message: msg })
+                });
+
+                const data = await res.json();
+                messagesDiv.innerHTML += `<div class="message bot"><b>Bot:</b> ${data.reply}</div>`;
+            } catch (err) {
+                messagesDiv.innerHTML += `<div class="message bot" style="color:red;"><b>Bot:</b> Error connecting to chatbot</div>`;
+            }
+
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+    </script>
+</body>
+</html>
