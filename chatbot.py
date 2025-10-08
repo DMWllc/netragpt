@@ -6,11 +6,7 @@ import os
 app = Flask(__name__)
 CORS(app)
 
-# Ensure the API key is set
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-if not OPENAI_API_KEY:
-    raise RuntimeError("OPENAI_API_KEY environment variable not set")
-openai.api_key = OPENAI_API_KEY
+openai.api_key = os.environ.get("OPENAI_API_KEY")
 
 @app.route("/")
 def home():
@@ -25,12 +21,12 @@ def chat():
         return jsonify({"reply": "Please enter a message."}), 400
 
     try:
-        response = openai.ChatCompletion.create(
+        response = openai.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": message}],
-            max_tokens=300
+            max_tokens=200
         )
-        reply = response.choices[0].message["content"].strip()
+        reply = response.choices[0].message.content.strip()
 
     except Exception as e:
         reply = f"Error: {str(e)}"
@@ -38,5 +34,4 @@ def chat():
     return jsonify({"reply": reply})
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)
