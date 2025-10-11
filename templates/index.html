@@ -357,6 +357,16 @@
             box-shadow: 0 4px 20px rgba(255, 107, 107, 0.2);
             border-left: 4px solid var(--warning-accent);
             animation: slideInUp 0.5s ease-out;
+            transition: var(--transition);
+        }
+
+        .warning-container.hidden {
+            opacity: 0;
+            transform: translateY(-10px);
+            height: 0;
+            padding: 0;
+            margin: 0;
+            border: none;
         }
 
         @keyframes slideInUp {
@@ -383,8 +393,14 @@
         .warning-header {
             display: flex;
             align-items: center;
-            gap: 10px;
+            justify-content: space-between;
             margin-bottom: 8px;
+        }
+
+        .warning-title-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .warning-icon {
@@ -411,6 +427,22 @@
             font-weight: 600;
             font-size: 13px;
             letter-spacing: 0.5px;
+        }
+
+        .close-warning {
+            background: none;
+            border: none;
+            color: var(--warning-text);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: var(--transition);
+            opacity: 0.7;
+        }
+
+        .close-warning:hover {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.1);
         }
 
         .warning-content {
@@ -455,6 +487,123 @@
         .warning-btn:hover {
             background: rgba(255, 255, 255, 0.2);
             transform: translateY(-1px);
+        }
+
+        /* Chats List Sidebar */
+        .chats-sidebar {
+            position: fixed;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: var(--surface-dark);
+            z-index: 1000;
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--shadow);
+        }
+
+        .chats-sidebar.active {
+            left: 0;
+        }
+
+        .sidebar-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-title {
+            color: white;
+            font-weight: 600;
+            font-size: 18px;
+        }
+
+        .close-sidebar {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            transition: var(--transition);
+        }
+
+        .close-sidebar:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .chats-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .chat-item {
+            background: var(--surface-light);
+            border-radius: var(--border-radius-small);
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: var(--transition);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .chat-item:hover {
+            background: var(--surface-lighter);
+            transform: translateX(5px);
+        }
+
+        .chat-item.active {
+            background: var(--primary-color);
+            border-color: var(--primary-light);
+        }
+
+        .chat-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .chat-title {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .chat-date {
+            font-size: 10px;
+            color: var(--text-secondary);
+        }
+
+        .chat-preview {
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        .no-chats {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 40px 20px;
+            font-style: italic;
+        }
+
+        .no-chats i {
+            font-size: 40px;
+            margin-bottom: 15px;
+            opacity: 0.5;
         }
 
         .chat-input-container {
@@ -651,12 +800,21 @@
             .warning-content {
                 font-size: 10px;
             }
+
+            .chats-sidebar {
+                width: 100%;
+            }
         }
 
         @media (min-width: 768px) {
             .chat-container {
                 max-width: 450px;
                 height: 700px;
+            }
+
+            .chats-sidebar {
+                width: 400px;
+                left: -400px;
             }
         }
 
@@ -673,14 +831,29 @@
     </style>
 </head>
 <body>
+    <!-- Chats List Sidebar -->
+    <div class="chats-sidebar" id="chatsSidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-title">
+                <i class="fas fa-comments"></i> Your Chats
+            </div>
+            <button class="close-sidebar" id="closeSidebar">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="chats-list" id="chatsList">
+            <!-- Chats will be dynamically loaded here -->
+        </div>
+    </div>
+
     <div class="chat-container">
         <div class="chat-header">
             <div class="header-controls">
                 <button class="header-btn" id="newChat" title="New Chat">
                     <i class="fas fa-plus"></i>
                 </button>
-                <button class="header-btn" id="refresh" title="Refresh">
-                    <i class="fas fa-sync-alt"></i>
+                <button class="header-btn" id="showChats" title="Chat History">
+                    <i class="fas fa-history"></i>
                 </button>
             </div>
             <div class="logo">
@@ -691,8 +864,8 @@
                 NetraGPT Chat
             </div>
             <div class="header-controls">
-                <button class="header-btn" id="menu" title="Menu">
-                    <i class="fas fa-ellipsis-v"></i>
+                <button class="header-btn" id="refresh" title="Refresh">
+                    <i class="fas fa-sync-alt"></i>
                 </button>
             </div>
         </div>
@@ -707,12 +880,17 @@
         </div>
 
         <!-- Enhanced Warning Design -->
-        <div class="warning-container">
+        <div class="warning-container" id="warningContainer">
             <div class="warning-header">
-                <div class="warning-icon">
-                    <i class="fas fa-exclamation"></i>
+                <div class="warning-title-container">
+                    <div class="warning-icon">
+                        <i class="fas fa-exclamation"></i>
+                    </div>
+                    <div class="warning-title">Important Notice</div>
                 </div>
-                <div class="warning-title">Important Notice</div>
+                <button class="close-warning" onclick="closeWarning()">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
             <div class="warning-content">
                 <strong>Responses are for reference only.</strong> NetraGPT may occasionally provide inaccurate information. 
@@ -747,14 +925,135 @@
         const sendBtn = document.getElementById('send');
         const newChatBtn = document.getElementById('newChat');
         const refreshBtn = document.getElementById('refresh');
-        const menuBtn = document.getElementById('menu');
+        const showChatsBtn = document.getElementById('showChats');
+        const closeSidebarBtn = document.getElementById('closeSidebar');
+        const chatsSidebar = document.getElementById('chatsSidebar');
+        const chatsList = document.getElementById('chatsList');
+        const warningContainer = document.getElementById('warningContainer');
 
         let currentChatId = generateChatId();
         let isTyping = false;
 
+        // Initialize chat system
+        function initializeChatSystem() {
+            const savedChats = getChatsList();
+            if (savedChats.length === 0) {
+                // Create initial chat
+                createNewChat();
+            } else {
+                // Load most recent chat
+                currentChatId = savedChats[0].id;
+                loadChatHistory();
+            }
+            updateChatsList();
+        }
+
         // Generate unique chat ID
         function generateChatId() {
             return 'chat_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        // Get all chats list
+        function getChatsList() {
+            const chats = JSON.parse(localStorage.getItem('netragpt_chats') || '[]');
+            return chats.sort((a, b) => new Date(b.lastActivity) - new Date(a.lastActivity));
+        }
+
+        // Update chat in list
+        function updateChatInList(chatId, message = '') {
+            const chats = getChatsList();
+            const existingChat = chats.find(chat => chat.id === chatId);
+            
+            if (existingChat) {
+                existingChat.lastActivity = new Date().toISOString();
+                if (message) {
+                    existingChat.lastMessage = message.substring(0, 100) + (message.length > 100 ? '...' : '');
+                }
+            } else {
+                chats.unshift({
+                    id: chatId,
+                    title: `Chat ${chats.length + 1}`,
+                    lastMessage: message.substring(0, 100) + (message.length > 100 ? '...' : ''),
+                    lastActivity: new Date().toISOString(),
+                    messageCount: 0
+                });
+            }
+            
+            localStorage.setItem('netragpt_chats', JSON.stringify(chats));
+            updateChatsList();
+        }
+
+        // Update chats list display
+        function updateChatsList() {
+            const chats = getChatsList();
+            chatsList.innerHTML = '';
+
+            if (chats.length === 0) {
+                chatsList.innerHTML = `
+                    <div class="no-chats">
+                        <i class="fas fa-comment-slash"></i>
+                        <div>No chats yet</div>
+                        <div style="font-size: 12px; margin-top: 8px;">Start a new conversation!</div>
+                    </div>
+                `;
+                return;
+            }
+
+            chats.forEach(chat => {
+                const chatItem = document.createElement('div');
+                chatItem.className = `chat-item ${chat.id === currentChatId ? 'active' : ''}`;
+                chatItem.innerHTML = `
+                    <div class="chat-item-header">
+                        <div class="chat-title">${chat.title}</div>
+                        <div class="chat-date">${formatDate(chat.lastActivity)}</div>
+                    </div>
+                    <div class="chat-preview">${chat.lastMessage || 'No messages yet'}</div>
+                `;
+                chatItem.onclick = () => switchToChat(chat.id);
+                chatsList.appendChild(chatItem);
+            });
+        }
+
+        // Format date for display
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffTime = Math.abs(now - date);
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 0) {
+                return 'Today';
+            } else if (diffDays === 1) {
+                return 'Yesterday';
+            } else if (diffDays < 7) {
+                return `${diffDays} days ago`;
+            } else {
+                return date.toLocaleDateString();
+            }
+        }
+
+        // Switch to different chat
+        function switchToChat(chatId) {
+            currentChatId = chatId;
+            loadChatHistory();
+            closeSidebar();
+            showToast('Chat loaded!');
+        }
+
+        // Create new chat
+        function createNewChat() {
+            currentChatId = generateChatId();
+            updateChatInList(currentChatId);
+            loadChatHistory();
+            showToast('New chat started!');
+        }
+
+        // Close warning
+        function closeWarning() {
+            warningContainer.classList.add('hidden');
+            setTimeout(() => {
+                warningContainer.style.display = 'none';
+            }, 300);
         }
 
         // Copy email to clipboard
@@ -766,10 +1065,19 @@
 
         // Handle warning understanding
         function understandWarning() {
-            const warning = document.querySelector('.warning-container');
-            warning.style.opacity = '0.7';
-            warning.style.transform = 'scale(0.98)';
+            closeWarning();
             showToast('Thank you for understanding!');
+        }
+
+        // Show sidebar
+        function showSidebar() {
+            chatsSidebar.classList.add('active');
+            updateChatsList();
+        }
+
+        // Close sidebar
+        function closeSidebar() {
+            chatsSidebar.classList.remove('active');
         }
 
         // Auto-resize textarea
@@ -828,8 +1136,11 @@
             chatBox.appendChild(messageDiv);
             chatBox.scrollTop = chatBox.scrollHeight;
             
-            // Save to localStorage
+            // Save to localStorage and update chat list
             saveMessageToHistory(sender, text);
+            if (sender === 'User') {
+                updateChatInList(currentChatId, text);
+            }
         }
 
         // Add message interactions
@@ -1025,22 +1336,6 @@
             });
         }
 
-        // Start new chat
-        function startNewChat() {
-            currentChatId = generateChatId();
-            loadChatHistory();
-            showToast('New chat started!');
-        }
-
-        // Clear current chat
-        function clearChat() {
-            if (confirm('Are you sure you want to clear this chat?')) {
-                localStorage.removeItem(currentChatId);
-                loadChatHistory();
-                showToast('Chat cleared!');
-            }
-        }
-
         // Send message function
         async function sendMessage() {
             const msg = input.value.trim();
@@ -1082,15 +1377,21 @@
             }
         });
 
-        newChatBtn.addEventListener('click', startNewChat);
+        newChatBtn.addEventListener('click', createNewChat);
+        showChatsBtn.addEventListener('click', showSidebar);
+        closeSidebarBtn.addEventListener('click', closeSidebar);
         refreshBtn.addEventListener('click', () => window.location.reload());
-        menuBtn.addEventListener('click', () => {
-            showToast('Menu options coming soon!');
+
+        // Close sidebar when clicking outside on mobile
+        chatsSidebar.addEventListener('click', (e) => {
+            if (e.target === chatsSidebar) {
+                closeSidebar();
+            }
         });
 
         // Load chat history on startup
         window.addEventListener('load', () => {
-            loadChatHistory();
+            initializeChatSystem();
             input.focus();
         });
 
