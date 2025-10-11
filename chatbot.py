@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
-import openai
+from openai import OpenAI
 import os
 import random
 import re
@@ -13,7 +13,8 @@ import urllib.parse
 app = Flask(__name__)
 CORS(app)
 
-openai.api_key = os.environ.get("OPENAI_API_KEY")
+# Initialize OpenAI client
+client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 # Conversation memory
 conversation_history = {}
@@ -103,7 +104,7 @@ def get_ai_response(message, conversation_context, website_content=None):
         # Add current message
         context_messages.append({"role": "user", "content": message})
         
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=context_messages,
             max_tokens=300,
@@ -113,6 +114,7 @@ def get_ai_response(message, conversation_context, website_content=None):
         return response.choices[0].message.content.strip()
         
     except Exception as e:
+        print(f"OpenAI API error: {e}")
         return None
 
 def get_fallback_response(message, user_id="default"):
@@ -332,7 +334,7 @@ def chat():
         # Always try to use AI first if API key is available and user wants it
         user_session = get_user_session(user_id)
         
-        if openai.api_key and user_session.get('use_api', True):
+        if os.environ.get("OPENAI_API_KEY") and user_session.get('use_api', True):
             # Get AI response for all questions
             chat_history = get_chat_history(user_id)
             website_content = scrape_netra_website(message) if any(keyword in message.lower() for keyword in ['netra', 'aidnest']) else None
