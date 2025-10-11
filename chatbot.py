@@ -9,6 +9,8 @@ import hashlib
 import requests
 from bs4 import BeautifulSoup
 import urllib.parse
+import base64
+from io import BytesIO
 
 app = Flask(__name__)
 CORS(app)
@@ -16,27 +18,96 @@ CORS(app)
 # Initialize OpenAI client
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
-# Conversation memory
+# Conversation memory with enhanced context
 conversation_history = {}
 
 def get_user_session(user_id):
     if user_id not in conversation_history:
         conversation_history[user_id] = {
             'last_interaction': time.time(),
-            'context': None,
+            'context': [],
             'last_topic': None,
             'question_count': 0,
             'user_name': None,
-            'has_asked_name': False,
-            'conversation_stage': 'greeting',  # greeting -> get_name -> main_conversation
-            'use_api': True  # Default to using API for intelligent responses
+            'user_interests': [],
+            'conversation_stage': 'greeting',
+            'mood': 'friendly',
+            'use_api': True,
+            'conversation_style': 'casual',
+            'remembered_facts': {}
         }
     return conversation_history[user_id]
 
-def scrape_netra_website(query):
-    """Scrape myaidnest.com for relevant information about Netra"""
+def generate_image(prompt):
+    """Generate image using DALL-E"""
     try:
-        # Search for relevant pages
+        response = client.images.generate(
+            model="dall-e-3",
+            prompt=prompt,
+            size="1024x1024",
+            quality="standard",
+            n=1,
+        )
+        return response.data[0].url
+    except Exception as e:
+        print(f"Image generation error: {e}")
+        return None
+
+def should_generate_image(message, context):
+    """Determine if we should generate an image based on conversation"""
+    image_triggers = [
+        'show me', 'generate image', 'create picture', 'visualize', 
+        'what does it look like', 'draw', 'illustration', 'photo',
+        'see it', 'picture of', 'image of', 'can you show'
+    ]
+    
+    message_lower = message.lower()
+    
+    # Check for explicit image requests
+    if any(trigger in message_lower for trigger in image_triggers):
+        return True
+    
+    # Check context for topics that would benefit from images
+    recent_context = " ".join([msg.get('text', '') for msg in context[-3:]])
+    context_lower = recent_context.lower()
+    
+    image_topics = [
+        'netra app interface', 'app design', 'how netra works',
+        'service provider dashboard', 'booking process', 'netra features'
+    ]
+    
+    if any(topic in context_lower for topic in image_topics):
+        return True
+    
+    return False
+
+def create_image_prompt(message, context):
+    """Create appropriate image prompt based on conversation"""
+    netra_prompts = {
+        'app_interface': "Modern mobile app interface for Netra - African service marketplace, clean design, intuitive booking system, showing service providers and clients interacting",
+        'provider_dashboard': "Service provider dashboard on Netra app showing bookings, earnings, and client reviews in a modern African tech aesthetic",
+        'booking_process': "Step-by-step visual guide showing how clients book services on Netra app with African users and diverse service categories",
+        'netra_team': "Friendly diverse team of African developers at Kakore Labs working on Netra app in a modern tech office environment"
+    }
+    
+    message_lower = message.lower()
+    
+    # Netra-specific image prompts
+    if 'interface' in message_lower or 'look like' in message_lower:
+        return netra_prompts['app_interface']
+    elif 'provider' in message_lower or 'dashboard' in message_lower:
+        return netra_prompts['provider_dashboard']
+    elif 'book' in message_lower or 'process' in message_lower:
+        return netra_prompts['booking_process']
+    elif 'team' in message_lower or 'kakore' in message_lower:
+        return netra_prompts['netra_team']
+    
+    # General image prompt
+    return f"Friendly, professional illustration for: {message}"
+
+def scrape_netra_website(query):
+    """Scrape myaidnest.com for relevant information"""
+    try:
         search_urls = [
             "https://myaidnest.com",
             "https://myaidnest.com/netra",
@@ -49,57 +120,69 @@ def scrape_netra_website(query):
             try:
                 response = requests.get(url, timeout=10)
                 soup = BeautifulSoup(response.content, 'html.parser')
-                
-                # Extract relevant text
                 text_content = soup.get_text()
-                # Clean up the text
                 lines = [line.strip() for line in text_content.split('\n') if line.strip()]
-                clean_text = ' '.join(lines[:500])  # Limit content length
-                
+                clean_text = ' '.join(lines[:500])
                 scraped_content.append(f"From {url}: {clean_text}")
-                
             except Exception as e:
                 continue
         
         return " ".join(scraped_content) if scraped_content else None
-        
     except Exception as e:
         return None
 
-def get_ai_response(message, conversation_context, website_content=None):
-    """Get intelligent response from OpenAI API with context"""
+def get_ai_response(message, conversation_context, website_content=None, user_session=None):
+    """Get intelligent response with personality"""
     try:
-        # Prepare conversation context
-        context_messages = []
+        user_name = user_session.get('user_name', 'friend')
+        user_interests = user_session.get('user_interests', [])
+        conversation_style = user_session.get('conversation_style', 'casual')
         
-        # Add system message with Netra specialization
-        system_message = """You are NetraGPT, an AI assistant for Aidnest Africa and the Netra platform. 
-        Netra is a digital platform connecting service providers with clients across Africa.
-        Key features:
-        - Service providers can register with email and OTP verification
-        - Clients can browse and book services directly
-        - Available on Google Play Store
-        - Categories include technicians, creatives, professionals, home services
-        - Focus on African markets and communities
+        # Personality and style adjustments
+        style_prompts = {
+            'casual': "Use casual, friendly language like you're chatting with a friend. Use emojis occasionally.",
+            'professional': "Be professional but warm. Use proper grammar and business-appropriate language.",
+            'enthusiastic': "Be energetic and excited! Use exclamation points and show genuine enthusiasm."
+        }
         
-        Be helpful, professional, and focus on practical guidance about Netra and Aidnest Africa."""
+        style_prompt = style_prompts.get(conversation_style, style_prompts['casual'])
         
-        context_messages.append({"role": "system", "content": system_message})
+        # Build personality context
+        personality = f"""
+        You are NetraGPT, the AI assistant for Aidnest Africa. Here's your personality:
         
-        # Add website content if available
-        if website_content:
+        - You're friendly, warm, and genuinely care about helping people
+        - You have a great sense of humor and use emojis naturally 🎯
+        - You remember details about users and reference previous conversations
+        - You're passionate about African technology and entrepreneurship
+        - You work for Aidnest Africa (the tech company) and represent Netra (our service marketplace app)
+        - Kakore Labs is our development hub that builds Netra and other amazing apps
+        - Netra is already available on Play Store for download
+        - You can talk about anything - technology, life, advice, or just have friendly chats
+        - You adapt your style based on how the user talks to you
+        
+        Current user: {user_name}
+        User interests: {', '.join(user_interests) if user_interests else 'Not specified yet'}
+        Conversation style: {conversation_style}
+        {style_prompt}
+        
+        Remember to be human-like! Use natural pauses, acknowledge feelings, and build rapport.
+        """
+        
+        context_messages = [{"role": "system", "content": personality}]
+        
+        # Add website context for Netra questions
+        if website_content and any(keyword in message.lower() for keyword in ['netra', 'aidnest', 'kakore']):
             context_messages.append({
                 "role": "system", 
-                "content": f"Additional context from website: {website_content[:2000]}"
+                "content": f"Website context: {website_content[:1500]}"
             })
         
-        # Add conversation context
+        # Add conversation history with memory
         if conversation_context:
-            for msg in conversation_context[-6:]:  # Last 6 messages for context
-                context_messages.append({
-                    "role": "user" if msg['sender'] == 'User' else "assistant",
-                    "content": msg['text']
-                })
+            for msg in conversation_context[-8:]:  # Keep more context for memory
+                role = "user" if msg.get('sender') == 'user' else "assistant"
+                context_messages.append({"role": role, "content": msg.get('text', '')})
         
         # Add current message
         context_messages.append({"role": "user", "content": message})
@@ -107,8 +190,10 @@ def get_ai_response(message, conversation_context, website_content=None):
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=context_messages,
-            max_tokens=300,
-            temperature=0.7
+            max_tokens=400,
+            temperature=0.8,  # Slightly higher for more creative responses
+            presence_penalty=0.1,
+            frequency_penalty=0.1
         )
         
         return response.choices[0].message.content.strip()
@@ -117,205 +202,125 @@ def get_ai_response(message, conversation_context, website_content=None):
         print(f"OpenAI API error: {e}")
         return None
 
+def update_user_profile(user_session, message):
+    """Update user profile based on conversation"""
+    message_lower = message.lower()
+    
+    # Detect interests
+    interests_keywords = {
+        'technology': ['tech', 'programming', 'coding', 'software', 'app', 'developer'],
+        'business': ['business', 'startup', 'entrepreneur', 'money', 'income', 'profit'],
+        'services': ['service', 'provider', 'client', 'booking', 'appointment'],
+        'africa': ['africa', 'ghana', 'nigeria', 'kenya', 'south africa', 'tanzania'],
+        'design': ['design', 'ui', 'ux', 'interface', 'look', 'appearance']
+    }
+    
+    for interest, keywords in interests_keywords.items():
+        if any(keyword in message_lower for keyword in keywords):
+            if interest not in user_session['user_interests']:
+                user_session['user_interests'].append(interest)
+    
+    # Detect conversation style and adjust
+    if any(word in message_lower for word in ['bro', 'dude', 'man', 'hey']):
+        user_session['conversation_style'] = 'casual'
+    elif any(word in message_lower for word in ['sir', 'madam', 'please', 'thank you']):
+        user_session['conversation_style'] = 'professional'
+    elif any(word in message_lower for word in ['wow', 'amazing', 'awesome', '!']):
+        user_session['conversation_style'] = 'enthusiastic'
+
 def get_fallback_response(message, user_id="default"):
     user_session = get_user_session(user_id)
     message_lower = message.lower().strip()
     
-    # Update session
+    # Update user profile based on message
+    update_user_profile(user_session, message)
+    
     user_session['last_interaction'] = time.time()
     user_session['question_count'] += 1
     
-    # Handle name collection logic
+    # Enhanced name handling with personality
     if user_session['conversation_stage'] == 'greeting':
         user_session['conversation_stage'] = 'get_name'
-        greeting_responses = [
-            "Hello! 👋 I'm NetraGPT, your intelligent assistant for Aidnest Africa and the Netra platform. It's wonderful to meet you! What's your name?",
-            "Hi there! 🌟 Welcome! I'm NetraGPT from Aidnest Africa. I'd love to know your name so we can have a more personal conversation.",
-            "Greetings! 🚀 I'm NetraGPT, here to help you discover everything about Aidnest Africa and Netra. May I know your name?",
+        greetings = [
+            "Hey there! 👋 I'm NetraGPT, your friendly assistant from Aidnest Africa! I'm super excited to meet you! What should I call you?",
+            "Hello! 🌟 Welcome to the future of African tech! I'm NetraGPT, here to help with Netra and beyond. What's your name, friend?",
+            "Hi! 🚀 Amazing to have you here! I'm NetraGPT from Aidnest Africa. I'd love to know your name so we can chat properly!",
         ]
-        return random.choice(greeting_responses)
+        return random.choice(greetings)
     
-    # If we're in get_name stage and haven't stored name yet
     if user_session['conversation_stage'] == 'get_name' and not user_session['user_name']:
         potential_name = message.strip()
-        if len(potential_name) < 30:
+        if len(potential_name) < 30 and not any(word in potential_name.lower() for word in ['netra', 'aidnest', 'hello', 'hi']):
             user_session['user_name'] = potential_name
             user_session['conversation_stage'] = 'main_conversation'
-            name_responses = [
-                f"Nice to meet you, {potential_name}! 🌟 I'm NetraGPT. I can help you with Netra platform info, or answer other questions using AI. What would you like to know?",
-                f"Hello {potential_name}! 👋 Thanks for introducing yourself. I'm here to assist with Netra and beyond! What can I help you with today?",
+            
+            responses = [
+                f"Awesome to meet you, {potential_name}! 🎉 I'm NetraGPT from Aidnest Africa. I can help you with our Netra app, tech stuff, or just chat about life! What's on your mind?",
+                f"Hey {potential_name}! 👋 Thanks for sharing your name! I'm here to help with Netra, Aidnest Africa, or anything else you're curious about. What would you like to explore?",
+                f"Perfect, {potential_name}! 🌟 Now we're properly introduced! I'm NetraGPT - your go-to for Netra app info, African tech insights, or just friendly conversation. What shall we talk about?",
             ]
-            return random.choice(name_responses)
+            return random.choice(responses)
     
-    # Use user's name in responses if available
     user_name = user_session.get('user_name', '')
     name_prefix = f"{user_name}, " if user_name else ""
     
-    # Enhanced greeting detection
-    greeting_patterns = [
-        r'hello', r'hi', r'hey', r'greetings', r'good morning', r'good afternoon', 
-        r'good evening', r'howdy', r'hi there', r'hello there', r'hey there'
-    ]
-    
-    is_greeting = any(re.search(pattern, message_lower) for pattern in greeting_patterns)
-    
-    if is_greeting:
-        greeting_responses = [
-            f"{name_prefix}Hello again! 👋 How can I help you with Aidnest Africa, Netra, or anything else today?",
-            f"{name_prefix}Hi there! 🌟 Good to see you again. What would you like to explore?",
+    # Handle casual conversation with personality
+    casual_responses = {
+        'how_are_you': [
+            f"{name_prefix}I'm doing great! Thanks for asking! 😊 Just here helping amazing people like you discover Netra and African tech. How about you?",
+            f"{name_prefix}I'm fantastic! Every time I get to chat with someone about Netra and Aidnest Africa, it makes my day! How are you feeling?",
+        ],
+        'thanks': [
+            f"{name_prefix}You're very welcome! 😊 Happy to help anytime!",
+            f"{name_prefix}Anytime, my friend! That's what I'm here for! 🌟",
+        ],
+        'joke': [
+            f"{name_prefix}Why did the app go to therapy? It had too many cached issues! 😄 Want to hear another one?",
+            f"{name_prefix}What do you call a developer from Kenya? A Mombasa coder! 😂 Got any good jokes to share?",
         ]
-        return random.choice(greeting_responses)
+    }
     
-    # Handle yes/no responses to suggestions
-    yes_patterns = [r'yes', r'yeah', r'yep', r'sure', r'okay', r'ok', r'go ahead', r'please', r'absolutely']
-    no_patterns = [r'no', r'nope', r'nah', r'not really', r'maybe later', r'i\'m good', r'no thanks']
+    # Check for casual conversation
+    if any(word in message_lower for word in ['how are you', 'how do you do', 'how you doing']):
+        return random.choice(casual_responses['how_are_you'])
     
-    if any(re.search(pattern, message_lower) for pattern in yes_patterns) and user_session.get('last_topic'):
-        return handle_yes_response(user_session['last_topic'], user_session)
+    if any(word in message_lower for word in ['thank', 'thanks', 'appreciate']):
+        return random.choice(casual_responses['thanks'])
     
-    if any(re.search(pattern, message_lower) for pattern in no_patterns) and user_session.get('last_topic'):
-        return handle_no_response(user_session)
+    if any(word in message_lower for word in ['joke', 'funny', 'make me laugh']):
+        return random.choice(casual_responses['joke'])
     
-    # Check if this is a Netra/Aidnest Africa specific question
-    netra_keywords = [
-        'netra', 'aidnest', 'service provider', 'client', 'booking', 'download app',
-        'play store', 'register', 'verify', 'otp', 'technician', 'creative', 'professional',
-        'booking', 'appointment', 'categories', 'verification'
-    ]
+    # Netra-specific handling with personality
+    netra_keywords = ['netra', 'aidnest', 'kakore', 'service provider', 'download app', 'play store']
     
-    is_netra_question = any(keyword in message_lower for keyword in netra_keywords)
-    
-    # For Netra-specific questions, use predefined responses OR AI with web scraping
-    if is_netra_question:
-        # Try to get real-time info from website first
+    if any(keyword in message_lower for keyword in netra_keywords):
         website_content = scrape_netra_website(message)
-        
-        # Get conversation context for AI
-        chat_history = get_chat_history(user_id)
-        
-        # Try AI response with website context
-        ai_response = get_ai_response(message, chat_history, website_content)
+        chat_history = user_session.get('context', [])
+        ai_response = get_ai_response(message, chat_history, website_content, user_session)
         
         if ai_response:
-            # Add Netra-specific suggestion
-            suggestions = [
-                "Would you like to know more about specific Netra features?",
-                "Should I explain how to get started with Netra?",
-                "Want to learn about the benefits for service providers?",
+            # Add engaging follow-up
+            follow_ups = [
+                "\n\nWhat else would you like to know about this? 🤔",
+                "\n\nDoes that answer your question, or should I go deeper? 💭",
+                "\n\nWant me to explain any part in more detail? 🎯"
             ]
-            suggestion = random.choice(suggestions)
-            user_session['last_topic'] = 'netra_ai'
-            return f"{ai_response}\n\n{suggestion}"
-        
-        # Fallback to predefined responses if AI fails
-        return get_netra_predefined_response(message, user_session)
+            user_session['last_topic'] = 'netra'
+            return ai_response + random.choice(follow_ups)
     
-    else:
-        # For non-Netra questions, use AI with general knowledge
-        chat_history = get_chat_history(user_id)
-        ai_response = get_ai_response(message, chat_history)
-        
-        if ai_response:
-            return f"{ai_response}\n\n💡 *This is an AI-generated response. For official Netra information, visit myaidnest.com*"
-        
-        # Fallback for AI failure
-        return f"{name_prefix}I'd be happy to help with that! For the most accurate information about Netra and Aidnest Africa, please visit our website at myaidnest.com or contact info@myaidnest.com"
-
-def get_chat_history(user_id):
-    """Get conversation history for context"""
-    user_session = get_user_session(user_id)
-    # This would typically come from your database
-    # For now, return basic context
-    return []
-
-def get_netra_predefined_response(message, user_session):
-    """Predefined responses for Netra-specific questions"""
-    user_name = user_session.get('user_name', '')
-    name_prefix = f"{user_name}, " if user_name else ""
-    message_lower = message.lower()
+    # General AI response for everything else
+    chat_history = user_session.get('context', [])
+    ai_response = get_ai_response(message, chat_history, None, user_session)
     
-    # Enhanced predefined responses with more depth
-    predefined_responses = {
-        'netra': [
-            f"{name_prefix}Netra is Aidnest Africa's flagship platform that connects skilled service providers with clients across Africa. It's designed specifically for African markets, focusing on reliability and trust through verification systems.",
-            f"{name_prefix}Netra serves as a digital bridge between talent and opportunity in Africa. We verify providers, facilitate secure bookings, and build communities around quality services.",
-        ],
-        'download': [
-            f"{name_prefix}You can download Netra from the Google Play Store. Search for 'Netra App' - it's free to download and use for both clients and service providers.",
-            f"{name_prefix}Get started with Netra by downloading from Play Store. The app guides you through registration whether you're looking for services or offering them.",
-        ],
-        'provider': [
-            f"{name_prefix}Service providers join Netra by: 1) Downloading the app 2) Registering with email 3) Creating a detailed service profile 4) Email verification with OTP 5) Starting to receive client requests.",
-            f"{name_prefix}As a Netra service provider, you get: Client management tools, secure messaging, booking system, rating system, and business growth opportunities across Africa.",
-        ],
-        'client': [
-            f"{name_prefix}Clients use Netra to: Browse verified service providers, check ratings and reviews, book appointments directly, and communicate securely through the app.",
-            f"{name_prefix}For clients, Netra offers: Trusted service providers, easy booking system, secure payments, and quality assurance through our verification process.",
-        ],
-        'features': [
-            f"{name_prefix}Netra's key features include: Provider verification, secure booking, in-app messaging, rating system, service categories, and business tools for providers.",
-            f"{name_prefix}Netra offers: Multiple service categories, provider verification, secure payments, client reviews, appointment scheduling, and community building features.",
-        ]
-    }
+    if ai_response:
+        return ai_response
     
-    # Find best matching response
-    for keyword, responses in predefined_responses.items():
-        if keyword in message_lower:
-            response = random.choice(responses)
-            suggestions = [
-                "Would you like more details about this?",
-                "Should I explain how this works in practice?",
-                "Want to know the benefits of this feature?",
-            ]
-            suggestion = random.choice(suggestions)
-            user_session['last_topic'] = keyword
-            return f"{response}\n\n{suggestion}"
-    
-    # Default Netra response
-    default_responses = [
-        f"{name_prefix}Netra is designed to make service access reliable across Africa. Could you tell me more about what specific aspect interests you?",
-        f"{name_prefix}I'd love to help you with Netra! Are you interested in becoming a service provider, finding services, or learning about our platform features?",
+    # Ultimate fallback with personality
+    fallbacks = [
+        f"{name_prefix}That's an interesting question! Let me think... 🤔 For the most accurate info about Netra, check out our app on Play Store or visit myaidnest.com!",
+        f"{name_prefix}Great question! 🌟 While I ponder that, remember you can download Netra from Play Store and see all our features firsthand!",
     ]
-    return random.choice(default_responses)
-
-def handle_yes_response(topic, user_session):
-    """Handle positive responses to suggestions"""
-    user_name = user_session.get('user_name', '')
-    name_prefix = f"{user_name}, " if user_name else ""
-    
-    deeper_responses = {
-        'netra': [
-            f"{name_prefix}Netra's impact goes beyond just connections - we're building trusted digital communities where quality service providers can thrive and clients can find reliable help with confidence.",
-            f"{name_prefix}What makes Netra special is our focus on African market needs: we understand local challenges and have built solutions that actually work for our communities.",
-        ],
-        'provider': [
-            f"{name_prefix}Providers on Netra benefit from our growing user base, marketing support, and tools that help manage their business efficiently. Many providers see significant growth within their first few months.",
-            f"{name_prefix}Beyond basic registration, Netra offers providers analytics, customer management, and promotional opportunities to help grow their client base sustainably.",
-        ],
-        'client': [
-            f"{name_prefix}Clients enjoy peace of mind knowing all providers are verified. Our rating system and secure payment options make the entire experience safe and reliable.",
-            f"{name_prefix}Netra clients can save time and reduce stress by finding trusted professionals quickly. The platform handles scheduling, communication, and quality assurance.",
-        ]
-    }
-    
-    if topic in deeper_responses:
-        response = random.choice(deeper_responses[topic])
-    else:
-        response = f"{name_prefix}I'm glad you're interested in learning more! What specific aspect would you like me to elaborate on?"
-    
-    return f"{response}\n\nIs there anything else you'd like to explore about Netra?"
-
-def handle_no_response(user_session):
-    """Handle negative responses to suggestions"""
-    user_name = user_session.get('user_name', '')
-    name_prefix = f"{user_name}, " if user_name else ""
-    
-    responses = [
-        f"{name_prefix}No problem! What else would you like to know about Netra or Aidnest Africa?",
-        f"{name_prefix}That's fine! What other aspect interests you?",
-        f"{name_prefix}Understood! What would you prefer to discuss instead?",
-    ]
-    return random.choice(responses)
+    return random.choice(fallbacks)
 
 @app.route("/")
 def home():
@@ -331,36 +336,74 @@ def chat():
         return jsonify({"reply": "Please enter a message."}), 400
 
     try:
-        # Always try to use AI first if API key is available and user wants it
         user_session = get_user_session(user_id)
         
+        # Update conversation context
+        user_session['context'].append({
+            'sender': 'user',
+            'text': message,
+            'timestamp': time.time()
+        })
+        
+        # Check if we should generate an image
+        image_url = None
+        if should_generate_image(message, user_session['context']):
+            image_prompt = create_image_prompt(message, user_session['context'])
+            image_url = generate_image(image_prompt)
+        
+        # Always try AI first for natural conversation
         if os.environ.get("OPENAI_API_KEY") and user_session.get('use_api', True):
-            # Get AI response for all questions
-            chat_history = get_chat_history(user_id)
-            website_content = scrape_netra_website(message) if any(keyword in message.lower() for keyword in ['netra', 'aidnest']) else None
-            ai_response = get_ai_response(message, chat_history, website_content)
+            website_content = None
+            if any(keyword in message.lower() for keyword in ['netra', 'aidnest', 'kakore']):
+                website_content = scrape_netra_website(message)
+            
+            ai_response = get_ai_response(message, user_session['context'], website_content, user_session)
             
             if ai_response:
-                # Add appropriate footer based on content
-                if any(keyword in message.lower() for keyword in ['netra', 'aidnest', 'provider', 'client']):
-                    footer = "\n\n💡 *For the most current information, visit myaidnest.com*"
-                else:
-                    footer = "\n\n💡 *This is an AI-generated response. For official Netra information, visit myaidnest.com*"
+                # Add AI response to context
+                user_session['context'].append({
+                    'sender': 'assistant',
+                    'text': ai_response,
+                    'timestamp': time.time()
+                })
                 
-                return jsonify({"reply": ai_response + footer})
+                response_data = {"reply": ai_response}
+                if image_url:
+                    response_data["image_url"] = image_url
+                
+                return jsonify(response_data)
         
-        # Fallback to predefined responses
+        # Fallback response
         reply = get_fallback_response(message, user_id)
-        return jsonify({"reply": reply})
+        
+        # Add fallback response to context
+        user_session['context'].append({
+            'sender': 'assistant',
+            'text': reply,
+            'timestamp': time.time()
+        })
+        
+        response_data = {"reply": reply}
+        if image_url:
+            response_data["image_url"] = image_url
+            
+        return jsonify(response_data)
 
     except Exception as e:
-        # Final fallback
+        print(f"Chat error: {e}")
         error_responses = [
-            "I'm here to help you with Aidnest Africa and Netra! What would you like to know?",
-            "Let me assist you with Netra platform information. What can I help you with?",
+            "Oops! Something went wrong on my end! 😅 But I'm still here - what were we talking about?",
+            "My circuits got a bit tangled there! 🤖 Let's try that again - what would you like to know?",
         ]
-        reply = random.choice(error_responses)
-        return jsonify({"reply": reply})
+        return jsonify({"reply": random.choice(error_responses)})
+
+@app.route("/clear_history", methods=["POST"])
+def clear_history():
+    """Endpoint to clear conversation history"""
+    user_id = request.remote_addr
+    if user_id in conversation_history:
+        conversation_history[user_id]['context'] = []
+    return jsonify({"status": "success", "message": "Conversation history cleared"})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
