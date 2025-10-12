@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NetraGPT - Your Intelligent Assistant for Aidnest Africa</title>
+    <title>Jovira - Your Intelligent Assistant for Aidnest Africa</title>
 
     <!-- SEO Meta Tags -->
-    <meta name="description" content="NetraGPT Chatbot - Discover everything about Aidnest Africa, Netra app, Autra app, and innovative tech solutions. Get coding help, tech advice, and business insights.">
+    <meta name="description" content="Jovira Chatbot - Discover everything about Aidnest Africa, Netra app, Autra app, and innovative tech solutions. Get coding help, tech advice, and business insights.">
     <meta name="keywords" content="Aidnest Africa, Netra app, Autra app, tech solutions, AI chatbot, coding help, programming, web development, African technology, service marketplace, Kakore Labs">
     <meta name="author" content="Aidnest Africa">
     <meta name="robots" content="index, follow">
@@ -24,17 +24,17 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@300;400;500&display=swap" rel="stylesheet">
 
     <!-- Open Graph Meta Tags -->
-    <meta property="og:title" content="NetraGPT - AI Assistant for Aidnest Africa">
+    <meta property="og:title" content="Jovira - AI Assistant for Aidnest Africa">
     <meta property="og:description" content="Intelligent chatbot for Netra app, Aidnest Africa services, coding help, and tech solutions. Your friendly AI assistant.">
     <meta property="og:image" content="https://myaidnest.com/images/netragpt.png">
     <meta property="og:url" content="https://chatbot.myaidnest.com">
     <meta property="og:type" content="website">
-    <meta property="og:site_name" content="NetraGPT">
+    <meta property="og:site_name" content="Jovira">
 
     <!-- Twitter Card Meta Tags -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="NetraGPT - Your AI Assistant">
-    <meta name="twitter:description" content="Discover Aidnest Africa services, get coding help, and explore tech solutions with NetraGPT">
+    <meta name="twitter:title" content="Jovira - Your AI Assistant">
+    <meta name="twitter:description" content="Discover Aidnest Africa services, get coding help, and explore tech solutions with Jovira">
     <meta name="twitter:image" content="https://myaidnest.com/images/netragpt.png">
     <meta name="twitter:creator" content="@aidnestafrica">
 
@@ -46,7 +46,7 @@
     {
         "@context": "https://schema.org",
         "@type": "WebApplication",
-        "name": "NetraGPT",
+        "name": "Jovira",
         "description": "AI-powered chatbot assistant for Aidnest Africa services and tech solutions",
         "url": "https://chatbot.myaidnest.com",
         "applicationCategory": "UtilitiesApplication",
@@ -313,17 +313,8 @@
             display: flex;
             margin-bottom: 8px;
             animation: messageSlide 0.4s ease-out;
-        }
-
-        @keyframes messageSlide {
-            from {
-                opacity: 0;
-                transform: translateY(20px) scale(0.95);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
+            gap: 12px;
+            align-items: flex-start;
         }
 
         .message.user {
@@ -334,8 +325,42 @@
             justify-content: flex-start;
         }
 
+        .message-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            overflow: hidden;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .message-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .avatar-fallback {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            color: white;
+        }
+
+        .message.user .message-avatar {
+            background: var(--primary-gradient);
+        }
+
+        .message.bot .message-avatar {
+            background: var(--accent-gradient);
+        }
+
         .message-content {
-            max-width: 85%;
+            max-width: 70%;
             padding: 16px 20px;
             border-radius: var(--border-radius);
             font-size: 14px;
@@ -517,7 +542,7 @@
             backdrop-filter: blur(10px);
             border-radius: var(--border-radius);
             border-bottom-left-radius: 8px;
-            max-width: 80%;
+            max-width: 70%;
             align-self: flex-start;
             color: var(--text-secondary);
             font-size: 13px;
@@ -591,58 +616,41 @@
             transform: translateY(-2px);
         }
 
-        /* Chat Input */
+        /* Chat Input - WhatsApp Style */
         .chat-input-area {
             border-top: 1px solid rgba(255, 255, 255, 0.1);
             background: rgba(26, 26, 46, 0.8);
             backdrop-filter: blur(20px);
-            padding: 20px;
+            padding: 16px 20px;
             position: relative;
         }
 
-        .chat-input {
+        .chat-input-wrapper {
             display: flex;
-            gap: 12px;
             align-items: flex-end;
-        }
-
-        #input {
-            flex: 1;
-            padding: 16px 20px;
-            border: none;
-            font-size: 14px;
+            gap: 12px;
             background: rgba(255, 255, 255, 0.08);
-            border-radius: var(--border-radius-small);
-            color: var(--text-primary);
-            transition: var(--transition);
-            resize: none;
-            min-height: 52px;
-            max-height: 120px;
-            font-family: inherit;
-            line-height: 1.4;
             border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 25px;
+            padding: 8px 16px;
+            transition: var(--transition);
         }
 
-        #input:focus {
-            outline: none;
+        .chat-input-wrapper:focus-within {
             background: rgba(255, 255, 255, 0.12);
             border-color: var(--text-accent);
             box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.2);
         }
 
-        #input::placeholder {
-            color: var(--text-secondary);
-        }
-
         .input-controls {
             display: flex;
             gap: 8px;
-            margin-top: 8px;
+            align-items: center;
+            flex-shrink: 0;
         }
 
         .file-input-wrapper {
             position: relative;
-            display: inline-block;
         }
 
         .file-input {
@@ -651,42 +659,25 @@
             opacity: 0;
         }
 
-        .file-input-label {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+        .input-btn {
+            background: transparent;
+            border: none;
             color: var(--text-secondary);
-            padding: 10px 16px;
-            border-radius: var(--border-radius-small);
+            padding: 8px;
+            border-radius: 50%;
             cursor: pointer;
             transition: var(--transition);
             display: flex;
             align-items: center;
-            gap: 6px;
-            font-size: 12px;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
         }
 
-        .file-input-label:hover {
-            background: rgba(255, 255, 255, 0.2);
-            color: var(--text-primary);
-        }
-
-        .voice-btn {
+        .input-btn:hover {
             background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: var(--text-secondary);
-            padding: 10px 16px;
-            border-radius: var(--border-radius-small);
-            cursor: pointer;
-            transition: var(--transition);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 12px;
-        }
-
-        .voice-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
             color: var(--text-primary);
+            transform: scale(1.1);
         }
 
         .voice-btn.recording {
@@ -695,30 +686,54 @@
             animation: pulse 1.5s infinite;
         }
 
+        #input {
+            flex: 1;
+            border: none;
+            font-size: 14px;
+            background: transparent;
+            color: var(--text-primary);
+            transition: var(--transition);
+            resize: none;
+            min-height: 24px;
+            max-height: 100px;
+            font-family: inherit;
+            line-height: 1.4;
+            padding: 8px 0;
+        }
+
+        #input:focus {
+            outline: none;
+        }
+
+        #input::placeholder {
+            color: var(--text-secondary);
+        }
+
         #send {
-            padding: 16px 20px;
+            padding: 12px;
             background: var(--primary-gradient);
             border: none;
             color: white;
             font-weight: 600;
             cursor: pointer;
-            border-radius: var(--border-radius-small);
+            border-radius: 50%;
             transition: var(--transition);
             display: flex;
             align-items: center;
             justify-content: center;
             box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
-            min-width: 52px;
-            min-height: 52px;
+            width: 44px;
+            height: 44px;
+            flex-shrink: 0;
         }
 
         #send:hover {
-            transform: translateY(-2px);
+            transform: translateY(-2px) scale(1.05);
             box-shadow: 0 6px 25px rgba(102, 126, 234, 0.6);
         }
 
         #send:active {
-            transform: translateY(0);
+            transform: translateY(0) scale(1);
         }
 
         #send:disabled {
@@ -735,6 +750,7 @@
         /* Image Display */
         .message-image {
             max-width: 100%;
+            max-height: 300px;
             border-radius: var(--border-radius-small);
             margin-top: 8px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
@@ -974,12 +990,12 @@
             }
 
             .message-content {
-                max-width: 90%;
+                max-width: 75%;
                 padding: 14px 18px;
             }
 
             .chat-input-area {
-                padding: 15px;
+                padding: 12px 15px;
             }
 
             .chats-sidebar {
@@ -987,7 +1003,19 @@
             }
 
             .input-controls {
-                flex-wrap: wrap;
+                gap: 6px;
+            }
+
+            .input-btn {
+                width: 36px;
+                height: 36px;
+                padding: 6px;
+            }
+
+            #send {
+                width: 40px;
+                height: 40px;
+                padding: 10px;
             }
         }
 
@@ -1071,10 +1099,10 @@
             </div>
             <div class="logo">
                 <div class="logo-icon">
-                    <img src="https://myaidnest.com/images/favicon.png" alt="NetraGPT" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                    <div class="logo-fallback">N</div>
+                    <img src="https://myaidnest.com/images/favicon.png" alt="Jovira" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="logo-fallback">J</div>
                 </div>
-                NetraGPT
+                Jovira
             </div>
             <div class="header-controls">
                 <button class="header-btn" id="infoBtn" title="About">
@@ -1087,7 +1115,7 @@
             <div id="chat">
                 <div class="welcome-message">
                     <i class="fas fa-sparkles"></i>
-                    <h3 style="margin-bottom: 8px; color: var(--text-primary);">Hello! I'm NetraGPT 🌟</h3>
+                    <h3 style="margin-bottom: 8px; color: var(--text-primary);">Hello! I'm Jovira 🌟</h3>
                     <p style="margin-bottom: 15px; line-height: 1.5;">Your intelligent assistant from Aidnest Africa! I can help you with:</p>
                     
                     <div class="quick-actions">
@@ -1113,19 +1141,19 @@
         </div>
 
         <div class="chat-input-area">
-            <div class="input-controls">
-                <div class="file-input-wrapper">
-                    <input type="file" id="imageUpload" accept="image/*" class="file-input">
-                    <label for="imageUpload" class="file-input-label">
-                        <i class="fas fa-image"></i> Upload Image
-                    </label>
+            <div class="chat-input-wrapper">
+                <div class="input-controls">
+                    <div class="file-input-wrapper">
+                        <input type="file" id="imageUpload" accept="image/*" class="file-input">
+                        <button class="input-btn" id="imageBtn" title="Upload Image">
+                            <i class="fas fa-image"></i>
+                        </button>
+                    </div>
+                    <button class="input-btn voice-btn" id="voiceBtn" title="Voice Message">
+                        <i class="fas fa-microphone"></i>
+                    </button>
                 </div>
-                <button class="voice-btn" id="voiceBtn" title="Voice Message">
-                    <i class="fas fa-microphone"></i> Voice
-                </button>
-            </div>
-            <div class="chat-input">
-                <textarea id="input" placeholder="What's on your mind?...." rows="1"></textarea>
+                <textarea id="input" placeholder="Type a message..." rows="1"></textarea>
                 <button id="send">
                     <i class="fas fa-paper-plane send-icon"></i>
                 </button>
@@ -1145,10 +1173,15 @@
         const chatsList = document.getElementById('chatsList');
         const infoBtn = document.getElementById('infoBtn');
         const imageUpload = document.getElementById('imageUpload');
+        const imageBtn = document.getElementById('imageBtn');
         const voiceBtn = document.getElementById('voiceBtn');
         const imageModal = document.getElementById('imageModal');
         const modalImage = document.getElementById('modalImage');
         const modalClose = document.getElementById('modalClose');
+
+        // Profile images
+        const JOVIRA_AVATAR = 'https://myaidnest.com/images/jovira.png';
+        const USER_AVATAR = 'https://myaidnest.com/images/user.png';
 
         // State
         let currentChatId = null;
@@ -1173,6 +1206,7 @@
         // Setup event listeners
         function setupEventListeners() {
             // Image upload handling
+            imageBtn.addEventListener('click', () => imageUpload.click());
             imageUpload.addEventListener('change', handleImageUpload);
             
             // Voice recording
@@ -1272,7 +1306,7 @@
                 mediaRecorder.start();
                 isRecording = true;
                 voiceBtn.classList.add('recording');
-                voiceBtn.innerHTML = '<i class="fas fa-stop"></i> Stop';
+                voiceBtn.innerHTML = '<i class="fas fa-stop"></i>';
                 
                 // Add recording indicator to chat
                 addVoiceRecordingIndicator();
@@ -1289,7 +1323,7 @@
                 mediaRecorder.stop();
                 isRecording = false;
                 voiceBtn.classList.remove('recording');
-                voiceBtn.innerHTML = '<i class="fas fa-microphone"></i> Voice';
+                voiceBtn.innerHTML = '<i class="fas fa-microphone"></i>';
                 
                 // Remove recording indicator
                 removeVoiceRecordingIndicator();
@@ -1360,6 +1394,26 @@
             setTimeout(() => {
                 modalImage.src = '';
             }, 300);
+        }
+
+        // Create avatar element
+        function createAvatar(sender, imageUrl) {
+            const avatarDiv = document.createElement('div');
+            avatarDiv.className = 'message-avatar';
+            
+            const img = document.createElement('img');
+            img.src = imageUrl;
+            img.alt = `${sender} avatar`;
+            img.onerror = function() {
+                this.style.display = 'none';
+                const fallback = document.createElement('div');
+                fallback.className = 'avatar-fallback';
+                fallback.textContent = sender === 'User' ? 'U' : 'J';
+                avatarDiv.appendChild(fallback);
+            };
+            
+            avatarDiv.appendChild(img);
+            return avatarDiv;
         }
 
         // Generate unique chat ID
@@ -1490,7 +1544,7 @@
         // Auto-resize textarea
         input.addEventListener('input', function() {
             this.style.height = 'auto';
-            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+            this.style.height = Math.min(this.scrollHeight, 100) + 'px';
         });
 
         // Process message content for special formatting
@@ -1571,6 +1625,9 @@
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message', sender.toLowerCase());
             
+            // Create avatar
+            const avatar = createAvatar(sender, sender === 'User' ? USER_AVATAR : JOVIRA_AVATAR);
+            
             const contentDiv = document.createElement('div');
             contentDiv.classList.add('message-content');
             
@@ -1604,7 +1661,15 @@
                 contentDiv.appendChild(audio);
             }
             
-            messageDiv.appendChild(contentDiv);
+            // Add elements to message
+            if (sender === 'User') {
+                messageDiv.appendChild(contentDiv);
+                messageDiv.appendChild(avatar);
+            } else {
+                messageDiv.appendChild(avatar);
+                messageDiv.appendChild(contentDiv);
+            }
+            
             chatBox.appendChild(messageDiv);
             
             // Smooth scroll to bottom
@@ -1626,15 +1691,18 @@
             typingDiv.classList.add('message-typing');
             typingDiv.id = 'typing-indicator';
             
+            const avatar = createAvatar('Bot', JOVIRA_AVATAR);
+            
             typingDiv.innerHTML = `
                 <div class="typing-dots">
                     <div class="typing-dot"></div>
                     <div class="typing-dot"></div>
                     <div class="typing-dot"></div>
                 </div>
-                <span>NetraGPT is thinking...</span>
+                <span>Jovira is thinking...</span>
             `;
             
+            typingDiv.prepend(avatar);
             chatBox.appendChild(typingDiv);
             chatBox.scrollTo({
                 top: chatBox.scrollHeight,
@@ -1680,7 +1748,7 @@
                 welcomeMsg.classList.add('welcome-message');
                 welcomeMsg.innerHTML = `
                     <i class="fas fa-sparkles"></i>
-                    <h3 style="margin-bottom: 8px; color: var(--text-primary);">Hello! I'm NetraGPT 🌟</h3>
+                    <h3 style="margin-bottom: 8px; color: var(--text-primary);">Hello! I'm Jovira 🌟</h3>
                     <p style="margin-bottom: 15px; line-height: 1.5;">Your intelligent assistant from Aidnest Africa! What would you like to know?</p>
                     
                     <div class="quick-actions">
@@ -1791,7 +1859,7 @@
         closeSidebarBtn.addEventListener('click', closeSidebar);
 
         infoBtn.addEventListener('click', function() {
-            addMessage("Bot", `🌟 **About NetraGPT**\n\nI'm your intelligent assistant from **Aidnest Africa**! Here's what I can help you with:\n\n🚀 **Netra App**: Service marketplace connecting providers and clients across Africa\n🏢 **Aidnest Africa**: Innovative tech company driving digital transformation\n💻 **Kakore Labs**: Our development hub building amazing applications\n👨‍💻 **Coding Help**: Python, JavaScript, web development, and more!\n🎨 **Image Analysis**: Upload images for analysis and generation\n🎤 **Voice Messages**: Record and send voice messages\n🔗 **Smart Features**: I recognize links, code blocks, and provide copy-paste functionality\n\n**Try these features:**\n• Upload an image for analysis\n• Record a voice message\n• Ask for code examples\n• Learn about African technology\n\nFeel free to ask me anything! 💫`);
+            addMessage("Bot", `🌟 **About Jovira**\n\nI'm your intelligent assistant from **Aidnest Africa**! Here's what I can help you with:\n\n🚀 **Netra App**: Service marketplace connecting providers and clients across Africa\n🏢 **Aidnest Africa**: Innovative tech company driving digital transformation\n💻 **Kakore Labs**: Our development hub building amazing applications\n👨‍💻 **Coding Help**: Python, JavaScript, web development, and more!\n🎨 **Image Analysis**: Upload images for analysis and generation\n🎤 **Voice Messages**: Record and send voice messages\n🔗 **Smart Features**: I recognize links, code blocks, and provide copy-paste functionality\n\n**Try these features:**\n• Upload an image for analysis\n• Record a voice message\n• Ask for code examples\n• Learn about African technology\n\nFeel free to ask me anything! 💫`);
         });
 
         // Close sidebar when clicking outside on mobile
@@ -1830,7 +1898,7 @@
                 this.style.display = 'none';
                 this.nextElementSibling.style.display = 'flex';
             };
-        }  
+        }
     </script>
 </body>
 </html>
