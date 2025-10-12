@@ -220,7 +220,6 @@
         .logo-icon {
             width: 32px;
             height: 32px;
-            background: white;
             border-radius: 10px;
             display: flex;
             align-items: center;
@@ -229,6 +228,25 @@
             font-weight: bold;
             background: var(--accent-gradient);
             box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
+            overflow: hidden;
+        }
+
+        .logo-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .logo-fallback {
+            width: 100%;
+            height: 100%;
+            background: var(--primary-gradient);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 10px;
         }
 
         .header-controls {
@@ -340,6 +358,65 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
             color: var(--text-primary);
             border-bottom-left-radius: 8px;
+        }
+
+        /* Uploaded Images */
+        .uploaded-image {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: var(--border-radius-small);
+            margin-top: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .uploaded-image:hover {
+            transform: scale(1.02);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        /* Voice Recording */
+        .voice-recording {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            background: var(--primary-gradient);
+            border-radius: var(--border-radius);
+            margin: 8px 0;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .voice-visualizer {
+            display: flex;
+            gap: 3px;
+            align-items: center;
+            flex: 1;
+        }
+
+        .voice-bar {
+            width: 3px;
+            background: white;
+            border-radius: 2px;
+            animation: voicePulse 0.8s infinite ease-in-out;
+        }
+
+        .voice-bar:nth-child(1) { animation-delay: 0s; height: 8px; }
+        .voice-bar:nth-child(2) { animation-delay: 0.1s; height: 12px; }
+        .voice-bar:nth-child(3) { animation-delay: 0.2s; height: 16px; }
+        .voice-bar:nth-child(4) { animation-delay: 0.3s; height: 12px; }
+        .voice-bar:nth-child(5) { animation-delay: 0.4s; height: 8px; }
+
+        @keyframes voicePulse {
+            0%, 100% { transform: scaleY(0.8); }
+            50% { transform: scaleY(1.2); }
         }
 
         /* Links Styling */
@@ -557,6 +634,67 @@
             color: var(--text-secondary);
         }
 
+        .input-controls {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        .file-input {
+            position: absolute;
+            left: -9999px;
+            opacity: 0;
+        }
+
+        .file-input-label {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--text-secondary);
+            padding: 10px 16px;
+            border-radius: var(--border-radius-small);
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+        }
+
+        .file-input-label:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: var(--text-primary);
+        }
+
+        .voice-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--text-secondary);
+            padding: 10px 16px;
+            border-radius: var(--border-radius-small);
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+        }
+
+        .voice-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: var(--text-primary);
+        }
+
+        .voice-btn.recording {
+            background: #ff4757;
+            color: white;
+            animation: pulse 1.5s infinite;
+        }
+
         #send {
             padding: 16px 20px;
             background: var(--primary-gradient);
@@ -601,6 +739,64 @@
             margin-top: 8px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .message-image:hover {
+            transform: scale(1.02);
+        }
+
+        /* Image Modal */
+        .image-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: var(--transition);
+        }
+
+        .image-modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-soft);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 18px;
+            transition: var(--transition);
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
         }
 
         /* Chats Sidebar */
@@ -789,6 +985,10 @@
             .chats-sidebar {
                 width: 100%;
             }
+
+            .input-controls {
+                flex-wrap: wrap;
+            }
         }
 
         @media (min-width: 768px) {
@@ -834,6 +1034,14 @@
         </div>
     </div>
 
+    <!-- Image Modal -->
+    <div class="image-modal" id="imageModal">
+        <button class="modal-close" id="modalClose">
+            <i class="fas fa-times"></i>
+        </button>
+        <img class="modal-content" id="modalImage" src="" alt="Enlarged view">
+    </div>
+
     <!-- Chats Sidebar -->
     <div class="chats-sidebar" id="chatsSidebar">
         <div class="sidebar-header">
@@ -861,7 +1069,13 @@
                     <i class="fas fa-history"></i>
                 </button>
             </div>
-           
+            <div class="logo">
+                <div class="logo-icon">
+                    <img src="https://myaidnest.com/images/favicon.png" alt="NetraGPT" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="logo-fallback">N</div>
+                </div>
+                NetraGPT
+            </div>
             <div class="header-controls">
                 <button class="header-btn" id="infoBtn" title="About">
                     <i class="fas fa-info"></i>
@@ -873,7 +1087,7 @@
             <div id="chat">
                 <div class="welcome-message">
                     <i class="fas fa-sparkles"></i>
-                    <h3 style="margin-bottom: 8px; color: var(--text-primary);">Hello! I'm NetraGPT </h3>
+                    <h3 style="margin-bottom: 8px; color: var(--text-primary);">Hello! I'm NetraGPT 🌟</h3>
                     <p style="margin-bottom: 15px; line-height: 1.5;">Your intelligent assistant from Aidnest Africa! I can help you with:</p>
                     
                     <div class="quick-actions">
@@ -899,6 +1113,17 @@
         </div>
 
         <div class="chat-input-area">
+            <div class="input-controls">
+                <div class="file-input-wrapper">
+                    <input type="file" id="imageUpload" accept="image/*" class="file-input">
+                    <label for="imageUpload" class="file-input-label">
+                        <i class="fas fa-image"></i> Upload Image
+                    </label>
+                </div>
+                <button class="voice-btn" id="voiceBtn" title="Voice Message">
+                    <i class="fas fa-microphone"></i> Voice
+                </button>
+            </div>
             <div class="chat-input">
                 <textarea id="input" placeholder="What's on your mind?...." rows="1"></textarea>
                 <button id="send">
@@ -919,10 +1144,18 @@
         const chatsSidebar = document.getElementById('chatsSidebar');
         const chatsList = document.getElementById('chatsList');
         const infoBtn = document.getElementById('infoBtn');
+        const imageUpload = document.getElementById('imageUpload');
+        const voiceBtn = document.getElementById('voiceBtn');
+        const imageModal = document.getElementById('imageModal');
+        const modalImage = document.getElementById('modalImage');
+        const modalClose = document.getElementById('modalClose');
 
         // State
         let currentChatId = null;
         let isTyping = false;
+        let isRecording = false;
+        let mediaRecorder = null;
+        let audioChunks = [];
 
         // Initialize chat system
         function initializeChatSystem() {
@@ -934,6 +1167,199 @@
                 loadChatHistory(currentChatId);
             }
             updateChatsList();
+            setupEventListeners();
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Image upload handling
+            imageUpload.addEventListener('change', handleImageUpload);
+            
+            // Voice recording
+            voiceBtn.addEventListener('click', toggleVoiceRecording);
+            
+            // Image modal
+            modalClose.addEventListener('click', closeImageModal);
+            imageModal.addEventListener('click', (e) => {
+                if (e.target === imageModal) closeImageModal();
+            });
+            
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.ctrlKey && e.key === 'k') {
+                    e.preventDefault();
+                    input.focus();
+                }
+            });
+        }
+
+        // Handle image upload
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Check if file is an image
+            if (!file.type.startsWith('image/')) {
+                showToast('Please upload an image file!');
+                return;
+            }
+
+            // Check file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                showToast('Image size should be less than 5MB!');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const imageData = e.target.result;
+                addMessage("User", "I uploaded an image for analysis:", imageData);
+                
+                // Analyze the image
+                analyzeImage(file);
+            };
+            reader.readAsDataURL(file);
+
+            // Reset file input
+            event.target.value = '';
+        }
+
+        // Analyze uploaded image
+        async function analyzeImage(file) {
+            showTypingIndicator();
+            
+            try {
+                // For now, we'll simulate image analysis
+                // In a real implementation, you would send this to your backend
+                setTimeout(() => {
+                    hideTypingIndicator();
+                    addMessage("Bot", `🔍 **Image Analysis Complete!**\n\nI've received your image (${file.name}, ${(file.size / 1024).toFixed(1)}KB). \n\n*In a full implementation, I would analyze this image and provide insights about its content, generate variations, or answer questions about it!*\n\nYou can ask me to:\n• Describe what's in the image\n• Generate similar images\n• Modify the image style\n• Extract text from the image`);
+                }, 2000);
+            } catch (error) {
+                hideTypingIndicator();
+                addMessage("Bot", "Sorry, I encountered an error while analyzing the image. Please try again.");
+            }
+        }
+
+        // Voice recording functionality
+        async function toggleVoiceRecording() {
+            if (!isRecording) {
+                await startVoiceRecording();
+            } else {
+                stopVoiceRecording();
+            }
+        }
+
+        // Start voice recording
+        async function startVoiceRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    await processAudioRecording(audioBlob);
+                    
+                    // Stop all tracks
+                    stream.getTracks().forEach(track => track.stop());
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                voiceBtn.classList.add('recording');
+                voiceBtn.innerHTML = '<i class="fas fa-stop"></i> Stop';
+                
+                // Add recording indicator to chat
+                addVoiceRecordingIndicator();
+                
+            } catch (error) {
+                console.error('Error starting voice recording:', error);
+                showToast('Microphone access denied or not available');
+            }
+        }
+
+        // Stop voice recording
+        function stopVoiceRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                isRecording = false;
+                voiceBtn.classList.remove('recording');
+                voiceBtn.innerHTML = '<i class="fas fa-microphone"></i> Voice';
+                
+                // Remove recording indicator
+                removeVoiceRecordingIndicator();
+            }
+        }
+
+        // Add voice recording indicator
+        function addVoiceRecordingIndicator() {
+            const recordingDiv = document.createElement('div');
+            recordingDiv.className = 'voice-recording';
+            recordingDiv.id = 'voice-recording-indicator';
+            recordingDiv.innerHTML = `
+                <i class="fas fa-microphone"></i>
+                <div class="voice-visualizer">
+                    <div class="voice-bar"></div>
+                    <div class="voice-bar"></div>
+                    <div class="voice-bar"></div>
+                    <div class="voice-bar"></div>
+                    <div class="voice-bar"></div>
+                </div>
+                <span>Recording... Click stop when done</span>
+            `;
+            chatBox.appendChild(recordingDiv);
+            chatBox.scrollTo({ top: chatBox.scrollHeight, behavior: 'smooth' });
+        }
+
+        // Remove voice recording indicator
+        function removeVoiceRecordingIndicator() {
+            const indicator = document.getElementById('voice-recording-indicator');
+            if (indicator) {
+                indicator.remove();
+            }
+        }
+
+        // Process audio recording
+        async function processAudioRecording(audioBlob) {
+            showTypingIndicator();
+            
+            try {
+                // For now, we'll simulate speech-to-text processing
+                // In a real implementation, you would send this to a speech-to-text API
+                setTimeout(() => {
+                    hideTypingIndicator();
+                    addMessage("Bot", `🎤 **Voice Message Received!**\n\n*In a full implementation, I would transcribe your voice message and respond accordingly!*\n\nFor now, you can type your message or try our other features like image upload.`);
+                }, 1500);
+                
+                // You could also create an audio element to play back the recording
+                const audioUrl = URL.createObjectURL(audioBlob);
+                addMessage("User", "Voice message:", null, audioUrl);
+                
+            } catch (error) {
+                hideTypingIndicator();
+                addMessage("Bot", "Sorry, I couldn't process the voice message. Please try again or type your message.");
+            }
+        }
+
+        // Open image in modal
+        function openImageModal(imageSrc) {
+            modalImage.src = imageSrc;
+            imageModal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Close image modal
+        function closeImageModal() {
+            imageModal.classList.remove('active');
+            document.body.style.overflow = 'auto';
+            setTimeout(() => {
+                modalImage.src = '';
+            }, 300);
         }
 
         // Generate unique chat ID
@@ -1141,7 +1567,7 @@
         }
 
         // Add message with enhanced features
-        function addMessage(sender, text, imageUrl = null) {
+        function addMessage(sender, text, imageUrl = null, audioUrl = null) {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message', sender.toLowerCase());
             
@@ -1156,9 +1582,26 @@
             if (imageUrl) {
                 const img = document.createElement('img');
                 img.src = imageUrl;
-                img.classList.add('message-image');
-                img.alt = 'Generated image';
+                if (sender === 'User') {
+                    img.classList.add('uploaded-image');
+                    img.alt = 'Uploaded image';
+                    img.onclick = () => openImageModal(imageUrl);
+                } else {
+                    img.classList.add('message-image');
+                    img.alt = 'Generated image';
+                    img.onclick = () => openImageModal(imageUrl);
+                }
                 contentDiv.appendChild(img);
+            }
+            
+            // Add audio if available
+            if (audioUrl) {
+                const audio = document.createElement('audio');
+                audio.controls = true;
+                audio.src = audioUrl;
+                audio.style.width = '100%';
+                audio.style.marginTop = '8px';
+                contentDiv.appendChild(audio);
             }
             
             messageDiv.appendChild(contentDiv);
@@ -1171,7 +1614,7 @@
             });
             
             // Save to localStorage
-            saveMessageToHistory(sender, text, imageUrl);
+            saveMessageToHistory(sender, text, imageUrl, audioUrl);
         }
 
         // Show typing indicator
@@ -1209,12 +1652,13 @@
         }
 
         // Save message to history
-        function saveMessageToHistory(sender, text, imageUrl = null) {
+        function saveMessageToHistory(sender, text, imageUrl = null, audioUrl = null) {
             const chatHistory = JSON.parse(localStorage.getItem(currentChatId) || '[]');
             chatHistory.push({
                 sender,
                 text,
                 imageUrl,
+                audioUrl,
                 timestamp: new Date().toISOString()
             });
             localStorage.setItem(currentChatId, JSON.stringify(chatHistory));
@@ -1259,7 +1703,7 @@
             
             // Load messages
             chatHistory.forEach(msg => {
-                addMessage(msg.sender, msg.text, msg.imageUrl);
+                addMessage(msg.sender, msg.text, msg.imageUrl, msg.audioUrl);
             });
         }
 
@@ -1347,7 +1791,7 @@
         closeSidebarBtn.addEventListener('click', closeSidebar);
 
         infoBtn.addEventListener('click', function() {
-            addMessage("Bot", `🌟 **About NetraGPT**\n\nI'm your intelligent assistant from **Aidnest Africa**! Here's what I can help you with:\n\n🚀 **Netra App**: Service marketplace connecting providers and clients across Africa\n🏢 **Aidnest Africa**: Innovative tech company driving digital transformation\n💻 **Kakore Labs**: Our development hub building amazing applications\n👨‍💻 **Coding Help**: Python, JavaScript, web development, and more!\n🔗 **Smart Features**: I recognize links, code blocks, and provide copy-paste functionality\n\n**Try these commands:**\n\`\`\`python\nprint("Hello World!")\n\`\`\`\n\nOr ask: "Show me HTML code for a button" or "Explain Python functions"\n\nFeel free to ask me anything! 💫`);
+            addMessage("Bot", `🌟 **About NetraGPT**\n\nI'm your intelligent assistant from **Aidnest Africa**! Here's what I can help you with:\n\n🚀 **Netra App**: Service marketplace connecting providers and clients across Africa\n🏢 **Aidnest Africa**: Innovative tech company driving digital transformation\n💻 **Kakore Labs**: Our development hub building amazing applications\n👨‍💻 **Coding Help**: Python, JavaScript, web development, and more!\n🎨 **Image Analysis**: Upload images for analysis and generation\n🎤 **Voice Messages**: Record and send voice messages\n🔗 **Smart Features**: I recognize links, code blocks, and provide copy-paste functionality\n\n**Try these features:**\n• Upload an image for analysis\n• Record a voice message\n• Ask for code examples\n• Learn about African technology\n\nFeel free to ask me anything! 💫`);
         });
 
         // Close sidebar when clicking outside on mobile
@@ -1374,6 +1818,19 @@
             const y = (e.clientY / window.innerHeight) * 100;
             particles.style.transform = `translate(${x * 0.02}px, ${y * 0.02}px)`;
         });
+
+        // Handle logo loading
+        const logoImg = document.querySelector('.logo-icon img');
+        if (logoImg) {
+            logoImg.onload = function() {
+                this.style.display = 'block';
+                this.nextElementSibling.style.display = 'none';
+            };
+            logoImg.onerror = function() {
+                this.style.display = 'none';
+                this.nextElementSibling.style.display = 'flex';
+            };
+        }
     </script>
 </body>
 </html>
