@@ -1118,21 +1118,10 @@
                     <h3 style="margin-bottom: 8px; color: var(--text-primary);">Hello! I'm Jovira 🌟</h3>
                     <p style="margin-bottom: 15px; line-height: 1.5;">Your intelligent assistant from Aidnest Africa! I can help you with:</p>
                     
-                    <div class="quick-actions">
-                        <div class="quick-action" onclick="askQuestion('Tell me about Netra app features')">
-                            <i class="fas fa-mobile-alt"></i> Netra App
-                        </div>
-                        <div class="quick-action" onclick="askQuestion('What is Aidnest Africa?')">
-                            <i class="fas fa-building"></i> Aidnest Africa
-                        </div>
-                        <div class="quick-action" onclick="askQuestion('Let us learn programming')">
-                            <i class="fas fa-code"></i> Coding Help
-                        </div>
-                        <div class="quick-action" onclick="askQuestion('How to download Netra app?')">
-                            <i class="fas fa-download"></i> Download
-                        </div>
-                    </div>
-                    
+                   
+                    <p style="font-size: 12px; opacity: 0.8; margin-top: 10px;">
+                        Am not a human being, but I think like a human. Though I can make errors.
+                    </p>
                     <p style="font-size: 12px; opacity: 0.8; margin-top: 10px;">
                         Ask me anything about technology, coding, or our services! 💫
                     </p>
@@ -1832,7 +1821,7 @@
                 }
             } catch (err) {
                 hideTypingIndicator();
-                addMessage("Bot", "I'm having trouble connecting right now. Please check your internet connection and try again. 🌐");
+                addMessage("Bot", "I'm having trouble connecting right now. Please check your internet connection and try again. ");
             } finally {
                 sendBtn.disabled = false;
                 input.focus();
@@ -1859,7 +1848,7 @@
         closeSidebarBtn.addEventListener('click', closeSidebar);
 
         infoBtn.addEventListener('click', function() {
-            addMessage("Bot", `🌟 **About Jovira**\n\nI'm your intelligent assistant from **Aidnest Africa**! Here's what I can help you with:\n\n🚀 **Netra App**: Service marketplace connecting providers and clients across Africa\n🏢 **Aidnest Africa**: Innovative tech company driving digital transformation\n💻 **Kakore Labs**: Our development hub building amazing applications\n👨‍💻 **Coding Help**: Python, JavaScript, web development, and more!\n🎨 **Image Analysis**: Upload images for analysis and generation\n🎤 **Voice Messages**: Record and send voice messages\n🔗 **Smart Features**: I recognize links, code blocks, and provide copy-paste functionality\n\n**Try these features:**\n• Upload an image for analysis\n• Record a voice message\n• Ask for code examples\n• Learn about African technology\n\nFeel free to ask me anything! 💫`);
+            addMessage("Bot", ` **About Jovira**\n\nI'm your intelligent assistant from **Aidnest Africa**! Here's what I can help you with:\n\n **Netra App**: Service marketplace connecting providers and clients across Africa\n **Aidnest Africa**: Innovative tech company driving digital transformation\n💻 **Kakore Labs**: Our development hub building amazing applications\n **Coding Help**: Python, JavaScript, web development, and more!\n🎨 **Image Analysis**: Upload images for analysis and generation\n🎤 **Voice Messages**: Record and send voice messages\n🔗 **Smart Features**: I recognize links, code blocks, and provide copy-paste functionality\n\n**Try these features:**\n• Upload an image for analysis\n• Record a voice message\n• Ask for code examples\n• Learn about African technology\n\nFeel free to ask me anything! 💫`);
         });
 
         // Close sidebar when clicking outside on mobile
