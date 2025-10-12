@@ -12,6 +12,9 @@ import urllib.parse
 import base64
 from io import BytesIO
 import json
+import speech_recognition as sr
+from PIL import Image
+import io
 
 app = Flask(__name__)
 CORS(app)
@@ -111,7 +114,8 @@ def get_user_session(user_id):
             'recent_topics': [],
             'personal_details': {},
             'image_requests': 0,
-            'coding_help_requests': 0
+            'coding_help_requests': 0,
+            'voice_requests': 0
         }
     return conversation_history[user_id]
 
@@ -190,6 +194,59 @@ def generate_image(prompt):
         print(f"Image generation error: {e}")
         return None
 
+def analyze_image(image_data):
+    """Analyze image using GPT-4 Vision"""
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4-vision-preview",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "Analyze this image in detail. Describe what you see, identify objects, people, text, colors, and any notable features. Provide a comprehensive analysis."
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{image_data}"
+                            }
+                        }
+                    ]
+                }
+            ],
+            max_tokens=500
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        print(f"Image analysis error: {e}")
+        return None
+
+def transcribe_audio(audio_file):
+    """Transcribe audio using Whisper"""
+    try:
+        # Save audio file temporarily
+        audio_path = "temp_audio.wav"
+        audio_file.save(audio_path)
+        
+        # Transcribe using Whisper
+        with open(audio_path, "rb") as audio:
+            transcript = client.audio.transcriptions.create(
+                model="whisper-1",
+                file=audio,
+                response_format="text"
+            )
+        
+        # Clean up temporary file
+        if os.path.exists(audio_path):
+            os.remove(audio_path)
+            
+        return transcript
+    except Exception as e:
+        print(f"Audio transcription error: {e}")
+        return None
+
 def should_generate_image(message, context, user_session):
     """Enhanced image generation detection"""
     message_lower = message.lower()
@@ -224,6 +281,29 @@ def should_generate_image(message, context, user_session):
             return True
     
     return False
+
+def should_analyze_image(message):
+    """Check if user wants image analysis"""
+    message_lower = message.lower()
+    
+    analysis_triggers = [
+        'analyze this image', 'what is in this image', 'describe this picture',
+        'what do you see', 'analyze the image', 'tell me about this image',
+        'what does this show', 'explain this picture'
+    ]
+    
+    return any(trigger in message_lower for trigger in analysis_triggers)
+
+def should_transcribe_audio(message):
+    """Check if user wants audio transcription"""
+    message_lower = message.lower()
+    
+    transcription_triggers = [
+        'transcribe this', 'what is being said', 'convert speech to text',
+        'transcribe audio', 'speech to text', 'what did they say'
+    ]
+    
+    return any(trigger in message_lower for trigger in transcription_triggers)
 
 def create_image_prompt(message, context, user_session):
     """Create appropriate image prompt based on conversation"""
@@ -282,6 +362,10 @@ def update_conversation_memory(user_session, message, response):
     if any(word in message_lower for word in ['code', 'programming', 'developer', 'script']):
         user_session['coding_help_requests'] = user_session.get('coding_help_requests', 0) + 1
     
+    # Track voice requests
+    if any(word in message_lower for word in ['voice', 'audio', 'speech', 'transcribe']):
+        user_session['voice_requests'] = user_session.get('voice_requests', 0) + 1
+    
     # Update recent topics (keep last 5)
     if len(user_session['recent_topics']) >= 5:
         user_session['recent_topics'].pop(0)
@@ -309,6 +393,9 @@ def build_memory_context(user_session):
     if user_session.get('coding_help_requests', 0) > 0:
         memory_parts.append(f"Coding help requests: {user_session['coding_help_requests']}")
     
+    if user_session.get('voice_requests', 0) > 0:
+        memory_parts.append(f"Voice requests: {user_session['voice_requests']}")
+    
     return " | ".join(memory_parts) if memory_parts else "New conversation"
 
 def get_company_context(query):
@@ -335,7 +422,7 @@ def get_ai_response(message, conversation_context, web_search_results=None, user
         
         # Build comprehensive system message
         system_message = f"""
-        You are NetraGPT, a real team member at Aidnest Africa. You're friendly, knowledgeable, and provide helpful information.
+        You are Jovira, a real team member at Aidnest Africa. You're friendly, knowledgeable, and provide helpful information.
 
         ABOUT YOUR COMPANY:
         - Aidnest Africa: Technology company creating digital solutions for African markets
@@ -349,6 +436,7 @@ def get_ai_response(message, conversation_context, web_search_results=None, user
         - Use emojis occasionally to express warmth
         - Be professional but friendly and approachable
         - If you don't know something, be honest but helpful
+        - You can analyze images, generate images, and transcribe voice messages
 
         CURRENT CONVERSATION:
         - User: {user_name}
@@ -361,6 +449,7 @@ def get_ai_response(message, conversation_context, web_search_results=None, user
         - Provide specific information about Netra, Kakore Labs, and Aidnest Africa
         - Offer coding help and technical guidance when requested
         - Suggest image generation when visual explanations would help
+        - Offer to analyze images or transcribe audio when relevant
         - Never say you're an AI or mention being generated
         """
         
@@ -413,9 +502,9 @@ def get_fallback_response(message, user_id="default"):
     if user_session['conversation_stage'] == 'greeting':
         user_session['conversation_stage'] = 'get_name'
         greetings = [
-            "Hey there! 👋 I'm from the Aidnest Africa team! I help with Netra, Kakore Labs, and tech questions. What should I call you?",
-            "Hello! 🌟 Welcome! I'm here from Aidnest Africa and I'd love to get to know you better. What's your name?",
-            "Hi! 🚀 Great to connect! I'm on the Netra team at Aidnest Africa, working with Kakore Labs. What do you prefer to be called?",
+            "Hey there! 👋 I'm Jovira from the Aidnest Africa team! I help with Netra, Kakore Labs, and tech questions. What should I call you?",
+            "Hello! 🌟 Welcome! I'm Jovira from Aidnest Africa and I'd love to get to know you better. What's your name?",
+            "Hi! 🚀 Great to connect! I'm Jovira on the Netra team at Aidnest Africa, working with Kakore Labs. What do you prefer to be called?",
         ]
         return random.choice(greetings)
     
@@ -448,6 +537,10 @@ def get_fallback_response(message, user_id="default"):
         last_topic = user_session['recent_topics'][-1]
         if any(topic in last_topic for topic in ['netra', 'app', 'booking']):
             return f"{name_prefix}Since we were discussing Netra features, would you like me to generate a visual of the app interface to better explain? 🎨"
+    
+    # Feature suggestions
+    if any(word in message_lower for word in ['what can you do', 'help', 'features']):
+        return f"{name_prefix}I can help you with: 📱 Netra app info, 💻 Kakore Labs projects, 🎨 image generation, 🔍 image analysis, 🎤 voice transcription, and 💡 coding help! What interests you most?"
     
     # Casual conversation
     if any(word in message_lower for word in ['how are you', 'how do you do']):
@@ -551,6 +644,86 @@ def chat():
         ]
         return jsonify({"reply": random.choice(error_responses)})
 
+@app.route("/analyze_image", methods=["POST"])
+def analyze_image_endpoint():
+    """Endpoint to analyze uploaded images"""
+    try:
+        if 'image' not in request.files:
+            return jsonify({"error": "No image file provided"}), 400
+        
+        image_file = request.files['image']
+        if image_file.filename == '':
+            return jsonify({"error": "No image selected"}), 400
+        
+        # Convert image to base64
+        image_data = base64.b64encode(image_file.read()).decode('utf-8')
+        
+        # Analyze image
+        analysis_result = analyze_image(image_data)
+        
+        if analysis_result:
+            return jsonify({
+                "analysis": analysis_result,
+                "message": "🔍 I've analyzed your image! Here's what I found:"
+            })
+        else:
+            return jsonify({"error": "Failed to analyze image"}), 500
+            
+    except Exception as e:
+        print(f"Image analysis endpoint error: {e}")
+        return jsonify({"error": "Error analyzing image"}), 500
+
+@app.route("/transcribe_audio", methods=["POST"])
+def transcribe_audio_endpoint():
+    """Endpoint to transcribe audio files"""
+    try:
+        if 'audio' not in request.files:
+            return jsonify({"error": "No audio file provided"}), 400
+        
+        audio_file = request.files['audio']
+        if audio_file.filename == '':
+            return jsonify({"error": "No audio selected"}), 400
+        
+        # Transcribe audio
+        transcript = transcribe_audio(audio_file)
+        
+        if transcript:
+            return jsonify({
+                "transcript": transcript,
+                "message": "🎤 I've transcribed your audio! Here's what was said:"
+            })
+        else:
+            return jsonify({"error": "Failed to transcribe audio"}), 500
+            
+    except Exception as e:
+        print(f"Audio transcription endpoint error: {e}")
+        return jsonify({"error": "Error transcribing audio"}), 500
+
+@app.route("/generate_image", methods=["POST"])
+def generate_image_endpoint():
+    """Endpoint to generate images"""
+    try:
+        data = request.get_json()
+        prompt = data.get("prompt", "").strip()
+        
+        if not prompt:
+            return jsonify({"error": "No prompt provided"}), 400
+        
+        # Generate image
+        image_url = generate_image(prompt)
+        
+        if image_url:
+            return jsonify({
+                "image_url": image_url,
+                "message": "🎨 I've generated an image based on your request!"
+            })
+        else:
+            return jsonify({"error": "Failed to generate image"}), 500
+            
+    except Exception as e:
+        print(f"Image generation endpoint error: {e}")
+        return jsonify({"error": "Error generating image"}), 500
+
 @app.route("/company_info")
 def company_info():
     """Endpoint to get company information"""
@@ -574,7 +747,8 @@ def clear_history():
             'recent_topics': [],
             'personal_details': {},
             'image_requests': 0,
-            'coding_help_requests': 0
+            'coding_help_requests': 0,
+            'voice_requests': 0
         }
     return jsonify({"status": "success", "message": "Conversation history cleared"})
 
