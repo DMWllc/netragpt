@@ -12,6 +12,8 @@ import urllib.parse
 import base64
 from io import BytesIO
 import json
+from urllib.parse import urljoin, urlparse
+from collections import Counter
 
 app = Flask(__name__)
 CORS(app)
@@ -21,80 +23,6 @@ client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 # Enhanced conversation memory with persistent storage
 conversation_history = {}
-
-# Company and Team Information
-COMPANY_INFO = {
-    "kakore_labs": {
-        "name": "Kakore Labs",
-        "description": "Kakore Labs is the innovative development hub and technical arm of Aidnest Africa, specializing in creating cutting-edge digital solutions for African markets.",
-        "focus_areas": [
-            "Mobile App Development",
-            "Web Platforms", 
-            "AI and Machine Learning",
-            "Cloud Infrastructure",
-            "UI/UX Design",
-            "Digital Transformation"
-        ],
-        "key_projects": [
-            "Netra - Service Marketplace App",
-            "Autra - Automotive Services Platform",
-            "Aidnest Africa Main Website",
-            "Various Enterprise Solutions"
-        ],
-        "expertise": [
-            "Flutter & Dart for cross-platform mobile apps",
-            "Python Django & Flask for backend services",
-            "React.js & Vue.js for modern web interfaces",
-            "PostgreSQL & MongoDB for database solutions",
-            "AWS & Google Cloud for scalable infrastructure",
-            "AI/ML integration for smart features"
-        ],
-        "mission": "To build transformative digital solutions that empower African businesses and communities through innovative technology.",
-        "team_culture": "Agile, collaborative, and user-focused development approach with emphasis on clean code and scalable architecture."
-    },
-    "nowamaani_donath": {
-        "name": "Nowamaani Donath",
-        "role": "Lead Developer & Technical Director at Kakore Labs",
-        "background": "Seasoned software engineer and technology leader with extensive experience in full-stack development and digital solution architecture.",
-        "expertise": [
-            "Full-Stack Web Development",
-            "Mobile App Development (Flutter, React Native)",
-            "Cloud Architecture & DevOps",
-            "Database Design & Optimization",
-            "API Development & Integration",
-            "Technical Team Leadership"
-        ],
-        "education": [
-            "Advanced degrees in Computer Science and Software Engineering",
-            "Multiple certifications in cloud technologies and agile methodologies"
-        ],
-        "achievements": [
-            "Led development of Netra app from concept to Play Store launch",
-            "Architected scalable backend systems for multiple enterprise clients",
-            "Mentored and built high-performing development teams",
-            "Pioneered AI integration in service marketplace platforms"
-        ],
-        "philosophy": "Believes in building technology that solves real-world problems while maintaining elegance in code and user experience.",
-        "contact": "Available for technical consultations and complex project discussions"
-    },
-    "aidnest_africa": {
-        "name": "Aidnest Africa",
-        "description": "A innovative technology company focused on creating digital solutions that bridge service gaps across African markets.",
-        "core_products": [
-            "Netra - Service Marketplace connecting providers with clients",
-            "Autra - Automotive services and maintenance platform",
-            "Various custom enterprise solutions"
-        ],
-        "vision": "To become Africa's leading technology enabler for service-based businesses and digital transformation.",
-        "values": [
-            "Innovation and Excellence",
-            "User-Centric Design",
-            "African Market Focus",
-            "Sustainable Technology",
-            "Community Impact"
-        ]
-    }
-}
 
 def get_user_session(user_id):
     if user_id not in conversation_history:
@@ -112,234 +40,429 @@ def get_user_session(user_id):
             'personal_details': {},
             'image_requests': 0,
             'coding_help_requests': 0,
-            'voice_requests': 0
+            'voice_requests': 0,
+            'browsing_sessions': 0
         }
     return conversation_history[user_id]
 
-def enhanced_web_search(query, site_specific=True):
-    """Enhanced web search for real-time information"""
+def enhanced_web_browsing(query, max_pages=8, deep_analysis=False):
+    """Enhanced browsing that can navigate through Netra website pages with deep analysis"""
     try:
+        # Netra website structure mapping
+        netra_pages = {
+            'home': 'https://myaidnest.com',
+            'about': 'https://myaidnest.com/about.php',
+            'services': 'https://myaidnest.com/serviceshub.php',
+            'register': 'https://myaidnest.com/register.php',
+            'login': 'https://myaidnest.com/login.php',
+            'contact': 'https://myaidnest.com/contact.php',
+            'privacy': 'https://myaidnest.com/privacy.php',
+            'terms': 'https://myaidnest.com/terms.php',
+            'settings': 'https://myaidnest.com/settings.php',
+            'detail_services': 'https://myaidnest.com/detail_services.php',
+            'download': 'https://play.google.com/store/apps/details?id=com.kakorelabs.netra'
+        }
+        
         search_results = []
+        visited_urls = set()
+        all_providers = []
+        all_services = []
         
-        # Netra/Aidnest specific sites
-        netra_sites = [
-            "https://myaidnest.com",
-            "https://myaidnest.com/register.php", 
-            "https://myaidnest.com/about.php",
-            "https://myaidnest.com/serviceshub.php",
-            "https://play.google.com/store/apps/details?id=com.kakorelabs.netra"
-        ]
+        # Determine which pages to search based on query
+        pages_to_search = identify_relevant_pages(query, netra_pages, deep_analysis)
         
-        # General tech news sites for broader context
-        general_sites = [
-            "https://techcabal.com",
-            "https://webfrontapp.com",
-            "https://africabusiness.com"
-        ]
-        
-        sites_to_search = netra_sites if site_specific else netra_sites + general_sites
-        
-        for url in sites_to_search:
+        for page_key in pages_to_search[:max_pages]:
+            url = netra_pages[page_key]
+            if url in visited_urls:
+                continue
+                
             try:
-                response = requests.get(url, timeout=8)
+                response = requests.get(url, timeout=15, headers={
+                    'User-Agent': 'Mozilla/5.0 (compatible; Jovira-Bot/1.0; +https://myaidnest.com)'
+                })
                 soup = BeautifulSoup(response.content, 'html.parser')
                 
-                # Remove scripts and styles
-                for script in soup(["script", "style"]):
-                    script.decompose()
+                # Extract meaningful content
+                page_data = extract_page_content(soup, url, page_key)
+                if page_data:
+                    search_results.append(page_data)
+                    visited_urls.add(url)
                 
-                text_content = soup.get_text()
-                lines = [line.strip() for line in text_content.split('\n') if line.strip()]
-                clean_text = ' '.join(lines[:300])
-                
-                # Check if content is relevant to query
-                query_terms = query.lower().split()
-                relevance_score = sum(1 for term in query_terms if term in clean_text.lower())
-                
-                if relevance_score > 0:
-                    search_results.append({
-                        'url': url,
-                        'content': clean_text[:800],
-                        'relevance': relevance_score
-                    })
+                # For deep analysis, extract providers and services
+                if deep_analysis:
+                    providers = extract_providers_from_page(soup, url)
+                    all_providers.extend(providers)
                     
+                    services = extract_services_from_page(soup, url)
+                    all_services.extend(services)
+                    
+                # Extract and follow internal links for deeper browsing
+                if len(visited_urls) < max_pages:
+                    internal_links = extract_internal_links(soup, 'myaidnest.com')
+                    for link in internal_links[:3]:  # Limit to 3 additional pages
+                        if link not in visited_urls and len(visited_urls) < max_pages:
+                            try:
+                                link_response = requests.get(link, timeout=10)
+                                link_soup = BeautifulSoup(link_response.content, 'html.parser')
+                                link_data = extract_page_content(link_soup, link, 'internal')
+                                if link_data:
+                                    search_results.append(link_data)
+                                    visited_urls.add(link)
+                                    
+                                # Deep analysis on internal pages
+                                if deep_analysis:
+                                    providers = extract_providers_from_page(link_soup, link)
+                                    all_providers.extend(providers)
+                                    services = extract_services_from_page(link_soup, link)
+                                    all_services.extend(services)
+                                    
+                            except Exception as e:
+                                print(f"Error browsing internal link {link}: {e}")
+                                continue
+                                
             except Exception as e:
+                print(f"Error browsing {url}: {e}")
                 continue
         
-        # Sort by relevance and return top 3
-        search_results.sort(key=lambda x: x['relevance'], reverse=True)
-        return search_results[:3]
+        # Add analysis data if deep analysis was performed
+        analysis_data = {}
+        if deep_analysis:
+            analysis_data = {
+                'providers': all_providers,
+                'services': all_services,
+                'top_rated_provider': find_top_rated_provider(all_providers),
+                'most_popular_service': find_most_popular_service(all_services),
+                'provider_count': len(all_providers),
+                'service_count': len(all_services)
+            }
+        
+        return {
+            'pages': search_results,
+            'analysis': analysis_data,
+            'total_pages_visited': len(visited_urls)
+        }
         
     except Exception as e:
-        return []
+        print(f"Web browsing error: {e}")
+        return {'pages': [], 'analysis': {}, 'total_pages_visited': 0}
 
-def generate_image(prompt):
-    """Generate image using DALL-E with enhanced prompts"""
-    try:
-        # Enhance prompt for better results
-        enhanced_prompt = f"Professional, high-quality, detailed {prompt}. Clean design, modern aesthetic, professional illustration style."
-        
-        response = client.images.generate(
-            model="dall-e-3",
-            prompt=enhanced_prompt,
-            size="1024x1024",
-            quality="standard",
-            n=1,
-        )
-        return response.data[0].url
-    except Exception as e:
-        print(f"Image generation error: {e}")
-        return None
-
-def analyze_image(image_data):
-    """Analyze image using GPT-4 Vision"""
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4-vision-preview",
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": "Analyze this image in detail. Describe what you see, identify objects, people, text, colors, and any notable features. Provide a comprehensive analysis."
-                        },
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/jpeg;base64,{image_data}"
-                            }
-                        }
-                    ]
-                }
-            ],
-            max_tokens=500
-        )
-        return response.choices[0].message.content
-    except Exception as e:
-        print(f"Image analysis error: {e}")
-        return None
-
-def transcribe_audio(audio_file):
-    """Transcribe audio using Whisper"""
-    try:
-        # Save audio file temporarily
-        audio_path = "temp_audio.wav"
-        audio_file.save(audio_path)
-        
-        # Transcribe using Whisper
-        with open(audio_path, "rb") as audio:
-            transcript = client.audio.transcriptions.create(
-                model="whisper-1",
-                file=audio,
-                response_format="text"
-            )
-        
-        # Clean up temporary file
-        if os.path.exists(audio_path):
-            os.remove(audio_path)
-            
-        return transcript
-    except Exception as e:
-        print(f"Audio transcription error: {e}")
-        return None
-
-def should_generate_image(message, context, user_session):
-    """Enhanced image generation detection"""
-    message_lower = message.lower()
+def identify_relevant_pages(query, netra_pages, deep_analysis=False):
+    """Identify which Netra pages are most relevant to the query"""
+    query_lower = query.lower()
+    relevance_scores = {}
     
-    # Direct image requests
-    image_triggers = [
-        'generate image', 'create picture', 'visualize', 'draw', 'illustration',
-        'show me a picture', 'make an image', 'create visual', 'generate visual'
-    ]
-    
-    if any(trigger in message_lower for trigger in image_triggers):
-        return True
-    
-    # Context-based image generation
-    recent_context = " ".join([msg.get('text', '') for msg in context[-3:]])
-    context_lower = recent_context.lower()
-    
-    image_topics = [
-        'netra app interface', 'app design', 'how netra looks',
-        'service provider dashboard', 'booking process', 'netra features',
-        'kakore labs office', 'team photo', 'app screenshot',
-        'website design', 'mobile app design', 'user interface'
-    ]
-    
-    if any(topic in context_lower for topic in image_topics):
-        return True
-    
-    # User interest-based generation
-    if user_session.get('image_requests', 0) < 5:  # Limit to prevent abuse
-        visual_keywords = ['look like', 'appearance', 'design', 'interface', 'screenshot', 'visual']
-        if any(keyword in message_lower for keyword in visual_keywords):
-            return True
-    
-    return False
-
-def should_analyze_image(message):
-    """Check if user wants image analysis"""
-    message_lower = message.lower()
-    
-    analysis_triggers = [
-        'analyze this image', 'what is in this image', 'describe this picture',
-        'what do you see', 'analyze the image', 'tell me about this image',
-        'what does this show', 'explain this picture'
-    ]
-    
-    return any(trigger in message_lower for trigger in analysis_triggers)
-
-def should_transcribe_audio(message):
-    """Check if user wants audio transcription"""
-    message_lower = message.lower()
-    
-    transcription_triggers = [
-        'transcribe this', 'what is being said', 'convert speech to text',
-        'transcribe audio', 'speech to text', 'what did they say'
-    ]
-    
-    return any(trigger in message_lower for trigger in transcription_triggers)
-
-def create_image_prompt(message, context, user_session):
-    """Create appropriate image prompt based on conversation"""
-    # Company-specific prompts
-    company_prompts = {
-        'netra_interface': "Modern mobile app interface for Netra African service marketplace, clean design, intuitive booking system, African aesthetic, professional UI/UX design",
-        'kakore_labs_team': "Friendly diverse team of African developers at Kakore Labs working in modern tech office environment, collaborative atmosphere, computers and code visible",
-        'aidnest_office': "Modern African tech company office space with creative workspace, technology equipment, team collaboration, professional environment",
-        'netra_booking': "Step-by-step visual guide showing African users booking services on Netra app, mobile interface, diverse users, seamless experience",
-        'service_provider': "African service provider using Netra app on smartphone, showing booking notifications, earning dashboard, professional setting"
+    # Keyword mapping to pages
+    keyword_mapping = {
+        'home': ['home', 'main', 'welcome', 'overview', 'what is netra'],
+        'about': ['about', 'company', 'team', 'story', 'mission', 'vision'],
+        'services': ['services', 'categories', 'book', 'booking', 'hire', 'find service'],
+        'detail_services': ['details', 'specific', 'provider', 'ratings', 'reviews', 'top rated'],
+        'register': ['register', 'sign up', 'join', 'become provider', 'provider'],
+        'login': ['login', 'sign in', 'account'],
+        'settings': ['settings', 'profile', 'account settings', 'preferences'],
+        'contact': ['contact', 'support', 'help', 'email', 'phone'],
+        'download': ['download', 'install', 'app', 'play store', 'android']
     }
     
-    message_lower = message.lower()
+    # Analysis-specific triggers
+    analysis_keywords = [
+        'top rated', 'best provider', 'most popular', 'highest rated',
+        'best service', 'most booked', 'popular services', 'ratings',
+        'reviews', 'ranking', 'leaderboard', 'best rated'
+    ]
     
-    # Determine the best prompt based on conversation
-    if any(word in message_lower for word in ['interface', 'look like', 'design', 'ui', 'ux']):
-        return company_prompts['netra_interface']
-    elif any(word in message_lower for word in ['team', 'kakore', 'developers', 'office']):
-        return company_prompts['kakore_labs_team']
-    elif any(word in message_lower for word in ['booking', 'process', 'how to book']):
-        return company_prompts['netra_booking']
-    elif any(word in message_lower for word in ['provider', 'service provider', 'earn']):
-        return company_prompts['service_provider']
-    else:
-        # Generic prompt based on current topic
-        return f"Professional illustration of: {message}"
+    for page, keywords in keyword_mapping.items():
+        score = sum(1 for keyword in keywords if keyword in query_lower)
+        if score > 0:
+            relevance_scores[page] = score
+    
+    # Boost relevance for analysis queries
+    if any(keyword in query_lower for keyword in analysis_keywords):
+        relevance_scores['detail_services'] = relevance_scores.get('detail_services', 0) + 3
+        relevance_scores['services'] = relevance_scores.get('services', 0) + 2
+    
+    # Sort by relevance and return page keys
+    sorted_pages = sorted(relevance_scores.keys(), key=lambda x: relevance_scores[x], reverse=True)
+    
+    # Default pages if no specific matches
+    if not sorted_pages:
+        sorted_pages = ['home', 'services', 'detail_services', 'about']
+    
+    return sorted_pages
+
+def extract_page_content(soup, url, page_type):
+    """Extract structured content from a webpage"""
+    try:
+        # Remove unwanted elements but keep important structure
+        for script in soup(["script", "style"]):
+            script.decompose()
+        
+        # Get page title
+        title = soup.find('title')
+        page_title = title.get_text().strip() if title else "Netra Page"
+        
+        # Extract content based on page type
+        content = ""
+        
+        if page_type == 'home':
+            # Extract hero section and key points
+            hero = soup.find(['h1', 'h2', '.hero', '.banner']) 
+            content = hero.get_text().strip() + " " if hero else ""
+            features = soup.find_all(['h3', '.feature', '.benefit'])
+            content += " ".join([f.get_text().strip() for f in features[:5]])
+            
+        elif page_type == 'services' or page_type == 'detail_services':
+            # Extract service listings, providers, ratings
+            services = soup.find_all(['h3', 'h4', '.service', '.provider', '.rating'])
+            service_text = [s.get_text().strip() for s in services[:15]]
+            content = "Services and providers: " + ", ".join(service_text)
+            
+        elif page_type == 'settings':
+            # Extract settings options and profile info
+            forms = soup.find_all(['input', 'select', 'button'])
+            form_fields = [f.get('placeholder', f.get('name', '')) for f in forms if f.get('placeholder') or f.get('name')]
+            content = "Settings options: " + ", ".join([f for f in form_fields if f])
+            
+        else:
+            # Generic content extraction
+            headings = soup.find_all(['h1', 'h2', 'h3'])
+            paragraphs = soup.find_all('p')
+            content = " ".join([h.get_text().strip() for h in headings[:3]] + [p.get_text().strip() for p in paragraphs[:5]])
+        
+        # Clean and limit content
+        lines = [line.strip() for line in content.split('\n') if line.strip()]
+        clean_content = ' '.join(lines[:400])
+        
+        return {
+            'url': url,
+            'title': page_title,
+            'content': clean_content[:600],
+            'page_type': page_type,
+            'timestamp': time.time()
+        }
+        
+    except Exception as e:
+        print(f"Content extraction error: {e}")
+        return None
+
+def extract_providers_from_page(soup, url):
+    """Extract service provider information from page"""
+    providers = []
+    try:
+        # Look for provider cards, listings, or profiles
+        provider_elements = soup.find_all(['div', 'tr', 'li'], class_=re.compile(r'provider|service|profile|card', re.I))
+        
+        for element in provider_elements[:20]:  # Limit to 20 providers per page
+            provider_text = element.get_text().strip()
+            if len(provider_text) > 20 and len(provider_text) < 500:  # Reasonable length
+                # Try to extract rating if present
+                rating_match = re.search(r'(\d+\.?\d*)\s*stars?|\b(\d+\.?\d*)/\d+\b|rating[:]?\s*(\d+)', provider_text, re.I)
+                rating = float(rating_match.group(1) or rating_match.group(2) or rating_match.group(3)) if rating_match else None
+                
+                # Try to extract service count
+                service_match = re.search(r'(\d+)\s*services?', provider_text, re.I)
+                service_count = int(service_match.group(1)) if service_match else None
+                
+                provider_data = {
+                    'name': extract_provider_name(provider_text),
+                    'text': provider_text[:200],
+                    'rating': rating,
+                    'service_count': service_count,
+                    'source_page': url
+                }
+                
+                if provider_data['name']:
+                    providers.append(provider_data)
+                    
+    except Exception as e:
+        print(f"Provider extraction error: {e}")
+    
+    return providers
+
+def extract_provider_name(text):
+    """Extract provider name from text"""
+    # Simple heuristic - look for capitalized words that might be names
+    words = text.split()
+    for i, word in enumerate(words):
+        if (word.istitle() and len(word) > 2 and 
+            word not in ['Service', 'Provider', 'Rating', 'Book', 'Contact']):
+            # Take 1-3 words as potential name
+            potential_name = ' '.join(words[i:i+2])
+            return potential_name
+    return "Unknown Provider"
+
+def extract_services_from_page(soup, url):
+    """Extract service information from page"""
+    services = []
+    try:
+        # Look for service listings, categories
+        service_elements = soup.find_all(['div', 'li', 'span'], class_=re.compile(r'service|category|item|listing', re.I))
+        
+        for element in service_elements[:15]:
+            service_text = element.get_text().strip()
+            if len(service_text) > 10 and len(service_text) < 300:
+                # Try to extract price if present
+                price_match = re.search(r'[\$\€\£]?(\d+[,.]?\d*)\s*(?:USD|EUR|GBP)?', service_text)
+                price = price_match.group(1) if price_match else None
+                
+                service_data = {
+                    'name': extract_service_name(service_text),
+                    'text': service_text[:150],
+                    'price': price,
+                    'source_page': url
+                }
+                
+                if service_data['name']:
+                    services.append(service_data)
+                    
+    except Exception as e:
+        print(f"Service extraction error: {e}")
+    
+    return services
+
+def extract_service_name(text):
+    """Extract service name from text"""
+    words = text.split()
+    for i, word in enumerate(words):
+        if word.lower() in ['service', 'category', 'offering'] and i > 0:
+            return ' '.join(words[max(0, i-1):i+2])
+    return text.split('.')[0][:50]  # First sentence or first 50 chars
+
+def find_top_rated_provider(providers):
+    """Find the highest rated provider"""
+    if not providers:
+        return None
+    
+    rated_providers = [p for p in providers if p.get('rating')]
+    if not rated_providers:
+        return None
+    
+    return max(rated_providers, key=lambda x: x['rating'])
+
+def find_most_popular_service(services):
+    """Find the most mentioned/popular service"""
+    if not services:
+        return None
+    
+    # Simple frequency analysis
+    service_names = [s['name'] for s in services if s['name']]
+    if not service_names:
+        return None
+    
+    service_counts = Counter(service_names)
+    most_common = service_counts.most_common(1)[0]
+    
+    return {
+        'name': most_common[0],
+        'frequency': most_common[1]
+    }
+
+def extract_internal_links(soup, domain):
+    """Extract internal links from the page"""
+    links = []
+    try:
+        for link in soup.find_all('a', href=True):
+            href = link['href']
+            full_url = urljoin(f"https://{domain}", href)
+            
+            # Only include links from the same domain
+            if urlparse(full_url).netloc == domain:
+                links.append(full_url)
+                
+    except Exception as e:
+        print(f"Link extraction error: {e}")
+    
+    return list(set(links))  # Remove duplicates
+
+def get_dynamic_netra_info(query):
+    """Get real-time information by browsing Netra website with analysis"""
+    try:
+        # Check if this is an analysis query
+        analysis_keywords = [
+            'top rated', 'best provider', 'most popular', 'highest rated',
+            'best service', 'most booked', 'popular services', 'ratings',
+            'reviews', 'ranking', 'leaderboard', 'best rated', 'analyze',
+            'who is the best', 'find the top'
+        ]
+        
+        deep_analysis = any(keyword in query.lower() for keyword in analysis_keywords)
+        
+        # Perform enhanced browsing
+        browsing_result = enhanced_web_browsing(query, max_pages=6, deep_analysis=deep_analysis)
+        
+        pages_data = browsing_result['pages']
+        analysis_data = browsing_result['analysis']
+        
+        # Format the information
+        info_context = "Current information from Netra website:\n\n"
+        
+        # Add page information
+        for page in pages_data:
+            info_context += f"📄 {page['title']}\n"
+            info_context += f"🔗 {page['url']}\n"
+            info_context += f"📝 {page['content']}\n\n"
+        
+        # Add analysis results if available
+        if analysis_data and deep_analysis:
+            info_context += "📊 ANALYSIS RESULTS:\n\n"
+            
+            if analysis_data.get('top_rated_provider'):
+                top_provider = analysis_data['top_rated_provider']
+                info_context += f"🏆 TOP RATED PROVIDER:\n"
+                info_context += f"Name: {top_provider.get('name', 'Unknown')}\n"
+                info_context += f"Rating: {top_provider.get('rating', 'N/A')} ⭐\n"
+                info_context += f"Services: {top_provider.get('service_count', 'N/A')}\n"
+                info_context += f"Source: {top_provider.get('source_page', 'N/A')}\n\n"
+            
+            if analysis_data.get('most_popular_service'):
+                popular_service = analysis_data['most_popular_service']
+                info_context += f"🔥 MOST POPULAR SERVICE:\n"
+                info_context += f"Name: {popular_service.get('name', 'Unknown')}\n"
+                info_context += f"Mentioned: {popular_service.get('frequency', 0)} times\n\n"
+            
+            info_context += f"📈 STATISTICS:\n"
+            info_context += f"Providers Found: {analysis_data.get('provider_count', 0)}\n"
+            info_context += f"Services Found: {analysis_data.get('service_count', 0)}\n"
+            info_context += f"Pages Analyzed: {browsing_result.get('total_pages_visited', 0)}\n\n"
+        
+        return info_context
+        
+    except Exception as e:
+        print(f"Dynamic info error: {e}")
+        return get_static_netra_info(query)
+
+def get_static_netra_info(query):
+    """Fallback static information about Netra"""
+    return """
+    Netra is Africa's premier service marketplace connecting skilled service providers with clients. 
+    
+    Key Features:
+    • Service booking and management
+    • Real-time provider matching  
+    • Secure in-app payments
+    • Rating and review system
+    
+    Available on Google Play Store: https://play.google.com/store/apps/details?id=com.kakorelabs.netra
+    
+    Website: https://myaidnest.com
+    
+    For the most current information about providers, services, and ratings, please visit our website directly.
+    """
 
 def update_conversation_memory(user_session, message, response):
     """Enhanced conversation memory tracking"""
     message_lower = message.lower()
     
-    # Track user interests with more categories
+    # Track browsing sessions
+    if any(word in message_lower for word in ['browse', 'analyze', 'find', 'search', 'look up']):
+        user_session['browsing_sessions'] = user_session.get('browsing_sessions', 0) + 1
+    
+    # Track user interests
     interest_keywords = {
-        'technology': ['tech', 'coding', 'programming', 'developer', 'software', 'code', 'algorithm'],
-        'business': ['business', 'startup', 'money', 'income', 'entrepreneur', 'revenue', 'profit'],
-        'netra': ['netra', 'aidnest', 'service provider', 'booking', 'appointment', 'client'],
-        'kakore_labs': ['kakore', 'labs', 'development', 'technical', 'programmer', 'coder'],
-        'design': ['design', 'ui', 'ux', 'interface', 'looks', 'appearance', 'visual'],
-        'career': ['job', 'career', 'work', 'employment', 'hire', 'recruitment']
+        'providers': ['provider', 'service person', 'professional', 'expert'],
+        'services': ['service', 'category', 'booking', 'hire'],
+        'ratings': ['rating', 'review', 'stars', 'score', 'best'],
+        'technical': ['app', 'download', 'install', 'technical', 'bug']
     }
     
     for interest, keywords in interest_keywords.items():
@@ -347,23 +470,7 @@ def update_conversation_memory(user_session, message, response):
             if interest not in user_session['user_interests']:
                 user_session['user_interests'].append(interest)
     
-    # Track specific facts about the user
-    if 'name' in message_lower and user_session['user_name']:
-        user_session['remembered_facts']['knows_name'] = True
-    
-    # Track image requests
-    if any(word in message_lower for word in ['image', 'picture', 'visual', 'generate']):
-        user_session['image_requests'] = user_session.get('image_requests', 0) + 1
-    
-    # Track coding help requests
-    if any(word in message_lower for word in ['code', 'programming', 'developer', 'script']):
-        user_session['coding_help_requests'] = user_session.get('coding_help_requests', 0) + 1
-    
-    # Track voice requests
-    if any(word in message_lower for word in ['voice', 'audio', 'speech', 'transcribe']):
-        user_session['voice_requests'] = user_session.get('voice_requests', 0) + 1
-    
-    # Update recent topics (keep last 5)
+    # Update recent topics
     if len(user_session['recent_topics']) >= 5:
         user_session['recent_topics'].pop(0)
     user_session['recent_topics'].append(message_lower[:40])
@@ -384,89 +491,59 @@ def build_memory_context(user_session):
     if user_session['recent_topics']:
         memory_parts.append(f"Recent topics: {', '.join(user_session['recent_topics'][-3:])}")
     
-    if user_session.get('image_requests', 0) > 0:
-        memory_parts.append(f"Image requests: {user_session['image_requests']}")
-    
-    if user_session.get('coding_help_requests', 0) > 0:
-        memory_parts.append(f"Coding help requests: {user_session['coding_help_requests']}")
-    
-    if user_session.get('voice_requests', 0) > 0:
-        memory_parts.append(f"Voice requests: {user_session['voice_requests']}")
+    if user_session.get('browsing_sessions', 0) > 0:
+        memory_parts.append(f"Browsing sessions: {user_session['browsing_sessions']}")
     
     return " | ".join(memory_parts) if memory_parts else "New conversation"
 
-def get_company_context(query):
-    """Provide specific company and team information"""
-    query_lower = query.lower()
-    
-    if any(word in query_lower for word in ['kakore', 'labs', 'development', 'technical']):
-        return COMPANY_INFO['kakore_labs']
-    elif any(word in query_lower for word in ['nowamaani', 'donath', 'lead developer', 'technical director']):
-        return COMPANY_INFO['nowamaani_donath']
-    elif any(word in query_lower for word in ['aidnest', 'company', 'about us']):
-        return COMPANY_INFO['aidnest_africa']
-    
-    return None
-
-def get_ai_response(message, conversation_context, web_search_results=None, user_session=None):
-    """Enhanced AI response with better memory and company knowledge"""
+def get_ai_response(message, conversation_context, user_session=None):
+    """Enhanced AI response with real-time web browsing and analysis"""
     try:
         user_name = user_session.get('user_name', 'there')
         memory_context = build_memory_context(user_session)
         
-        # Get company-specific context if relevant
-        company_context = get_company_context(message)
+        # Get real-time information from Netra website
+        web_info = get_dynamic_netra_info(message)
         
         # Build comprehensive system message
         system_message = f"""
-        You are Jovira, a real team member at Aidnest Africa. You're friendly, knowledgeable, and provide helpful information.
+        You are Jovira, a real team member at Aidnest Africa working on the Netra project.
 
-        ABOUT YOUR COMPANY:
-        - Aidnest Africa: Technology company creating digital solutions for African markets
-        - Netra: Service marketplace app connecting providers with clients (available on Play Store)
-        - Kakore Labs: Development hub building Netra and other innovative apps
-        - Nowamaani Donath: Lead Developer & Technical Director at Kakore Labs
+        YOUR CAPABILITIES:
+        - Browse Netra website in real-time for current information
+        - Analyze provider ratings and service popularity
+        - Find top-rated providers and popular services
+        - Guide users to specific pages on our website
+        - Provide deep analysis of our service marketplace
 
-        YOUR PERSONALITY:
-        - Speak like a real human colleague, not an AI
-        - Remember previous conversations and build on them naturally
-        - Use emojis occasionally to express warmth
-        - Be professional but friendly and approachable
-        - If you don't know something, be honest but helpful
-        - You can analyze images, generate images, and transcribe voice messages
+        CURRENT NETRA WEBSITE INFORMATION (Real-time):
+        {web_info}
 
-        CURRENT CONVERSATION:
-        - User: {user_name}
-        - Memory Context: {memory_context}
-        - Previous Messages: {len(conversation_context)}
+        YOUR ROLE:
+        - Provide accurate, up-to-date information from our live website
+        - Perform analysis on providers and services when asked
+        - Guide users to relevant pages with direct URLs
+        - Help with app downloads and provider registration
+        - Explain current service categories and features
 
         RESPONSE GUIDELINES:
-        - Reference previous topics when relevant
-        - Ask follow-up questions based on user interests
-        - Provide specific information about Netra, Kakore Labs, and Aidnest Africa
-        - Offer coding help and technical guidance when requested
-        - Suggest image generation when visual explanations would help
-        - Offer to analyze images or transcribe audio when relevant
-        - Never say you're an AI or mention being generated
+        - Always reference current website information when available
+        - Provide specific URLs for users to visit relevant pages
+        - When analyzing, mention if data is from live website browsing
+        - Be honest about limitations of automated analysis
+        - Encourage visiting the actual website for most current info
+        - Use emojis to make the conversation engaging
+
+        CONVERSATION CONTEXT:
+        - User: {user_name}
+        - Memory: {memory_context}
         """
         
         context_messages = [{"role": "system", "content": system_message}]
         
-        # Add company-specific information
-        if company_context:
-            company_info = f"Specific information about {company_context['name']}:\n{json.dumps(company_context, indent=2)}"
-            context_messages.append({"role": "system", "content": company_info})
-        
-        # Add web search results
-        if web_search_results:
-            web_context = "Latest information from our websites:\n"
-            for result in web_search_results:
-                web_context += f"- {result['url']}: {result['content'][:400]}\n"
-            context_messages.append({"role": "system", "content": web_context})
-        
-        # Add conversation history (last 12 messages for better context)
+        # Add conversation history
         if conversation_context:
-            for msg in conversation_context[-12:]:
+            for msg in conversation_context[-6:]:
                 role = "user" if msg.get('sender') == 'user' else "assistant"
                 context_messages.append({"role": role, "content": msg.get('text', '')})
         
@@ -476,20 +553,18 @@ def get_ai_response(message, conversation_context, web_search_results=None, user
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=context_messages,
-            max_tokens=500,
-            temperature=0.8,
-            presence_penalty=0.1,
-            frequency_penalty=0.1
+            max_tokens=600,
+            temperature=0.7
         )
         
         return response.choices[0].message.content.strip()
         
     except Exception as e:
-        print(f"OpenAI API error: {e}")
-        return None
+        print(f"AI response error: {e}")
+        return "I'm having trouble accessing our current website information. Please visit https://myaidnest.com for the most up-to-date details about Netra services and providers."
 
 def get_fallback_response(message, user_id="default"):
-    """Enhanced fallback with company knowledge"""
+    """Enhanced fallback with browsing awareness"""
     user_session = get_user_session(user_id)
     message_lower = message.lower().strip()
     
@@ -499,9 +574,9 @@ def get_fallback_response(message, user_id="default"):
     if user_session['conversation_stage'] == 'greeting':
         user_session['conversation_stage'] = 'get_name'
         greetings = [
-            "Hey there! 👋 I'm Jovira from the Aidnest Africa team! I help with Netra, Kakore Labs, and tech questions. What should I call you?",
-            "Hello! 🌟 Welcome! I'm Jovira from Aidnest Africa and I'd love to get to know you better. What's your name?",
-            "Hi! 🚀 Great to connect! I'm Jovira on the Netra team at Aidnest Africa, working with Kakore Labs. What do you prefer to be called?",
+            "Hey there! 👋 I'm Jovira from the Aidnest Africa team! I can browse our Netra website to get you current information. What should I call you?",
+            "Hello! 🌟 Welcome! I'm Jovira and I can analyze Netra's live website data. What's your name?",
+            "Hi! 🚀 Great to connect! I'm Jovira and I can browse Netra in real-time to answer your questions. What do you prefer to be called?",
         ]
         return random.choice(greetings)
     
@@ -512,45 +587,34 @@ def get_fallback_response(message, user_id="default"):
             user_session['conversation_stage'] = 'main_conversation'
             
             responses = [
-                f"Perfect, {potential_name}! 🎉 Now we're properly introduced! I can help you with Netra, Kakore Labs development, or any tech questions. What's on your mind?",
-                f"Hey {potential_name}! 👋 Great name! I'm excited to help with Netra app, Kakore Labs projects, or anything tech-related. What would you like to explore?",
+                f"Perfect, {potential_name}! 🎉 Now I can help you with real Netra website data! I can browse services, analyze providers, and find current information. What would you like to explore?",
+                f"Hey {potential_name}! 👋 Great name! I'm excited to browse Netra's live data for you - services, providers, ratings, and more! What interests you?",
             ]
             return random.choice(responses)
     
     user_name = user_session.get('user_name', '')
     name_prefix = f"{user_name}, " if user_name else ""
     
-    # Company-specific responses
-    if any(word in message_lower for word in ['kakore', 'labs']):
-        kakore_info = COMPANY_INFO['kakore_labs']
-        return f"{name_prefix}Kakore Labs is our amazing development hub! 🏢 They specialize in {', '.join(kakore_info['focus_areas'][:3])}. Want me to tell you more about their projects or technical expertise?"
-    
-    if any(word in message_lower for word in ['nowamaani', 'donath']):
-        donath_info = COMPANY_INFO['nowamaani_donath']
-        return f"{name_prefix}Nowamaani Donath is our Lead Developer! 👨‍💻 He's an expert in {', '.join(donath_info['expertise'][:3])}. He led the Netra app development from concept to launch!"
-    
-    # Memory-based responses
-    if user_session['recent_topics']:
-        last_topic = user_session['recent_topics'][-1]
-        if any(topic in last_topic for topic in ['netra', 'app', 'booking']):
-            return f"{name_prefix}Since we were discussing Netra features, would you like me to generate a visual of the app interface to better explain? 🎨"
-    
     # Feature suggestions
-    if any(word in message_lower for word in ['what can you do', 'help', 'features']):
-        return f"{name_prefix}I can help you with: 📱 Netra app info, 💻 Kakore Labs projects, 🎨 image generation, 🔍 image analysis, 🎤 voice transcription, and 💡 coding help! What interests you most?"
+    if any(word in message_lower for word in ['what can you do', 'help', 'features', 'capabilities']):
+        return f"{name_prefix}I can: 🌐 Browse Netra website live, 🔍 Analyze providers & ratings, 🏆 Find top-rated services, 📊 Show popular categories, and 🎯 Guide you to specific pages! What would you like me to explore?"
+    
+    # Analysis capabilities
+    if any(word in message_lower for word in ['analyze', 'find top', 'best provider', 'ratings']):
+        return f"{name_prefix}I can browse Netra and analyze provider ratings! 🕵️‍♀️ Let me search through our services and find the top-rated providers for you. Want me to start analyzing?"
     
     # Casual conversation
     if any(word in message_lower for word in ['how are you', 'how do you do']):
-        return f"{name_prefix}I'm doing great! 😊 Just been helping users with Netra and working with the Kakore Labs team on some exciting updates. How about you?"
+        return f"{name_prefix}I'm doing great! 😊 Just been browsing Netra's website and analyzing service data. Ready to explore some live information with you!"
     
     if any(word in message_lower for word in ['thank', 'thanks']):
-        return f"{name_prefix}You're very welcome! Happy to help. The Kakore Labs team puts a lot of care into building great solutions. Anything else you're curious about?"
+        return f"{name_prefix}You're very welcome! Happy to browse and analyze Netra data for you. The website has so much current information to explore! 🌟"
     
     # Default engaging response
     engaging_responses = [
-        f"{name_prefix}That's interesting! 🤔 At Aidnest Africa, we're always exploring how technology can solve real problems. What specific aspect would you like me to focus on?",
-        f"{name_prefix}Fascinating topic! 💡 Our Kakore Labs team would love this kind of discussion. Should I provide more technical details or keep it general?",
-        f"{name_prefix}Great question! 🌟 Let me think about the best way to explain this... Would a code example or visual illustration help clarify things?"
+        f"{name_prefix}That's interesting! 🤔 I can browse Netra's current website to find specific information about that. Should I search for providers, services, or something else?",
+        f"{name_prefix}Fascinating topic! 💡 Let me browse Netra's live data to get you the most current information. What specific aspect should I focus on?",
+        f"{name_prefix}Great question! 🌟 I'll browse Netra's website to find the latest information. Would you like me to analyze providers, services, or general information?"
     ]
     return random.choice(engaging_responses)
 
@@ -577,48 +641,30 @@ def chat():
             'timestamp': time.time()
         })
         
-        # Enhanced web search for relevant information
-        web_search_results = []
-        if any(keyword in message.lower() for keyword in ['netra', 'aidnest', 'kakore', 'app', 'download', 'nowamaani']):
-            web_search_results = enhanced_web_search(message, site_specific=True)
+        # Get AI response with enhanced browsing
+        ai_response = get_ai_response(message, user_session['conversation_context'], user_session)
         
-        # Check for image generation (with limits)
-        image_url = None
-        if should_generate_image(message, user_session['conversation_context'], user_session):
-            image_prompt = create_image_prompt(message, user_session['conversation_context'], user_session)
-            image_url = generate_image(image_prompt)
-            if image_url:
-                user_session['image_requests'] = user_session.get('image_requests', 0) + 1
-        
-        # Always use AI for natural conversation
-        if os.environ.get("OPENAI_API_KEY"):
-            ai_response = get_ai_response(
-                message, 
-                user_session['conversation_context'], 
-                web_search_results, 
-                user_session
-            )
+        if ai_response:
+            # Update memory with this interaction
+            update_conversation_memory(user_session, message, ai_response)
             
-            if ai_response:
-                # Update memory with this interaction
-                update_conversation_memory(user_session, message, ai_response)
-                
-                # Add to conversation context
-                user_session['conversation_context'].append({
-                    'sender': 'assistant', 
-                    'text': ai_response, 
-                    'timestamp': time.time()
-                })
-                
-                response_data = {"reply": ai_response}
-                if image_url:
-                    response_data["image_url"] = image_url
-                    ai_response += f"\n\n🎨 *I've generated a visual to help explain this better!*"
-                
-                return jsonify(response_data)
+            # Add to conversation context
+            user_session['conversation_context'].append({
+                'sender': 'assistant', 
+                'text': ai_response, 
+                'timestamp': time.time()
+            })
+            
+            return jsonify({"reply": ai_response})
         
-        # Fallback with memory
-        reply = get_fallback_response(message, user_id)
+        # Fallback response
+        fallback_responses = [
+            "I've browsed our website but couldn't find specific information for your query. Could you try asking in a different way?",
+            "Let me check our website again... In the meantime, you can visit https://myaidnest.com for direct access to all Netra services.",
+            "I'm having trouble finding that specific information on our current website. Would you like me to help you with something else?"
+        ]
+        
+        reply = random.choice(fallback_responses)
         update_conversation_memory(user_session, message, reply)
         
         user_session['conversation_context'].append({
@@ -627,17 +673,13 @@ def chat():
             'timestamp': time.time()
         })
         
-        response_data = {"reply": reply}
-        if image_url:
-            response_data["image_url"] = image_url
-            
-        return jsonify(response_data)
+        return jsonify({"reply": reply})
 
     except Exception as e:
         print(f"Chat error: {e}")
         error_responses = [
-            "Hmm, I'm having a bit of a moment here! 😅 Let's try that again - what were we discussing?",
-            "Oops, my thoughts got a bit tangled! 🤔 Could you repeat that? We were having such a good conversation about technology!",
+            "I'm experiencing some technical difficulties accessing our website right now. Please try again in a moment! 🔄",
+            "Our website seems to be temporarily unavailable for browsing. You can visit https://myaidnest.com directly for current information! 🌐",
         ]
         return jsonify({"reply": random.choice(error_responses)})
 
@@ -655,16 +697,35 @@ def analyze_image_endpoint():
         # Convert image to base64
         image_data = base64.b64encode(image_file.read()).decode('utf-8')
         
-        # Analyze image
-        analysis_result = analyze_image(image_data)
+        # Analyze image using GPT-4 Vision
+        response = client.chat.completions.create(
+            model="gpt-4-vision-preview",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "Analyze this image in detail. Describe what you see, identify objects, people, text, colors, and any notable features. Provide a comprehensive analysis."
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{image_data}"
+                            }
+                        }
+                    ]
+                }
+            ],
+            max_tokens=500
+        )
         
-        if analysis_result:
-            return jsonify({
-                "analysis": analysis_result,
-                "message": "🔍 I've analyzed your image! Here's what I found:"
-            })
-        else:
-            return jsonify({"error": "Failed to analyze image"}), 500
+        analysis_result = response.choices[0].message.content
+        
+        return jsonify({
+            "analysis": analysis_result,
+            "message": "🔍 I've analyzed your image! Here's what I found:"
+        })
             
     except Exception as e:
         print(f"Image analysis endpoint error: {e}")
@@ -681,16 +742,26 @@ def transcribe_audio_endpoint():
         if audio_file.filename == '':
             return jsonify({"error": "No audio selected"}), 400
         
-        # Transcribe audio
-        transcript = transcribe_audio(audio_file)
+        # Save audio file temporarily
+        audio_path = "temp_audio.wav"
+        audio_file.save(audio_path)
         
-        if transcript:
-            return jsonify({
-                "transcript": transcript,
-                "message": "🎤 I've transcribed your audio! Here's what was said:"
-            })
-        else:
-            return jsonify({"error": "Failed to transcribe audio"}), 500
+        # Transcribe using Whisper
+        with open(audio_path, "rb") as audio:
+            transcript = client.audio.transcriptions.create(
+                model="whisper-1",
+                file=audio,
+                response_format="text"
+            )
+        
+        # Clean up temporary file
+        if os.path.exists(audio_path):
+            os.remove(audio_path)
+        
+        return jsonify({
+            "transcript": transcript,
+            "message": "🎤 I've transcribed your audio! Here's what was said:"
+        })
             
     except Exception as e:
         print(f"Audio transcription endpoint error: {e}")
@@ -706,25 +777,25 @@ def generate_image_endpoint():
         if not prompt:
             return jsonify({"error": "No prompt provided"}), 400
         
-        # Generate image
-        image_url = generate_image(prompt)
+        # Generate image using DALL-E
+        response = client.images.generate(
+            model="dall-e-3",
+            prompt=f"Professional, high-quality, detailed {prompt}. Clean design, modern aesthetic, professional illustration style.",
+            size="1024x1024",
+            quality="standard",
+            n=1,
+        )
         
-        if image_url:
-            return jsonify({
-                "image_url": image_url,
-                "message": "🎨 I've generated an image based on your request!"
-            })
-        else:
-            return jsonify({"error": "Failed to generate image"}), 500
+        image_url = response.data[0].url
+        
+        return jsonify({
+            "image_url": image_url,
+            "message": "🎨 I've generated an image based on your request!"
+        })
             
     except Exception as e:
         print(f"Image generation endpoint error: {e}")
         return jsonify({"error": "Error generating image"}), 500
-
-@app.route("/company_info")
-def company_info():
-    """Endpoint to get company information"""
-    return jsonify(COMPANY_INFO)
 
 @app.route("/clear_history", methods=["POST"])
 def clear_history():
@@ -745,7 +816,8 @@ def clear_history():
             'personal_details': {},
             'image_requests': 0,
             'coding_help_requests': 0,
-            'voice_requests': 0
+            'voice_requests': 0,
+            'browsing_sessions': 0
         }
     return jsonify({"status": "success", "message": "Conversation history cleared"})
 
