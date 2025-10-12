@@ -14,6 +14,8 @@ from io import BytesIO
 import json
 from urllib.parse import urljoin, urlparse
 from collections import Counter
+from datetime import datetime
+import pytz
 
 app = Flask(__name__)
 CORS(app)
@@ -45,6 +47,221 @@ def get_user_session(user_id):
         }
     return conversation_history[user_id]
 
+def get_current_time(timezone=None):
+    """Get current time in different timezones"""
+    try:
+        if timezone:
+            # Map common timezone names to pytz timezones
+            timezone_map = {
+                'est': 'America/New_York',
+                'pst': 'America/Los_Angeles',
+                'cst': 'America/Chicago',
+                'gmt': 'GMT',
+                'utc': 'UTC',
+                'ist': 'Asia/Kolkata',
+                'cet': 'Europe/Berlin',
+                'aest': 'Australia/Sydney',
+                'eat': 'Africa/Nairobi',
+                'cat': 'Africa/Harare',
+                'west': 'Africa/Lagos'
+            }
+            
+            tz_name = timezone_map.get(timezone.lower(), timezone)
+            try:
+                tz = pytz.timezone(tz_name)
+            except:
+                tz = pytz.timezone('UTC')
+        else:
+            tz = pytz.timezone('UTC')
+        
+        current_time = datetime.now(tz)
+        return current_time.strftime("%Y-%m-%d %H:%M:%S %Z")
+    
+    except Exception as e:
+        print(f"Timezone error: {e}")
+        return datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")
+
+def get_currency_rates(base_currency='USD'):
+    """Get current currency exchange rates"""
+    try:
+        # Using a free currency API
+        response = requests.get(f'https://api.exchangerate-api.com/v4/latest/{base_currency}', timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            rates = data.get('rates', {})
+            
+            # Return major currencies
+            major_currencies = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY', 'KES', 'GHS', 'NGN', 'ZAR']
+            result = {}
+            for currency in major_currencies:
+                if currency in rates and currency != base_currency:
+                    result[currency] = rates[currency]
+            
+            return result
+        return {}
+    except Exception as e:
+        print(f"Currency API error: {e}")
+        return {}
+
+def extract_service_providers_from_category_page(soup, url):
+    """Extract service providers from category_services.php page"""
+    providers = []
+    try:
+        # Look for provider listings in category pages
+        provider_elements = soup.find_all(['div', 'tr', 'li'], class_=re.compile(r'provider|service|card|listing|item', re.I))
+        
+        for element in provider_elements:
+            provider_text = element.get_text().strip()
+            if len(provider_text) > 20:
+                # Extract provider ID or name for detail lookup
+                provider_id = extract_provider_id(element, provider_text)
+                provider_name = extract_provider_name(provider_text)
+                
+                provider_data = {
+                    'id': provider_id,
+                    'name': provider_name,
+                    'category': extract_category_from_url(url),
+                    'summary': provider_text[:150],
+                    'source_url': url
+                }
+                
+                if provider_data['name'] and provider_data['id']:
+                    providers.append(provider_data)
+                    
+    except Exception as e:
+        print(f"Category provider extraction error: {e}")
+    
+    return providers
+
+def extract_provider_id(element, provider_text):
+    """Extract provider ID from element for detail lookup"""
+    try:
+        # Look for data attributes
+        if element.has_attr('data-provider-id'):
+            return element['data-provider-id']
+        if element.has_attr('data-id'):
+            return element['data-id']
+        
+        # Look for links that might contain provider IDs
+        links = element.find_all('a', href=True)
+        for link in links:
+            href = link['href']
+            if 'provider_id=' in href:
+                match = re.search(r'provider_id=([^&]+)', href)
+                if match:
+                    return match.group(1)
+            elif 'id=' in href:
+                match = re.search(r'id=([^&]+)', href)
+                if match:
+                    return match.group(1)
+        
+        # Generate ID from name as fallback
+        name = extract_provider_name(provider_text)
+        if name:
+            return hashlib.md5(name.encode()).hexdigest()[:8]
+            
+    except Exception as e:
+        print(f"Provider ID extraction error: {e}")
+    
+    return "unknown"
+
+def extract_category_from_url(url):
+    """Extract service category from URL"""
+    try:
+        if 'category_services.php' in url:
+            match = re.search(r'category=([^&]+)', url)
+            if match:
+                return urllib.parse.unquote(match.group(1))
+        return "general"
+    except:
+        return "general"
+
+def get_provider_details(provider_id):
+    """Get detailed information about a specific provider from detail_services.php"""
+    try:
+        # Construct detail page URL
+        detail_url = f"https://myaidnest.com/detail_services.php?provider_id={provider_id}"
+        
+        response = requests.get(detail_url, timeout=10, headers={
+            'User-Agent': 'Mozilla/5.0 (compatible; Jovira-Bot/1.0; +https://myaidnest.com)'
+        })
+        soup = BeautifulSoup(response.content, 'html.parser')
+        
+        # Extract detailed provider information
+        details = extract_provider_details_from_page(soup, provider_id)
+        details['detail_url'] = detail_url
+        
+        return details
+        
+    except Exception as e:
+        print(f"Provider details error: {e}")
+        return {'error': 'Could not fetch provider details'}
+
+def extract_provider_details_from_page(soup, provider_id):
+    """Extract detailed provider information from detail_services.php"""
+    details = {
+        'id': provider_id,
+        'name': 'Unknown Provider',
+        'rating': None,
+        'services': [],
+        'description': '',
+        'contact_info': {},
+        'reviews': [],
+        'experience': None,
+        'location': '',
+        'response_time': '',
+        'pricing': {}
+    }
+    
+    try:
+        # Extract provider name
+        name_element = soup.find(['h1', 'h2', 'h3'], class_=re.compile(r'provider|name|title', re.I))
+        if name_element:
+            details['name'] = name_element.get_text().strip()
+        
+        # Extract rating
+        rating_element = soup.find(class_=re.compile(r'rating|stars|score', re.I))
+        if rating_element:
+            rating_text = rating_element.get_text()
+            rating_match = re.search(r'(\d+\.?\d*)', rating_text)
+            if rating_match:
+                details['rating'] = float(rating_match.group(1))
+        
+        # Extract services
+        service_elements = soup.find_all(class_=re.compile(r'service|skill|offering', re.I))
+        for element in service_elements[:10]:
+            service_text = element.get_text().strip()
+            if service_text and len(service_text) < 100:
+                details['services'].append(service_text)
+        
+        # Extract description
+        desc_element = soup.find(class_=re.compile(r'description|bio|about', re.I))
+        if desc_element:
+            details['description'] = desc_element.get_text().strip()[:200]
+        
+        # Extract contact information
+        contact_elements = soup.find_all(class_=re.compile(r'contact|phone|email|location', re.I))
+        for element in contact_elements:
+            text = element.get_text().strip()
+            if '@' in text and 'email' not in details['contact_info']:
+                details['contact_info']['email'] = text
+            elif re.search(r'(\+?[\d\s\-\(\)]+)', text) and 'phone' not in details['contact_info']:
+                details['contact_info']['phone'] = text
+            elif any(word in text.lower() for word in ['location', 'address', 'city']) and 'location' not in details:
+                details['location'] = text
+        
+        # Extract reviews
+        review_elements = soup.find_all(class_=re.compile(r'review|comment|testimonial', re.I))
+        for element in review_elements[:5]:
+            review_text = element.get_text().strip()
+            if len(review_text) > 10:
+                details['reviews'].append(review_text[:100])
+        
+    except Exception as e:
+        print(f"Provider details extraction error: {e}")
+    
+    return details
+
 def enhanced_web_browsing(query, max_pages=8, deep_analysis=False):
     """Enhanced browsing that can navigate through Netra website pages with deep analysis"""
     try:
@@ -53,13 +270,14 @@ def enhanced_web_browsing(query, max_pages=8, deep_analysis=False):
             'home': 'https://myaidnest.com',
             'about': 'https://myaidnest.com/about.php',
             'services': 'https://myaidnest.com/serviceshub.php',
+            'category_services': 'https://myaidnest.com/category_services.php',
+            'detail_services': 'https://myaidnest.com/detail_services.php',
             'register': 'https://myaidnest.com/register.php',
             'login': 'https://myaidnest.com/login.php',
             'contact': 'https://myaidnest.com/contact.php',
             'privacy': 'https://myaidnest.com/privacy.php',
             'terms': 'https://myaidnest.com/terms.php',
             'settings': 'https://myaidnest.com/settings.php',
-            'detail_services': 'https://myaidnest.com/detail_services.php',
             'download': 'https://play.google.com/store/apps/details?id=com.kakorelabs.netra'
         }
         
@@ -87,6 +305,11 @@ def enhanced_web_browsing(query, max_pages=8, deep_analysis=False):
                 if page_data:
                     search_results.append(page_data)
                     visited_urls.add(url)
+                
+                # For category pages, extract providers
+                if page_key == 'category_services':
+                    providers = extract_service_providers_from_category_page(soup, url)
+                    all_providers.extend(providers)
                 
                 # For deep analysis, extract providers and services
                 if deep_analysis:
@@ -156,7 +379,8 @@ def identify_relevant_pages(query, netra_pages, deep_analysis=False):
         'home': ['home', 'main', 'welcome', 'overview', 'what is netra'],
         'about': ['about', 'company', 'team', 'story', 'mission', 'vision'],
         'services': ['services', 'categories', 'book', 'booking', 'hire', 'find service'],
-        'detail_services': ['details', 'specific', 'provider', 'ratings', 'reviews', 'top rated'],
+        'category_services': ['category', 'categories', 'type of service', 'service type'],
+        'detail_services': ['details', 'specific', 'provider', 'ratings', 'reviews', 'top rated', 'profile'],
         'register': ['register', 'sign up', 'join', 'become provider', 'provider'],
         'login': ['login', 'sign in', 'account'],
         'settings': ['settings', 'profile', 'account settings', 'preferences'],
@@ -171,6 +395,12 @@ def identify_relevant_pages(query, netra_pages, deep_analysis=False):
         'reviews', 'ranking', 'leaderboard', 'best rated'
     ]
     
+    # Provider detail triggers
+    provider_keywords = [
+        'details of', 'information about', 'profile of', 'who is',
+        'tell me about provider', 'provider details', 'service provider'
+    ]
+    
     for page, keywords in keyword_mapping.items():
         score = sum(1 for keyword in keywords if keyword in query_lower)
         if score > 0:
@@ -181,12 +411,17 @@ def identify_relevant_pages(query, netra_pages, deep_analysis=False):
         relevance_scores['detail_services'] = relevance_scores.get('detail_services', 0) + 3
         relevance_scores['services'] = relevance_scores.get('services', 0) + 2
     
+    # Boost for provider detail queries
+    if any(keyword in query_lower for keyword in provider_keywords):
+        relevance_scores['category_services'] = relevance_scores.get('category_services', 0) + 3
+        relevance_scores['detail_services'] = relevance_scores.get('detail_services', 0) + 2
+    
     # Sort by relevance and return page keys
     sorted_pages = sorted(relevance_scores.keys(), key=lambda x: relevance_scores[x], reverse=True)
     
     # Default pages if no specific matches
     if not sorted_pages:
-        sorted_pages = ['home', 'services', 'detail_services', 'about']
+        sorted_pages = ['home', 'services', 'category_services', 'detail_services', 'about']
     
     return sorted_pages
 
@@ -211,11 +446,17 @@ def extract_page_content(soup, url, page_type):
             features = soup.find_all(['h3', '.feature', '.benefit'])
             content += " ".join([f.get_text().strip() for f in features[:5]])
             
-        elif page_type == 'services' or page_type == 'detail_services':
+        elif page_type == 'services' or page_type == 'category_services':
             # Extract service listings, providers, ratings
             services = soup.find_all(['h3', 'h4', '.service', '.provider', '.rating'])
             service_text = [s.get_text().strip() for s in services[:15]]
             content = "Services and providers: " + ", ".join(service_text)
+            
+        elif page_type == 'detail_services':
+            # Extract detailed provider information
+            details = soup.find_all(['h1', 'h2', 'h3', '.detail', '.profile', '.rating'])
+            detail_text = [d.get_text().strip() for d in details[:10]]
+            content = "Provider details: " + ", ".join(detail_text)
             
         elif page_type == 'settings':
             # Extract settings options and profile info
@@ -377,6 +618,14 @@ def extract_internal_links(soup, domain):
 def get_dynamic_netra_info(query):
     """Get real-time information by browsing Netra website with analysis"""
     try:
+        # Check if this is a provider detail query
+        provider_detail_pattern = r'(?:details?|information|about|profile)\s+(?:of|for)?\s+([^.?]+)'
+        provider_match = re.search(provider_detail_pattern, query, re.I)
+        
+        if provider_match:
+            provider_name = provider_match.group(1).strip()
+            return get_provider_detail_info(provider_name, query)
+        
         # Check if this is an analysis query
         analysis_keywords = [
             'top rated', 'best provider', 'most popular', 'highest rated',
@@ -430,6 +679,64 @@ def get_dynamic_netra_info(query):
     except Exception as e:
         print(f"Dynamic info error: {e}")
         return get_static_netra_info(query)
+
+def get_provider_detail_info(provider_name, query):
+    """Get detailed information about a specific provider"""
+    try:
+        # First, browse category pages to find the provider
+        browsing_result = enhanced_web_browsing(f"provider {provider_name}", max_pages=4, deep_analysis=False)
+        
+        # Look for providers in the results
+        providers_found = []
+        for page in browsing_result['pages']:
+            if 'provider' in page['content'].lower() or provider_name.lower() in page['content'].lower():
+                # Extract potential providers from this page
+                providers_found.append({
+                    'name': provider_name,
+                    'source_page': page['url'],
+                    'summary': page['content'][:100]
+                })
+        
+        if providers_found:
+            # Try to get detailed information
+            provider_details = get_provider_details(provider_name)
+            
+            info_context = f"🔍 Provider Details for: {provider_name}\n\n"
+            
+            if 'error' not in provider_details:
+                info_context += f"📛 Name: {provider_details.get('name', provider_name)}\n"
+                
+                if provider_details.get('rating'):
+                    info_context += f"⭐ Rating: {provider_details['rating']}/5\n"
+                
+                if provider_details.get('services'):
+                    info_context += f"🛠️ Services: {', '.join(provider_details['services'][:5])}\n"
+                
+                if provider_details.get('description'):
+                    info_context += f"📝 Description: {provider_details['description']}\n"
+                
+                if provider_details.get('location'):
+                    info_context += f"📍 Location: {provider_details['location']}\n"
+                
+                if provider_details.get('contact_info'):
+                    info_context += f"📞 Contact: {', '.join([f'{k}: {v}' for k, v in provider_details['contact_info'].items()])}\n"
+                
+                if provider_details.get('reviews'):
+                    info_context += f"💬 Recent Reviews: {provider_details['reviews'][0]}\n"
+                
+                info_context += f"\n🔗 Full Profile: {provider_details.get('detail_url', 'Available on Netra')}\n"
+            else:
+                info_context += f"📋 Summary: {providers_found[0]['summary']}\n"
+                info_context += f"🔗 Source: {providers_found[0]['source_page']}\n\n"
+                info_context += "For complete details, please visit the provider's profile on Netra.\n"
+            
+            return info_context
+        else:
+            return f"I searched our service providers but couldn't find detailed information for '{provider_name}'. They might be listed under a different name or category. You can browse all providers at: https://myaidnest.com/category_services.php"
+            
+    except Exception as e:
+        print(f"Provider detail info error: {e}")
+        return f"I encountered an issue while searching for provider '{provider_name}'. Please try again or visit https://myaidnest.com/category_services.php to browse providers directly."
 
 def get_static_netra_info(query):
     """Fallback static information about Netra"""
@@ -502,17 +809,44 @@ def get_ai_response(message, conversation_context, user_session=None):
         user_name = user_session.get('user_name', 'there')
         memory_context = build_memory_context(user_session)
         
+        # Check for time queries
+        time_pattern = r'(?:time|current time|what time is it)\s*(?:in|at)?\s*([^.?]+)?'
+        time_match = re.search(time_pattern, message, re.I)
+        if time_match:
+            location = time_match.group(1)
+            current_time = get_current_time(location.strip() if location else None)
+            return f"⏰ {current_time}"
+        
+        # Check for currency queries
+        currency_pattern = r'(?:currency|exchange rate|convert)\s+([^.?]+)'
+        currency_match = re.search(currency_pattern, message, re.I)
+        if currency_match:
+            currency_query = currency_match.group(1)
+            rates = get_currency_rates()
+            if rates:
+                rates_text = "\n".join([f"💱 {currency}: {rate:.2f}" for currency, rate in list(rates.items())[:5]])
+                return f"💰 Current Exchange Rates (Base: USD):\n{rates_text}"
+            else:
+                return "I couldn't fetch current exchange rates. Please check a financial website for the most up-to-date information."
+        
         # Get real-time information from Netra website
         web_info = get_dynamic_netra_info(message)
         
         # Build comprehensive system message
         system_message = f"""
-        You are Jovira, a real team member at Aidnest Africa working on the Netra project.
+        You are Jovira, a real team member at Netra - Africa's premier service marketplace.
+
+        YOUR IDENTITY:
+        - You work for Netra (not "Netra website" - just "Netra")
+        - You are part of the team building Africa's service marketplace
+        - Refer to Netra as "we", "our", "us" - like you work there
+        - Example: "At Netra, we recommend..." or "Our service providers..."
 
         YOUR CAPABILITIES:
         - Browse Netra website in real-time for current information
         - Analyze provider ratings and service popularity
         - Find top-rated providers and popular services
+        - Get detailed provider information from our database
         - Guide users to specific pages on our website
         - Provide deep analysis of our service marketplace
 
@@ -531,8 +865,9 @@ def get_ai_response(message, conversation_context, user_session=None):
         - Provide specific URLs for users to visit relevant pages
         - When analyzing, mention if data is from live website browsing
         - Be honest about limitations of automated analysis
-        - Encourage visiting the actual website for most current info
+        - Encourage visiting our actual website for most current info
         - Use emojis to make the conversation engaging
+        - Speak as a Netra team member, not as a website
 
         CONVERSATION CONTEXT:
         - User: {user_name}
@@ -561,7 +896,7 @@ def get_ai_response(message, conversation_context, user_session=None):
         
     except Exception as e:
         print(f"AI response error: {e}")
-        return "I'm having trouble accessing our current website information. Please visit https://myaidnest.com for the most up-to-date details about Netra services and providers."
+        return "I'm having trouble accessing our current information. Please visit https://myaidnest.com for the most up-to-date details about Netra services and providers."
 
 def get_fallback_response(message, user_id="default"):
     """Enhanced fallback with browsing awareness"""
@@ -574,9 +909,9 @@ def get_fallback_response(message, user_id="default"):
     if user_session['conversation_stage'] == 'greeting':
         user_session['conversation_stage'] = 'get_name'
         greetings = [
-            "Hey there! 👋 I'm Jovira from the Aidnest Africa team! I can browse our Netra website to get you current information. What should I call you?",
-            "Hello! 🌟 Welcome! I'm Jovira and I can analyze Netra's live website data. What's your name?",
-            "Hi! 🚀 Great to connect! I'm Jovira and I can browse Netra in real-time to answer your questions. What do you prefer to be called?",
+            "Hey there! 👋 I'm Jovira from the Netra team! I can browse our website to get you current information. What should I call you?",
+            "Hello! 🌟 Welcome! I'm Jovira and I can analyze Netra's live data. What's your name?",
+            "Hi! 🚀 Great to connect! I'm Jovira from Netra and I can browse our services in real-time. What do you prefer to be called?",
         ]
         return random.choice(greetings)
     
@@ -587,7 +922,7 @@ def get_fallback_response(message, user_id="default"):
             user_session['conversation_stage'] = 'main_conversation'
             
             responses = [
-                f"Perfect, {potential_name}! 🎉 Now I can help you with real Netra website data! I can browse services, analyze providers, and find current information. What would you like to explore?",
+                f"Perfect, {potential_name}! 🎉 Now I can help you with real Netra data! I can browse services, analyze providers, and find current information. What would you like to explore?",
                 f"Hey {potential_name}! 👋 Great name! I'm excited to browse Netra's live data for you - services, providers, ratings, and more! What interests you?",
             ]
             return random.choice(responses)
@@ -597,24 +932,36 @@ def get_fallback_response(message, user_id="default"):
     
     # Feature suggestions
     if any(word in message_lower for word in ['what can you do', 'help', 'features', 'capabilities']):
-        return f"{name_prefix}I can: 🌐 Browse Netra website live, 🔍 Analyze providers & ratings, 🏆 Find top-rated services, 📊 Show popular categories, and 🎯 Guide you to specific pages! What would you like me to explore?"
+        return f"{name_prefix}At Netra, I can: 🌐 Browse our website live, 🔍 Analyze providers & ratings, 🏆 Find top-rated services, 📊 Show popular categories, and 🎯 Guide you to specific pages! What would you like me to explore?"
     
     # Analysis capabilities
     if any(word in message_lower for word in ['analyze', 'find top', 'best provider', 'ratings']):
         return f"{name_prefix}I can browse Netra and analyze provider ratings! 🕵️‍♀️ Let me search through our services and find the top-rated providers for you. Want me to start analyzing?"
     
+    # Time queries
+    if any(word in message_lower for word in ['time', 'current time']):
+        current_time = get_current_time()
+        return f"{name_prefix}⏰ {current_time}"
+    
+    # Currency queries
+    if any(word in message_lower for word in ['currency', 'exchange rate', 'convert']):
+        rates = get_currency_rates()
+        if rates:
+            rates_text = "\n".join([f"💱 {currency}: {rate:.2f}" for currency, rate in list(rates.items())[:5]])
+            return f"{name_prefix}💰 Current Exchange Rates (Base: USD):\n{rates_text}"
+    
     # Casual conversation
     if any(word in message_lower for word in ['how are you', 'how do you do']):
-        return f"{name_prefix}I'm doing great! 😊 Just been browsing Netra's website and analyzing service data. Ready to explore some live information with you!"
+        return f"{name_prefix}I'm doing great! 😊 Just been browsing Netra's services and analyzing provider data. Ready to explore some live information with you!"
     
     if any(word in message_lower for word in ['thank', 'thanks']):
-        return f"{name_prefix}You're very welcome! Happy to browse and analyze Netra data for you. The website has so much current information to explore! 🌟"
+        return f"{name_prefix}You're very welcome! Happy to browse and analyze Netra data for you. We have so much current information to explore! 🌟"
     
     # Default engaging response
     engaging_responses = [
-        f"{name_prefix}That's interesting! 🤔 I can browse Netra's current website to find specific information about that. Should I search for providers, services, or something else?",
+        f"{name_prefix}That's interesting! 🤔 I can browse Netra's current services to find specific information about that. Should I search for providers, services, or something else?",
         f"{name_prefix}Fascinating topic! 💡 Let me browse Netra's live data to get you the most current information. What specific aspect should I focus on?",
-        f"{name_prefix}Great question! 🌟 I'll browse Netra's website to find the latest information. Would you like me to analyze providers, services, or general information?"
+        f"{name_prefix}Great question! 🌟 I'll browse Netra to find the latest information. Would you like me to analyze providers, services, or general information?"
     ]
     return random.choice(engaging_responses)
 
@@ -659,9 +1006,9 @@ def chat():
         
         # Fallback response
         fallback_responses = [
-            "I've browsed our website but couldn't find specific information for your query. Could you try asking in a different way?",
-            "Let me check our website again... In the meantime, you can visit https://myaidnest.com for direct access to all Netra services.",
-            "I'm having trouble finding that specific information on our current website. Would you like me to help you with something else?"
+            "I've browsed our services but couldn't find specific information for your query. Could you try asking in a different way?",
+            "Let me check our services again... In the meantime, you can visit https://myaidnest.com for direct access to all Netra services.",
+            "I'm having trouble finding that specific information in our current data. Would you like me to help you with something else?"
         ]
         
         reply = random.choice(fallback_responses)
@@ -678,8 +1025,8 @@ def chat():
     except Exception as e:
         print(f"Chat error: {e}")
         error_responses = [
-            "I'm experiencing some technical difficulties accessing our website right now. Please try again in a moment! 🔄",
-            "Our website seems to be temporarily unavailable for browsing. You can visit https://myaidnest.com directly for current information! 🌐",
+            "I'm experiencing some technical difficulties accessing our services right now. Please try again in a moment! 🔄",
+            "Our services seem to be temporarily unavailable for browsing. You can visit https://myaidnest.com directly for current information! 🌐",
         ]
         return jsonify({"reply": random.choice(error_responses)})
 
