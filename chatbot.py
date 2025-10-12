@@ -12,9 +12,6 @@ import urllib.parse
 import base64
 from io import BytesIO
 import json
-import speech_recognition as sr
-from PIL import Image
-import io
 
 app = Flask(__name__)
 CORS(app)
