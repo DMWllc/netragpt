@@ -642,6 +642,12 @@
             box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.2);
         }
 
+        .chat-input-wrapper.typing {
+            border-color: var(--text-accent);
+            box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.2);
+            background: rgba(255, 255, 255, 0.12);
+        }
+
         .input-controls {
             display: flex;
             gap: 8px;
@@ -1100,7 +1106,7 @@
             <div class="logo">
                 <div class="logo-icon">
                     <img src="https://myaidnest.com/images/jovira.png" alt="Jovira" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                    
+                    <div class="logo-fallback">J</div>
                 </div>
                 Jovira
             </div>
@@ -1118,7 +1124,21 @@
                     <h3 style="margin-bottom: 8px; color: var(--text-primary);">Hello! I'm Jovira 🌟</h3>
                     <p style="margin-bottom: 15px; line-height: 1.5;">Your intelligent assistant from Aidnest Africa! I can help you with:</p>
                     
-                   
+                    <div class="quick-actions">
+                        <div class="quick-action" onclick="askQuestion('Tell me about Netra app features')">
+                            <i class="fas fa-mobile-alt"></i> Netra App
+                        </div>
+                        <div class="quick-action" onclick="askQuestion('What services does Aidnest Africa offer?')">
+                            <i class="fas fa-building"></i> Aidnest Africa
+                        </div>
+                        <div class="quick-action" onclick="askQuestion('Show me a Python code example')">
+                            <i class="fas fa-code"></i> Coding Help
+                        </div>
+                        <div class="quick-action" onclick="askQuestion('How to download Netra app?')">
+                            <i class="fas fa-download"></i> Download
+                        </div>
+                    </div>
+                    
                     <p style="font-size: 12px; opacity: 0.8; margin-top: 10px;">
                         Am not a human being, but I think like a human. Though I can make errors.
                     </p>
@@ -1130,7 +1150,7 @@
         </div>
 
         <div class="chat-input-area">
-            <div class="chat-input-wrapper">
+            <div class="chat-input-wrapper" id="inputWrapper">
                 <div class="input-controls">
                     <div class="file-input-wrapper">
                         <input type="file" id="imageUpload" accept="image/*" class="file-input">
@@ -1167,6 +1187,7 @@
         const imageModal = document.getElementById('imageModal');
         const modalImage = document.getElementById('modalImage');
         const modalClose = document.getElementById('modalClose');
+        const inputWrapper = document.getElementById('inputWrapper');
 
         // Profile images
         const JOVIRA_AVATAR = 'https://myaidnest.com/images/jovira.png';
@@ -1207,6 +1228,17 @@
                 if (e.target === imageModal) closeImageModal();
             });
             
+            // Input typing state
+            input.addEventListener('input', handleInputTyping);
+            input.addEventListener('focus', () => {
+                inputWrapper.classList.add('typing');
+            });
+            input.addEventListener('blur', () => {
+                if (!input.value.trim()) {
+                    inputWrapper.classList.remove('typing');
+                }
+            });
+            
             // Keyboard shortcuts
             document.addEventListener('keydown', (e) => {
                 if (e.ctrlKey && e.key === 'k') {
@@ -1214,6 +1246,15 @@
                     input.focus();
                 }
             });
+        }
+
+        // Handle input typing state
+        function handleInputTyping() {
+            if (input.value.trim()) {
+                inputWrapper.classList.add('typing');
+            } else {
+                inputWrapper.classList.remove('typing');
+            }
         }
 
         // Handle image upload
@@ -1688,7 +1729,7 @@
                     <div class="typing-dot"></div>
                     <div class="typing-dot"></div>
                 </div>
-                <span>Jovira is thinking...</span>
+                <span>Jovira is typing...</span>
             `;
             
             typingDiv.prepend(avatar);
@@ -1800,6 +1841,7 @@
             input.value = '';
             input.style.height = 'auto';
             sendBtn.disabled = true;
+            inputWrapper.classList.remove('typing');
 
             // Show typing indicator
             showTypingIndicator();
@@ -1826,6 +1868,11 @@
                 sendBtn.disabled = false;
                 input.focus();
             }
+        }
+
+        // Initialize chat
+        function initializeChat() {
+            initializeChatSystem();
         }
 
         // Event listeners
