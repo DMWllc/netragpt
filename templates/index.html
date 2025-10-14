@@ -277,32 +277,64 @@
             transform: scale(1.1) rotate(10deg);
         }
 
-        /* Session Status */
-        .session-status {
+        /* Session Timer - Redesigned */
+        .session-timer {
             position: absolute;
             top: 100%;
             left: 0;
             right: 0;
-            background: var(--warning-gradient);
+            background: var(--surface-dark);
             color: white;
             padding: 8px 15px;
             font-size: 12px;
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 8px;
+            justify-content: space-between;
             transform: translateY(-100%);
             transition: var(--transition);
             z-index: 10;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .session-status.warning {
-            background: var(--warning-gradient);
+        .timer-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        .session-status.danger {
-            background: var(--danger-gradient);
-            animation: pulse 1.5s infinite;
+        .timer-progress {
+            flex: 1;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+            margin: 0 10px;
+        }
+
+        .timer-progress-bar {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.5s ease;
+        }
+
+        .timer-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .timer-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 10px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .timer-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
         }
 
         /* Chat Content */
@@ -1249,10 +1281,23 @@
 
     <!-- Main Chat Container -->
     <div class="chat-container">
-        <!-- Session Status Bar -->
-        <div class="session-status" id="sessionStatus" style="display: none;">
-            <i class="fas fa-clock"></i>
-            <span id="sessionMessage">Session active - 20 minutes remaining</span>
+        <!-- Session Timer Bar -->
+        <div class="session-timer" id="sessionTimer">
+            <div class="timer-info">
+                <i class="fas fa-clock"></i>
+                <span id="timerText">20:00</span>
+            </div>
+            <div class="timer-progress">
+                <div class="timer-progress-bar" id="timerProgress" style="width: 100%; background: var(--success-gradient);"></div>
+            </div>
+            <div class="timer-actions">
+                <button class="timer-btn" id="extendSession" title="Extend Session">
+                    <i class="fas fa-plus"></i>
+                </button>
+                <button class="timer-btn" id="pauseSession" title="Pause Session">
+                    <i class="fas fa-pause"></i>
+                </button>
+            </div>
         </div>
 
         <!-- Chat Lock Overlay -->
@@ -1378,8 +1423,11 @@
         const modalImage = document.getElementById('modalImage');
         const modalClose = document.getElementById('modalClose');
         const inputWrapper = document.getElementById('inputWrapper');
-        const sessionStatus = document.getElementById('sessionStatus');
-        const sessionMessage = document.getElementById('sessionMessage');
+        const sessionTimer = document.getElementById('sessionTimer');
+        const timerText = document.getElementById('timerText');
+        const timerProgress = document.getElementById('timerProgress');
+        const extendSessionBtn = document.getElementById('extendSession');
+        const pauseSessionBtn = document.getElementById('pauseSession');
         const chatLock = document.getElementById('chatLock');
 
         // Profile images
@@ -1392,9 +1440,10 @@
         let isRecording = false;
         let mediaRecorder = null;
         let audioChunks = [];
-        let currentSession = null;
-        let sessionTimer = null;
         let isSessionActive = true;
+        let sessionTimeRemaining = 20 * 60; // 20 minutes in seconds
+        let sessionTimerInterval = null;
+        let isSessionPaused = false;
 
         // Initialize chat system
         function initializeChatSystem() {
@@ -1412,77 +1461,119 @@
 
         // Initialize session management
         function initializeSessionManagement() {
-            checkSessionStatus();
-            startSessionTimer();
-        }
-
-        // Check session status from server
-        async function checkSessionStatus() {
-            try {
-                const response = await fetch('/session_status');
-                const data = await response.json();
-                
-                if (data.active) {
-                    currentSession = data;
-                    updateSessionDisplay(data.time_remaining);
+            // Check if there's a saved session
+            const savedSession = localStorage.getItem('jovira_session');
+            if (savedSession) {
+                const sessionData = JSON.parse(savedSession);
+                if (sessionData.expires > Date.now()) {
+                    sessionTimeRemaining = Math.floor((sessionData.expires - Date.now()) / 1000);
                     isSessionActive = true;
-                    chatLock.style.display = 'none';
+                    startSessionTimer();
                 } else {
                     isSessionActive = false;
                     chatLock.style.display = 'flex';
-                    sessionStatus.style.display = 'none';
+                    sessionTimer.style.display = 'none';
                 }
-            } catch (error) {
-                console.error('Error checking session status:', error);
-                // Fallback: assume session is active
-                isSessionActive = true;
-                updateSessionDisplay(20);
+            } else {
+                // Start a new session
+                startNewSession();
             }
         }
 
-        // Update session display
-        function updateSessionDisplay(minutesRemaining) {
-            if (minutesRemaining <= 5) {
-                sessionStatus.className = 'session-status danger';
-                sessionMessage.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Session ending in ${minutesRemaining} minutes`;
-            } else if (minutesRemaining <= 10) {
-                sessionStatus.className = 'session-status warning';
-                sessionMessage.innerHTML = `<i class="fas fa-clock"></i> ${minutesRemaining} minutes remaining`;
-            } else {
-                sessionStatus.className = 'session-status';
-                sessionMessage.innerHTML = `<i class="fas fa-clock"></i> Session active - ${minutesRemaining} minutes`;
-            }
-            sessionStatus.style.display = 'flex';
+        // Start new session
+        function startNewSession() {
+            isSessionActive = true;
+            sessionTimeRemaining = 20 * 60; // 20 minutes
+            chatLock.style.display = 'none';
+            sessionTimer.style.display = 'flex';
+            
+            // Save session to localStorage
+            const sessionData = {
+                expires: Date.now() + (sessionTimeRemaining * 1000)
+            };
+            localStorage.setItem('jovira_session', JSON.stringify(sessionData));
+            
+            startSessionTimer();
+            updateTimerDisplay();
+            showToast('New session started! 🎉');
         }
 
         // Start session timer
         function startSessionTimer() {
-            // Update session status every minute
-            sessionTimer = setInterval(async () => {
-                await checkSessionStatus();
-            }, 60000);
+            if (sessionTimerInterval) {
+                clearInterval(sessionTimerInterval);
+            }
+            
+            sessionTimerInterval = setInterval(() => {
+                if (!isSessionPaused && isSessionActive) {
+                    sessionTimeRemaining--;
+                    updateTimerDisplay();
+                    
+                    if (sessionTimeRemaining <= 0) {
+                        endSession();
+                    }
+                }
+            }, 1000);
         }
 
-        // Start new session
-        async function startNewSession() {
-            try {
-                const response = await fetch('/start_new_session', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                const data = await response.json();
+        // Update timer display
+        function updateTimerDisplay() {
+            const minutes = Math.floor(sessionTimeRemaining / 60);
+            const seconds = sessionTimeRemaining % 60;
+            timerText.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            // Update progress bar
+            const progressPercentage = (sessionTimeRemaining / (20 * 60)) * 100;
+            timerProgress.style.width = `${progressPercentage}%`;
+            
+            // Update color based on time remaining
+            if (progressPercentage <= 25) {
+                timerProgress.style.background = 'var(--danger-gradient)';
+            } else if (progressPercentage <= 50) {
+                timerProgress.style.background = 'var(--warning-gradient)';
+            } else {
+                timerProgress.style.background = 'var(--success-gradient)';
+            }
+        }
+
+        // End session
+        function endSession() {
+            isSessionActive = false;
+            clearInterval(sessionTimerInterval);
+            chatLock.style.display = 'flex';
+            sessionTimer.style.display = 'none';
+            localStorage.removeItem('jovira_session');
+            showToast('Session ended. Start a new session to continue.');
+        }
+
+        // Extend session
+        function extendSession() {
+            if (isSessionActive) {
+                sessionTimeRemaining += 10 * 60; // Add 10 minutes
+                updateTimerDisplay();
                 
-                if (data.status === 'success') {
-                    isSessionActive = true;
-                    chatLock.style.display = 'none';
-                    clearCurrentChat();
-                    addMessage('Bot', data.reply);
-                    checkSessionStatus();
-                    showToast('New session started! 🎉');
-                }
-            } catch (error) {
-                console.error('Error starting new session:', error);
-                showToast('Error starting new session. Please refresh the page.');
+                // Update session in localStorage
+                const sessionData = {
+                    expires: Date.now() + (sessionTimeRemaining * 1000)
+                };
+                localStorage.setItem('jovira_session', JSON.stringify(sessionData));
+                
+                showToast('Session extended by 10 minutes! ⏰');
+            }
+        }
+
+        // Toggle session pause
+        function toggleSessionPause() {
+            isSessionPaused = !isSessionPaused;
+            
+            if (isSessionPaused) {
+                pauseSessionBtn.innerHTML = '<i class="fas fa-play"></i>';
+                pauseSessionBtn.title = 'Resume Session';
+                showToast('Session paused');
+            } else {
+                pauseSessionBtn.innerHTML = '<i class="fas fa-pause"></i>';
+                pauseSessionBtn.title = 'Pause Session';
+                showToast('Session resumed');
             }
         }
 
@@ -1528,12 +1619,17 @@
             
             // Session info button
             sessionInfoBtn.addEventListener('click', showSessionInfo);
+            
+            // Timer controls
+            extendSessionBtn.addEventListener('click', extendSession);
+            pauseSessionBtn.addEventListener('click', toggleSessionPause);
         }
 
         // Show session information
         function showSessionInfo() {
-            const timeRemaining = currentSession ? currentSession.time_remaining : 20;
-            addMessage('Bot', `**Session Information**\n\n⏰ **Time Remaining**: ${timeRemaining} minutes\n🔒 **Session Type**: 20-minute chat session\n🔄 **Features**: Code execution, math calculations\n💾 **Storage**: Chat history saved locally\n\n**Quick Tips**:\n• Use \`\`\`code\`\`\` for code blocks\n• Ask math questions like "calculate 15% of 200"\n• Click "Run" to execute code\n• Click "Copy" to copy code snippets`);
+            const minutes = Math.floor(sessionTimeRemaining / 60);
+            const seconds = sessionTimeRemaining % 60;
+            addMessage('Bot', `**Session Information**\n\n⏰ **Time Remaining**: ${minutes}:${seconds.toString().padStart(2, '0')}\n🔒 **Session Type**: 20-minute chat session\n⏸️ **Status**: ${isSessionPaused ? 'Paused' : 'Active'}\n🔄 **Features**: Code execution, math calculations\n💾 **Storage**: Chat history saved locally\n\n**Quick Tips**:\n• Use \`\`\`code\`\`\` for code blocks\n• Ask math questions like "calculate 15% of 200"\n• Click "Run" to execute code\n• Click "Copy" to copy code snippets`);
         }
 
         // Handle input typing state
@@ -2180,20 +2276,13 @@
                 hideTypingIndicator();
                 
                 if (data.session_expired) {
-                    isSessionActive = false;
-                    chatLock.style.display = 'flex';
-                    sessionStatus.style.display = 'none';
+                    endSession();
                     addMessage("Bot", data.reply);
                 } else {
                     if (data.image_url) {
                         addMessage("Bot", data.reply, data.image_url);
                     } else {
                         addMessage("Bot", data.reply);
-                    }
-                    
-                    // Update session status if provided
-                    if (data.time_remaining !== undefined) {
-                        updateSessionDisplay(data.time_remaining);
                     }
                 }
             } catch (err) {
