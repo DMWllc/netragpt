@@ -277,41 +277,32 @@
             transform: scale(1.1) rotate(10deg);
         }
 
-        /* Digital Session Timer */
-        .session-timer {
+        /* Session Status */
+        .session-status {
             position: absolute;
-            top: 70px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.5);
-            border-radius: 12px;
-            padding: 6px 10px;
-            font-family: 'Fira Code', monospace;
-            font-size: 11px;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--warning-gradient);
+            color: white;
+            padding: 8px 15px;
+            font-size: 12px;
             display: flex;
             align-items: center;
-            gap: 6px;
-            z-index: 5;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            justify-content: center;
+            gap: 8px;
+            transform: translateY(-100%);
+            transition: var(--transition);
+            z-index: 10;
         }
 
-        .timer-normal {
-            color: #43e97b;
+        .session-status.warning {
+            background: var(--warning-gradient);
         }
 
-        .timer-warning {
-            color: #fee140;
+        .session-status.danger {
+            background: var(--danger-gradient);
             animation: pulse 1.5s infinite;
-        }
-
-        .timer-danger {
-            color: #ff6b6b;
-            animation: pulse 0.8s infinite;
-        }
-
-        .timer-icon {
-            font-size: 10px;
         }
 
         /* Chat Content */
@@ -321,12 +312,11 @@
             flex-direction: column;
             overflow: hidden;
             background: transparent;
-            padding-top: 10px;
         }
 
         #chat {
             flex: 1;
-            padding: 15px 20px;
+            padding: 20px;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
@@ -372,7 +362,6 @@
             flex-shrink: 0;
             overflow: hidden;
             border: 2px solid rgba(255, 255, 255, 0.2);
-            position: relative;
         }
 
         .message-avatar img {
@@ -426,139 +415,84 @@
             border-bottom-left-radius: 8px;
         }
 
-        /* Information Cards */
-        .info-card {
-            background: rgba(79, 172, 254, 0.1);
-            border: 1px solid rgba(79, 172, 254, 0.3);
-            border-radius: 12px;
-            padding: 16px;
-            margin: 8px 0;
-            position: relative;
-        }
-
-        .info-card::before {
-            content: 'ℹ️';
-            position: absolute;
-            top: 12px;
-            left: 12px;
-            font-size: 16px;
-        }
-
-        .info-card-content {
-            margin-left: 28px;
-        }
-
-        .info-title {
-            font-weight: 600;
-            color: #4facfe;
-            margin-bottom: 6px;
-            font-size: 15px;
-        }
-
-        .info-text {
-            color: var(--text-primary);
-            line-height: 1.5;
-        }
-
-        /* Calculation Display */
-        .calculation-card {
-            background: rgba(67, 233, 123, 0.1);
-            border: 1px solid rgba(67, 233, 123, 0.3);
-            border-radius: 12px;
-            padding: 16px;
-            margin: 8px 0;
-            position: relative;
-        }
-
-        .calculation-card::before {
-            content: '🧮';
-            position: absolute;
-            top: 12px;
-            left: 12px;
-            font-size: 16px;
-        }
-
-        .calculation-content {
-            margin-left: 28px;
-        }
-
-        .calculation-title {
-            font-weight: 600;
-            color: #43e97b;
-            margin-bottom: 6px;
-            font-size: 15px;
-        }
-
-        .calculation-expression {
-            font-family: 'Fira Code', monospace;
-            background: rgba(0, 0, 0, 0.2);
-            padding: 8px 12px;
-            border-radius: 8px;
-            margin: 8px 0;
-            font-size: 16px;
-            text-align: center;
-        }
-
-        .calculation-result {
-            font-family: 'Fira Code', monospace;
-            background: var(--success-gradient);
-            color: white;
-            padding: 10px 14px;
-            border-radius: 8px;
+        /* Uploaded Images */
+        .uploaded-image {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: var(--border-radius-small);
             margin-top: 8px;
-            font-weight: 600;
-            text-align: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transition: var(--transition);
         }
 
-        /* Chemistry Equations */
-        .chemistry-card {
-            background: rgba(167, 139, 250, 0.1);
-            border: 1px solid rgba(167, 139, 250, 0.3);
-            border-radius: 12px;
-            padding: 16px;
+        .uploaded-image:hover {
+            transform: scale(1.02);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        /* Voice Recording */
+        .voice-recording {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            background: var(--primary-gradient);
+            border-radius: var(--border-radius);
             margin: 8px 0;
-            position: relative;
+            animation: pulse 1.5s infinite;
         }
 
-        .chemistry-card::before {
-            content: '🧪';
-            position: absolute;
-            top: 12px;
-            left: 12px;
-            font-size: 16px;
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
         }
 
-        .chemistry-content {
-            margin-left: 28px;
+        .voice-visualizer {
+            display: flex;
+            gap: 3px;
+            align-items: center;
+            flex: 1;
         }
 
-        .chemistry-title {
-            font-weight: 600;
-            color: #a78bfa;
-            margin-bottom: 6px;
-            font-size: 15px;
+        .voice-bar {
+            width: 3px;
+            background: white;
+            border-radius: 2px;
+            animation: voicePulse 0.8s infinite ease-in-out;
         }
 
-        .chemical-equation {
-            font-family: 'Fira Code', monospace;
-            background: rgba(0, 0, 0, 0.2);
-            padding: 12px;
-            border-radius: 8px;
-            margin: 8px 0;
-            font-size: 16px;
-            text-align: center;
-            line-height: 1.8;
+        .voice-bar:nth-child(1) { animation-delay: 0s; height: 8px; }
+        .voice-bar:nth-child(2) { animation-delay: 0.1s; height: 12px; }
+        .voice-bar:nth-child(3) { animation-delay: 0.2s; height: 16px; }
+        .voice-bar:nth-child(4) { animation-delay: 0.3s; height: 12px; }
+        .voice-bar:nth-child(5) { animation-delay: 0.4s; height: 8px; }
+
+        @keyframes voicePulse {
+            0%, 100% { transform: scaleY(0.8); }
+            50% { transform: scaleY(1.2); }
         }
 
-        .chemical-equation sub {
-            font-size: 12px;
-            vertical-align: sub;
+        /* Links Styling */
+        .message-link {
+            color: var(--text-accent);
+            text-decoration: none;
+            border-bottom: 1px solid var(--text-accent);
+            transition: var(--transition);
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+
+        .message-link:hover {
+            background: var(--text-accent);
+            color: var(--dark-bg);
         }
 
         /* Enhanced Code Blocks */
         .code-block {
-            background: #1a202c;
-            border: 1px solid #2d3748;
+            background: var(--code-bg);
+            border: 1px solid var(--code-border);
             border-radius: 12px;
             padding: 0;
             margin: 12px 0;
@@ -575,7 +509,7 @@
             align-items: center;
             padding: 12px 16px;
             background: rgba(0, 0, 0, 0.3);
-            border-bottom: 1px solid #2d3748;
+            border-bottom: 1px solid var(--code-border);
         }
 
         .code-language {
@@ -639,23 +573,14 @@
             word-wrap: break-word;
         }
 
-        /* DeepSeek-style syntax highlighting */
-        .hljs-keyword { color: #ff79c6; font-weight: bold; }
-        .hljs-built_in { color: #50fa7b; }
-        .hljs-type { color: #8be9fd; font-weight: bold; }
-        .hljs-literal { color: #ff79c6; }
-        .hljs-number { color: #bd93f9; }
-        .hljs-string { color: #f1fa8c; }
-        .hljs-comment { color: #6272a4; font-style: italic; }
-        .hljs-function { color: #50fa7b; }
-        .hljs-params { color: #f8f8f2; }
-        .hljs-title { color: #50fa7b; }
-        .hljs-attr { color: #50fa7b; }
-        .hljs-variable { color: #f8f8f2; }
-        .hljs-selector-tag { color: #ff79c6; }
-        .hljs-selector-class { color: #50fa7b; }
-        .hljs-selector-id { color: #50fa7b; }
-        .hljs-meta { color: #f1fa8c; }
+        .code-keyword { color: #ff79c6; }
+        .code-string { color: #f1fa8c; }
+        .code-number { color: #bd93f9; }
+        .code-comment { color: #6272a4; font-style: italic; }
+        .code-function { color: #50fa7b; }
+        .code-operator { color: #ff79c6; }
+        .code-variable { color: #8be9fd; }
+        .code-class { color: #8be9fd; font-weight: bold; }
 
         /* Inline Code */
         .inline-code {
@@ -666,6 +591,36 @@
             font-family: 'Fira Code', monospace;
             font-size: 12px;
             color: var(--text-accent);
+        }
+
+        /* Math Expression Styling */
+        .math-expression {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 16px;
+            margin: 8px 0;
+            text-align: center;
+            font-size: 16px;
+            font-family: 'Fira Code', monospace;
+        }
+
+        .math-result {
+            background: var(--success-gradient);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin: 8px 0;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'Fira Code', monospace;
+        }
+
+        .math-result::before {
+            content: '🧮';
+            font-size: 18px;
         }
 
         /* Chat Lock Overlay */
@@ -1294,10 +1249,10 @@
 
     <!-- Main Chat Container -->
     <div class="chat-container">
-        <!-- Digital Session Timer -->
-        <div class="session-timer timer-normal" id="sessionTimer">
-            <i class="fas fa-clock timer-icon"></i>
-            <span id="timerDisplay">20:00</span>
+        <!-- Session Status Bar -->
+        <div class="session-status" id="sessionStatus" style="display: none;">
+            <i class="fas fa-clock"></i>
+            <span id="sessionMessage">Session active - 20 minutes remaining</span>
         </div>
 
         <!-- Chat Lock Overlay -->
@@ -1351,7 +1306,7 @@
             <div id="chat">
                 <div class="welcome-message">
                     <i class="fas fa-sparkles"></i>
-                    <h3 style="margin-bottom: 8px; color: var(--text-primary);">Hello! I'm Jovira</h3>
+                    <h3 style="margin-bottom: 8px; color: var(--text-primary);">Hello! I'm Jovira 🌟</h3>
                     <p style="margin-bottom: 15px; line-height: 1.5;">Your intelligent assistant from Aidnest Africa! I can help you with:</p>
                     
                     <div class="quick-actions">
@@ -1361,8 +1316,8 @@
                         <div class="quick-action" onclick="askQuestion('Show me Python code for a calculator')">
                             <i class="fas fa-code"></i> Code
                         </div>
-                        <div class="quick-action" onclick="askQuestion('Balance H2 + O2 → H2O')">
-                            <i class="fas fa-flask"></i> Chemistry
+                        <div class="quick-action" onclick="askQuestion('Tell me about Netra services')">
+                            <i class="fas fa-mobile-alt"></i> Netra
                         </div>
                         <div class="quick-action" onclick="askQuestion('What is 15% of 200?')">
                             <i class="fas fa-percentage"></i> Percentage
@@ -1370,13 +1325,13 @@
                     </div>
                     
                     <p style="font-size: 12px; opacity: 0.8; margin-top: 10px;">
-                        New Features: Session management, code execution, math calculations, chemistry equations!
+                        💡 <strong>New Features:</strong> Session management, code execution, math calculations!
                     </p>
                     <p style="font-size: 12px; opacity: 0.8; margin-top: 10px;">
                         Am not a human being, but I think like a human. Though I can make errors.
                     </p>
                     <p style="font-size: 12px; opacity: 0.8; margin-top: 10px;">
-                        Ask me anything about technology, coding, or our services!
+                        Ask me anything about technology, coding, or our services! 💫
                     </p>
                 </div>
             </div>
@@ -1423,8 +1378,8 @@
         const modalImage = document.getElementById('modalImage');
         const modalClose = document.getElementById('modalClose');
         const inputWrapper = document.getElementById('inputWrapper');
-        const sessionTimer = document.getElementById('sessionTimer');
-        const timerDisplay = document.getElementById('timerDisplay');
+        const sessionStatus = document.getElementById('sessionStatus');
+        const sessionMessage = document.getElementById('sessionMessage');
         const chatLock = document.getElementById('chatLock');
 
         // Profile images
@@ -1438,8 +1393,7 @@
         let mediaRecorder = null;
         let audioChunks = [];
         let currentSession = null;
-        let sessionTimeLeft = 20 * 60; // 20 minutes in seconds
-        let sessionInterval = null;
+        let sessionTimer = null;
         let isSessionActive = true;
 
         // Initialize chat system
@@ -1458,54 +1412,78 @@
 
         // Initialize session management
         function initializeSessionManagement() {
+            checkSessionStatus();
             startSessionTimer();
+        }
+
+        // Check session status from server
+        async function checkSessionStatus() {
+            try {
+                const response = await fetch('/session_status');
+                const data = await response.json();
+                
+                if (data.active) {
+                    currentSession = data;
+                    updateSessionDisplay(data.time_remaining);
+                    isSessionActive = true;
+                    chatLock.style.display = 'none';
+                } else {
+                    isSessionActive = false;
+                    chatLock.style.display = 'flex';
+                    sessionStatus.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error checking session status:', error);
+                // Fallback: assume session is active
+                isSessionActive = true;
+                updateSessionDisplay(20);
+            }
+        }
+
+        // Update session display
+        function updateSessionDisplay(minutesRemaining) {
+            if (minutesRemaining <= 5) {
+                sessionStatus.className = 'session-status danger';
+                sessionMessage.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Session ending in ${minutesRemaining} minutes`;
+            } else if (minutesRemaining <= 10) {
+                sessionStatus.className = 'session-status warning';
+                sessionMessage.innerHTML = `<i class="fas fa-clock"></i> ${minutesRemaining} minutes remaining`;
+            } else {
+                sessionStatus.className = 'session-status';
+                sessionMessage.innerHTML = `<i class="fas fa-clock"></i> Session active - ${minutesRemaining} minutes`;
+            }
+            sessionStatus.style.display = 'flex';
         }
 
         // Start session timer
         function startSessionTimer() {
-            clearInterval(sessionInterval);
-            sessionTimeLeft = 20 * 60; // 20 minutes in seconds
-            
-            sessionInterval = setInterval(() => {
-                if (sessionTimeLeft <= 0) {
-                    clearInterval(sessionInterval);
-                    isSessionActive = false;
-                    chatLock.style.display = 'flex';
-                    sessionTimer.style.display = 'none';
-                    return;
-                }
-                
-                sessionTimeLeft--;
-                updateTimerDisplay();
-            }, 1000);
-        }
-
-        // Update timer display
-        function updateTimerDisplay() {
-            const minutes = Math.floor(sessionTimeLeft / 60);
-            const seconds = sessionTimeLeft % 60;
-            const timeString = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-            
-            timerDisplay.textContent = timeString;
-            
-            // Update timer color based on remaining time
-            if (sessionTimeLeft <= 5 * 60) { // 5 minutes or less
-                sessionTimer.className = 'session-timer timer-danger';
-            } else if (sessionTimeLeft <= 10 * 60) { // 10 minutes or less
-                sessionTimer.className = 'session-timer timer-warning';
-            } else {
-                sessionTimer.className = 'session-timer timer-normal';
-            }
+            // Update session status every minute
+            sessionTimer = setInterval(async () => {
+                await checkSessionStatus();
+            }, 60000);
         }
 
         // Start new session
-        function startNewSession() {
-            isSessionActive = true;
-            chatLock.style.display = 'none';
-            sessionTimer.style.display = 'flex';
-            clearCurrentChat();
-            startSessionTimer();
-            showToast('New session started!');
+        async function startNewSession() {
+            try {
+                const response = await fetch('/start_new_session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    isSessionActive = true;
+                    chatLock.style.display = 'none';
+                    clearCurrentChat();
+                    addMessage('Bot', data.reply);
+                    checkSessionStatus();
+                    showToast('New session started! 🎉');
+                }
+            } catch (error) {
+                console.error('Error starting new session:', error);
+                showToast('Error starting new session. Please refresh the page.');
+            }
         }
 
         // Setup event listeners
@@ -1550,50 +1528,12 @@
             
             // Session info button
             sessionInfoBtn.addEventListener('click', showSessionInfo);
-
-            // Send button click
-            sendBtn.addEventListener('click', sendMessage);
-
-            // Enter key to send message
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
-                }
-            });
         }
 
         // Show session information
         function showSessionInfo() {
-            const minutes = Math.floor(sessionTimeLeft / 60);
-            const seconds = sessionTimeLeft % 60;
-            const timeString = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-            
-            addMessage('Bot', 
-                `<div class="info-card">
-                    <div class="info-card-content">
-                        <div class="info-title">Session Information</div>
-                        <div class="info-text">
-                            Time Remaining: ${timeString}<br>
-                            Session Type: 20-minute chat session<br>
-                            Features: Code execution, math calculations, chemistry equations<br>
-                            Storage: Chat history saved locally
-                        </div>
-                    </div>
-                </div>
-                <div class="info-card">
-                    <div class="info-card-content">
-                        <div class="info-title">Quick Tips</div>
-                        <div class="info-text">
-                            • Use code blocks for programming<br>
-                            • Ask math questions like "calculate 15% of 200"<br>
-                            • Balance chemical equations like "H2 + O2 → H2O"<br>
-                            • Click "Run" to execute code<br>
-                            • Click "Copy" to copy code snippets
-                        </div>
-                    </div>
-                </div>`
-            );
+            const timeRemaining = currentSession ? currentSession.time_remaining : 20;
+            addMessage('Bot', `**Session Information**\n\n⏰ **Time Remaining**: ${timeRemaining} minutes\n🔒 **Session Type**: 20-minute chat session\n🔄 **Features**: Code execution, math calculations\n💾 **Storage**: Chat history saved locally\n\n**Quick Tips**:\n• Use \`\`\`code\`\`\` for code blocks\n• Ask math questions like "calculate 15% of 200"\n• Click "Run" to execute code\n• Click "Copy" to copy code snippets`);
         }
 
         // Handle input typing state
@@ -1645,22 +1585,7 @@
                 // In a real implementation, you would send this to your backend
                 setTimeout(() => {
                     hideTypingIndicator();
-                    addMessage("Bot", 
-                        `<div class="info-card">
-                            <div class="info-card-content">
-                                <div class="info-title">Image Analysis Complete</div>
-                                <div class="info-text">
-                                    I've received your image (${file.name}, ${(file.size / 1024).toFixed(1)}KB).<br><br>
-                                    In a full implementation, I would analyze this image and provide insights about its content, generate variations, or answer questions about it!<br><br>
-                                    You can ask me to:<br>
-                                    • Describe what's in the image<br>
-                                    • Generate similar images<br>
-                                    • Modify the image style<br>
-                                    • Extract text from the image
-                                </div>
-                            </div>
-                        </div>`
-                    );
+                    addMessage("Bot", `🔍 **Image Analysis Complete!**\n\nI've received your image (${file.name}, ${(file.size / 1024).toFixed(1)}KB). \n\n*In a full implementation, I would analyze this image and provide insights about its content, generate variations, or answer questions about it!*\n\nYou can ask me to:\n• Describe what's in the image\n• Generate similar images\n• Modify the image style\n• Extract text from the image`);
                 }, 2000);
             } catch (error) {
                 hideTypingIndicator();
@@ -1760,17 +1685,7 @@
                 // In a real implementation, you would send this to a speech-to-text API
                 setTimeout(() => {
                     hideTypingIndicator();
-                    addMessage("Bot", 
-                        `<div class="info-card">
-                            <div class="info-card-content">
-                                <div class="info-title">Voice Message Received</div>
-                                <div class="info-text">
-                                    In a full implementation, I would transcribe your voice message and respond accordingly!<br><br>
-                                    For now, you can type your message or try our other features like image upload.
-                                </div>
-                            </div>
-                        </div>`
-                    );
+                    addMessage("Bot", `🎤 **Voice Message Received!**\n\n*In a full implementation, I would transcribe your voice message and respond accordingly!*\n\nFor now, you can type your message or try our other features like image upload.`);
                 }, 1500);
                 
                 // You could also create an audio element to play back the recording
@@ -1952,42 +1867,12 @@
 
         // Process message content for special formatting
         function processMessageContent(text) {
-            // Remove markdown formatting
-            text = text.replace(/\*\*(.*?)\*\*/g, '$1');
-            text = text.replace(/\*(.*?)\*/g, '$1');
-            
             // Convert URLs to clickable links
             text = text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="message-link">$1</a>');
             
-            // Process calculation results
+            // Process math expressions
             text = text.replace(/🧮 Calculation Result:\s*```\s*([^`]+)\s*```/g, function(match, calculation) {
-                return `<div class="calculation-card">
-                    <div class="calculation-content">
-                        <div class="calculation-title">Calculation Result</div>
-                        <div class="calculation-expression">${calculation.split('=')[0] || calculation}</div>
-                        <div class="calculation-result">${calculation.split('=')[1] || calculation}</div>
-                    </div>
-                </div>`;
-            });
-            
-            // Process chemistry equations
-            text = text.replace(/(?:Chemical Equation|Chemistry):\s*(.+?)(?:\n|$)/g, function(match, equation) {
-                return `<div class="chemistry-card">
-                    <div class="chemistry-content">
-                        <div class="chemistry-title">Chemical Equation</div>
-                        <div class="chemical-equation">${equation}</div>
-                    </div>
-                </div>`;
-            });
-            
-            // Process information cards
-            text = text.replace(/(?:Information|Note|Tip):\s*(.+?)(?:\n|$)/g, function(match, info) {
-                return `<div class="info-card">
-                    <div class="info-card-content">
-                        <div class="info-title">Information</div>
-                        <div class="info-text">${info}</div>
-                    </div>
-                </div>`;
+                return `<div class="math-result">${calculation}</div>`;
             });
             
             // Convert code blocks with enhanced features
@@ -2009,7 +1894,7 @@
                         </div>
                     </div>
                     <div class="code-content">
-                        <pre id="${codeId}"><code class="hljs ${lang}">${escapeHtml(code)}</code></pre>
+                        <pre id="${codeId}"><code>${escapeHtml(code)}</code></pre>
                     </div>
                 </div>`;
             });
@@ -2043,22 +1928,7 @@
             // Simulate code execution
             setTimeout(() => {
                 const output = simulateCodeExecution(code, language);
-                addMessage('Bot', 
-                    `<div class="info-card">
-                        <div class="info-card-content">
-                            <div class="info-title">Code Execution Result</div>
-                            <div class="info-text">
-                                Language: ${language}<br>
-                                Output:<br>
-                                <div class="code-block">
-                                    <div class="code-content">
-                                        <pre>${output}</pre>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>`
-                );
+                addMessage('Bot', `**Code Execution Result**\n\n**Language**: ${language}\n**Output**:\n\`\`\`\n${output}\n\`\`\``);
             }, 1000);
         }
 
@@ -2081,7 +1951,7 @@
             
             const code = codeElement.textContent;
             navigator.clipboard.writeText(code).then(() => {
-                showToast('Code copied to clipboard!');
+                showToast('Code copied to clipboard! 📋');
             }).catch(err => {
                 console.error('Failed to copy: ', err);
                 showToast('Failed to copy code. Please try again.');
@@ -2145,16 +2015,6 @@
             
             chatBox.appendChild(messageDiv);
             
-            // Apply syntax highlighting
-            document.querySelectorAll('pre code').forEach((block) => {
-                // Simple syntax highlighting simulation
-                if (block.className.includes('python')) {
-                    block.innerHTML = highlightPython(block.textContent);
-                } else if (block.className.includes('javascript')) {
-                    block.innerHTML = highlightJavaScript(block.textContent);
-                }
-            });
-            
             // Smooth scroll to bottom
             chatBox.scrollTo({
                 top: chatBox.scrollHeight,
@@ -2163,28 +2023,6 @@
             
             // Save to localStorage
             saveMessageToHistory(sender, text, imageUrl, audioUrl);
-        }
-
-        // Simple Python syntax highlighting
-        function highlightPython(code) {
-            return code
-                .replace(/(def|class|if|else|elif|for|while|return|import|from|as|try|except|finally|with)(?=\s|\(|:)/g, '<span class="hljs-keyword">$1</span>')
-                .replace(/(True|False|None)(?=\s|\)|,|$)/g, '<span class="hljs-literal">$1</span>')
-                .replace(/(\b\d+\.?\d*\b)/g, '<span class="hljs-number">$1</span>')
-                .replace(/(["'`])(.*?)\1/g, '<span class="hljs-string">$1$2$1</span>')
-                .replace(/(#.*$)/gm, '<span class="hljs-comment">$1</span>')
-                .replace(/(\b\w+)(?=\s*\()/g, '<span class="hljs-function">$1</span>');
-        }
-
-        // Simple JavaScript syntax highlighting
-        function highlightJavaScript(code) {
-            return code
-                .replace(/(function|var|let|const|if|else|for|while|return|class|import|export|from|default)(?=\s|\(|:)/g, '<span class="hljs-keyword">$1</span>')
-                .replace(/(true|false|null|undefined)(?=\s|\)|,|$)/g, '<span class="hljs-literal">$1</span>')
-                .replace(/(\b\d+\.?\d*\b)/g, '<span class="hljs-number">$1</span>')
-                .replace(/(["'`])(.*?)\1/g, '<span class="hljs-string">$1$2$1</span>')
-                .replace(/(\/\/.*$)/gm, '<span class="hljs-comment">$1</span>')
-                .replace(/(\b\w+)(?=\s*\()/g, '<span class="hljs-function">$1</span>');
         }
 
         // Show typing indicator
@@ -2253,7 +2091,7 @@
                 welcomeMsg.classList.add('welcome-message');
                 welcomeMsg.innerHTML = `
                     <i class="fas fa-sparkles"></i>
-                    <h3 style="margin-bottom: 8px; color: var(--text-primary);">Hello! I'm Jovira</h3>
+                    <h3 style="margin-bottom: 8px; color: var(--text-primary);">Hello! I'm Jovira 🌟</h3>
                     <p style="margin-bottom: 15px; line-height: 1.5;">Your intelligent assistant from Aidnest Africa! What would you like to know?</p>
                     
                     <div class="quick-actions">
@@ -2263,8 +2101,8 @@
                         <div class="quick-action" onclick="askQuestion('Show me Python code for a calculator')">
                             <i class="fas fa-code"></i> Code
                         </div>
-                        <div class="quick-action" onclick="askQuestion('Balance H2 + O2 → H2O')">
-                            <i class="fas fa-flask"></i> Chemistry
+                        <div class="quick-action" onclick="askQuestion('Tell me about Netra services')">
+                            <i class="fas fa-mobile-alt"></i> Netra
                         </div>
                         <div class="quick-action" onclick="askQuestion('What is 15% of 200?')">
                             <i class="fas fa-percentage"></i> Percentage
@@ -2285,7 +2123,7 @@
             if (confirm('Are you sure you want to clear this chat? This action cannot be undone.')) {
                 chatBox.innerHTML = '';
                 loadWelcomeMessage();
-                showToast('Chat cleared!');
+                showToast('Chat cleared! 🗑️');
             }
         }
 
@@ -2313,7 +2151,7 @@
         }
 
         // Send message function
-        function sendMessage() {
+        async function sendMessage() {
             const msg = input.value.trim();
             if (!msg) return;
 
@@ -2331,100 +2169,40 @@
             // Show typing indicator
             showTypingIndicator();
 
-            // Simulate API response with different content types
-            setTimeout(() => {
+            try {
+                const response = await fetch("/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message: msg, chatId: currentChatId })
+                });
+
+                const data = await response.json();
                 hideTypingIndicator();
                 
-                // Generate appropriate response based on query
-                let response = "";
-                
-                if (msg.toLowerCase().includes('calculate') || msg.includes('+') || msg.includes('-') || msg.includes('*') || msg.includes('/')) {
-                    // Math calculation response
-                    try {
-                        const expression = msg.replace('calculate', '').trim();
-                        const result = eval(expression.replace(/[^-()\d/*+.]/g, ''));
-                        response = `<div class="calculation-card">
-                            <div class="calculation-content">
-                                <div class="calculation-title">Calculation Result</div>
-                                <div class="calculation-expression">${expression}</div>
-                                <div class="calculation-result">= ${result}</div>
-                            </div>
-                        </div>`;
-                    } catch (e) {
-                        response = `<div class="info-card">
-                            <div class="info-card-content">
-                                <div class="info-title">Calculation Error</div>
-                                <div class="info-text">I couldn't calculate that expression. Please check if it's a valid mathematical expression.</div>
-                            </div>
-                        </div>`;
-                    }
-                } else if (msg.toLowerCase().includes('h2') || msg.toLowerCase().includes('o2') || msg.toLowerCase().includes('chemistry')) {
-                    // Chemistry response
-                    response = `<div class="chemistry-card">
-                        <div class="chemistry-content">
-                            <div class="chemistry-title">Chemical Equation</div>
-                            <div class="chemical-equation">2H<sub>2</sub> + O<sub>2</sub> → 2H<sub>2</sub>O</div>
-                        </div>
-                    </div>
-                    <div class="info-card">
-                        <div class="info-card-content">
-                            <div class="info-title">Explanation</div>
-                            <div class="info-text">
-                                This is the balanced equation for the formation of water from hydrogen and oxygen gases.<br>
-                                Two molecules of hydrogen gas react with one molecule of oxygen gas to form two molecules of water.
-                            </div>
-                        </div>
-                    </div>`;
-                } else if (msg.toLowerCase().includes('python') || msg.toLowerCase().includes('code')) {
-                    // Code response
-                    response = `<div class="code-block">
-                        <div class="code-header">
-                            <span class="code-language">
-                                <i class="fas fa-code"></i> PYTHON
-                            </span>
-                            <div class="code-actions">
-                                <button class="code-btn run-btn" onclick="runCode('example_code')">
-                                    <i class="fas fa-play"></i> Run
-                                </button>
-                                <button class="code-btn copy-btn" onclick="copyCode('example_code')">
-                                    <i class="far fa-copy"></i> Copy
-                                </button>
-                            </div>
-                        </div>
-                        <div class="code-content">
-                            <pre id="example_code"><code class="hljs python">def calculate(a, b, operation):
-    if operation == '+':
-        return a + b
-    elif operation == '-':
-        return a - b
-    elif operation == '*':
-        return a * b
-    elif operation == '/':
-        return a / b if b != 0 else "Error: Division by zero"
-    else:
-        return "Invalid operation"
-
-# Example usage
-result = calculate(10, 5, '+')
-print(f"10 + 5 = {result}")</code></pre>
-                        </div>
-                    </div>`;
+                if (data.session_expired) {
+                    isSessionActive = false;
+                    chatLock.style.display = 'flex';
+                    sessionStatus.style.display = 'none';
+                    addMessage("Bot", data.reply);
                 } else {
-                    // General response
-                    response = `<div class="info-card">
-                        <div class="info-card-content">
-                            <div class="info-title">Response</div>
-                            <div class="info-text">
-                                I understand you asked: "${msg}"<br><br>
-                                This is a simulated response. In a real implementation, I would use AI to generate a meaningful answer to your question.
-                            </div>
-                        </div>
-                    </div>`;
+                    if (data.image_url) {
+                        addMessage("Bot", data.reply, data.image_url);
+                    } else {
+                        addMessage("Bot", data.reply);
+                    }
+                    
+                    // Update session status if provided
+                    if (data.time_remaining !== undefined) {
+                        updateSessionDisplay(data.time_remaining);
+                    }
                 }
-                
-                addMessage("Bot", response);
+            } catch (err) {
+                hideTypingIndicator();
+                addMessage("Bot", "I'm having trouble connecting right now. Please check your internet connection and try again. ");
+            } finally {
                 sendBtn.disabled = false;
-            }, 1500);
+                input.focus();
+            }
         }
 
         // Initialize chat
@@ -2433,30 +2211,20 @@ print(f"10 + 5 = {result}")</code></pre>
         }
 
         // Event listeners
+        sendBtn.onclick = sendMessage;
+
+        input.addEventListener("keypress", function(event) {
+            if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        });
+
+        showChatsBtn.addEventListener('click', showSidebar);
+        closeSidebarBtn.addEventListener('click', closeSidebar);
+
         infoBtn.addEventListener('click', function() {
-            addMessage("Bot", 
-                `<div class="info-card">
-                    <div class="info-card-content">
-                        <div class="info-title">About Jovira</div>
-                        <div class="info-text">
-                            I'm your intelligent assistant from Aidnest Africa! Here's what I can help you with:<br><br>
-                            Netra App: Service marketplace connecting providers and clients across Africa<br>
-                            Aidnest Africa: Innovative tech company driving digital transformation<br>
-                            Kakore Labs: Our development hub building amazing applications<br>
-                            Coding Help: Python, JavaScript, web development, and more!<br>
-                            Image Analysis: Upload images for analysis and generation<br>
-                            Voice Messages: Record and send voice messages<br>
-                            Smart Features: I recognize links, code blocks, and provide copy-paste functionality<br><br>
-                            Try these features:<br>
-                            • Upload an image for analysis<br>
-                            • Record a voice message<br>
-                            • Ask for code examples<br>
-                            • Learn about African technology<br><br>
-                            Feel free to ask me anything!
-                        </div>
-                    </div>
-                </div>`
-            );
+            addMessage("Bot", ` **About Jovira**\n\nI'm your intelligent assistant from **Aidnest Africa**! Here's what I can help you with:\n\n **Netra App**: Service marketplace connecting providers and clients across Africa\n **Aidnest Africa**: Innovative tech company driving digital transformation\n💻 **Kakore Labs**: Our development hub building amazing applications\n **Coding Help**: Python, JavaScript, web development, and more!\n🎨 **Image Analysis**: Upload images for analysis and generation\n🎤 **Voice Messages**: Record and send voice messages\n🔗 **Smart Features**: I recognize links, code blocks, and provide copy-paste functionality\n\n**Try these features:**\n• Upload an image for analysis\n• Record a voice message\n• Ask for code examples\n• Learn about African technology\n\nFeel free to ask me anything! 💫`);
         });
 
         // Close sidebar when clicking outside on mobile
