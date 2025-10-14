@@ -23,13 +23,42 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@300;400;500&display=swap" rel="stylesheet">
 
-    <!-- Highlight.js for code syntax highlighting -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="Jovira - AI Assistant for Aidnest Africa">
+    <meta property="og:description" content="Intelligent chatbot for Netra app, Aidnest Africa services, coding help, and tech solutions. Your friendly AI assistant.">
+    <meta property="og:image" content="https://myaidnest.com/images/netragpt.png">
+    <meta property="og:url" content="https://chatbot.myaidnest.com">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Jovira">
 
-    <!-- MathJax for mathematical expressions -->
-    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Jovira - Your AI Assistant">
+    <meta name="twitter:description" content="Discover Aidnest Africa services, get coding help, and explore tech solutions with Jovira">
+    <meta name="twitter:image" content="https://myaidnest.com/images/netragpt.png">
+    <meta name="twitter:creator" content="@aidnestafrica">
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://chatbot.myaidnest.com">
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Jovira",
+        "description": "AI-powered chatbot assistant for Aidnest Africa services and tech solutions",
+        "url": "https://chatbot.myaidnest.com",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Web Browser",
+        "permissions": "microphone",
+        "creator": {
+            "@type": "Organization",
+            "name": "Aidnest Africa",
+            "url": "https://myaidnest.com"
+        }
+    }
+    </script>
 
     <style>
         :root {
@@ -386,6 +415,80 @@
             border-bottom-left-radius: 8px;
         }
 
+        /* Uploaded Images */
+        .uploaded-image {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: var(--border-radius-small);
+            margin-top: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .uploaded-image:hover {
+            transform: scale(1.02);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        /* Voice Recording */
+        .voice-recording {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            background: var(--primary-gradient);
+            border-radius: var(--border-radius);
+            margin: 8px 0;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .voice-visualizer {
+            display: flex;
+            gap: 3px;
+            align-items: center;
+            flex: 1;
+        }
+
+        .voice-bar {
+            width: 3px;
+            background: white;
+            border-radius: 2px;
+            animation: voicePulse 0.8s infinite ease-in-out;
+        }
+
+        .voice-bar:nth-child(1) { animation-delay: 0s; height: 8px; }
+        .voice-bar:nth-child(2) { animation-delay: 0.1s; height: 12px; }
+        .voice-bar:nth-child(3) { animation-delay: 0.2s; height: 16px; }
+        .voice-bar:nth-child(4) { animation-delay: 0.3s; height: 12px; }
+        .voice-bar:nth-child(5) { animation-delay: 0.4s; height: 8px; }
+
+        @keyframes voicePulse {
+            0%, 100% { transform: scaleY(0.8); }
+            50% { transform: scaleY(1.2); }
+        }
+
+        /* Links Styling */
+        .message-link {
+            color: var(--text-accent);
+            text-decoration: none;
+            border-bottom: 1px solid var(--text-accent);
+            transition: var(--transition);
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+
+        .message-link:hover {
+            background: var(--text-accent);
+            color: var(--dark-bg);
+        }
+
         /* Enhanced Code Blocks */
         .code-block {
             background: var(--code-bg);
@@ -466,6 +569,28 @@
             font-family: 'Fira Code', monospace;
             font-size: 13px;
             line-height: 1.4;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .code-keyword { color: #ff79c6; }
+        .code-string { color: #f1fa8c; }
+        .code-number { color: #bd93f9; }
+        .code-comment { color: #6272a4; font-style: italic; }
+        .code-function { color: #50fa7b; }
+        .code-operator { color: #ff79c6; }
+        .code-variable { color: #8be9fd; }
+        .code-class { color: #8be9fd; font-weight: bold; }
+
+        /* Inline Code */
+        .inline-code {
+            background: var(--code-bg);
+            border: 1px solid var(--code-border);
+            border-radius: 6px;
+            padding: 2px 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 12px;
+            color: var(--text-accent);
         }
 
         /* Math Expression Styling */
@@ -477,6 +602,7 @@
             margin: 8px 0;
             text-align: center;
             font-size: 16px;
+            font-family: 'Fira Code', monospace;
         }
 
         .math-result {
@@ -489,32 +615,12 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            font-family: 'Fira Code', monospace;
         }
 
         .math-result::before {
             content: '🧮';
             font-size: 18px;
-        }
-
-        /* Calculation History */
-        .calculation-history {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            padding: 12px;
-            margin: 8px 0;
-            font-size: 12px;
-        }
-
-        .calculation-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 4px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .calculation-item:last-child {
-            border-bottom: none;
         }
 
         /* Chat Lock Overlay */
@@ -582,6 +688,64 @@
             box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
         }
 
+        /* Typing Indicator */
+        .message-typing {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px;
+            background: rgba(45, 45, 68, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: var(--border-radius);
+            border-bottom-left-radius: 8px;
+            max-width: 70%;
+            align-self: flex-start;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--text-accent);
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Welcome Message */
+        .welcome-message {
+            text-align: center;
+            padding: 30px 20px;
+            color: var(--text-secondary);
+            background: rgba(45, 45, 68, 0.5);
+            backdrop-filter: blur(10px);
+            border-radius: var(--border-radius);
+            margin: 10px 0;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .welcome-message i {
+            font-size: 32px;
+            margin-bottom: 12px;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
         /* Quick Actions */
         .quick-actions {
             display: flex;
@@ -608,7 +772,7 @@
             transform: translateY(-2px);
         }
 
-        /* Chat Input */
+        /* Chat Input - WhatsApp Style */
         .chat-input-area {
             border-top: 1px solid rgba(255, 255, 255, 0.1);
             background: rgba(26, 26, 46, 0.8);
@@ -634,6 +798,56 @@
             box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.2);
         }
 
+        .chat-input-wrapper.typing {
+            border-color: var(--text-accent);
+            box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.2);
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .input-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+        }
+
+        .file-input {
+            position: absolute;
+            left: -9999px;
+            opacity: 0;
+        }
+
+        .input-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 8px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+        }
+
+        .input-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            transform: scale(1.1);
+        }
+
+        .voice-btn.recording {
+            background: #ff4757;
+            color: white;
+            animation: pulse 1.5s infinite;
+        }
+
         #input {
             flex: 1;
             border: none;
@@ -651,6 +865,10 @@
 
         #input:focus {
             outline: none;
+        }
+
+        #input::placeholder {
+            color: var(--text-secondary);
         }
 
         #send {
@@ -674,6 +892,213 @@
         #send:hover {
             transform: translateY(-2px) scale(1.05);
             box-shadow: 0 6px 25px rgba(102, 126, 234, 0.6);
+        }
+
+        #send:active {
+            transform: translateY(0) scale(1);
+        }
+
+        #send:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .send-icon {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* Image Display */
+        .message-image {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: var(--border-radius-small);
+            margin-top: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .message-image:hover {
+            transform: scale(1.02);
+        }
+
+        /* Image Modal */
+        .image-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: var(--transition);
+        }
+
+        .image-modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-soft);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 18px;
+            transition: var(--transition);
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        /* Chats Sidebar */
+        .chats-sidebar {
+            position: fixed;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: rgba(26, 26, 46, 0.95);
+            backdrop-filter: blur(20px);
+            z-index: 1000;
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--shadow-soft);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .chats-sidebar.active {
+            left: 0;
+        }
+
+        .sidebar-header {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.9) 0%, rgba(118, 75, 162, 0.9) 100%);
+            padding: 25px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-title {
+            color: white;
+            font-weight: 600;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .close-sidebar {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            transition: var(--transition);
+        }
+
+        .close-sidebar:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .chats-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .chat-item {
+            background: rgba(45, 45, 68, 0.6);
+            border-radius: var(--border-radius-small);
+            padding: 16px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: var(--transition);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .chat-item:hover {
+            background: rgba(102, 126, 234, 0.2);
+            transform: translateX(5px);
+            border-color: rgba(102, 126, 234, 0.5);
+        }
+
+        .chat-item.active {
+            background: var(--primary-gradient);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .chat-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .chat-title {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .chat-date {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .chat-preview {
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        .no-chats {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 60px 20px;
+            font-style: italic;
+        }
+
+        .no-chats i {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.5;
         }
 
         /* Toast Notifications */
@@ -734,12 +1159,56 @@
             .chat-input-area {
                 padding: 12px 15px;
             }
+
+            .chats-sidebar {
+                width: 100%;
+            }
+
+            .input-controls {
+                gap: 6px;
+            }
+
+            .input-btn {
+                width: 36px;
+                height: 36px;
+                padding: 6px;
+            }
+
+            #send {
+                width: 40px;
+                height: 40px;
+                padding: 10px;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .chat-container {
+                max-width: 450px;
+                height: 800px;
+            }
+
+            .chats-sidebar {
+                width: 400px;
+                left: -400px;
+            }
+        }
+
+        @media screen and (max-width: 768px) {
+            input, textarea {
+                font-size: 16px !important;
+            }
         }
 
         /* Enhanced selection */
         .message-content::selection {
             background: var(--text-accent);
             color: white;
+        }
+
+        /* Focus states for accessibility */
+        button:focus-visible, #input:focus-visible {
+            outline: 2px solid var(--text-accent);
+            outline-offset: 2px;
         }
     </style>
 </head>
@@ -752,6 +1221,29 @@
             <div class="particle"></div>
             <div class="particle"></div>
             <div class="particle"></div>
+        </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div class="image-modal" id="imageModal">
+        <button class="modal-close" id="modalClose">
+            <i class="fas fa-times"></i>
+        </button>
+        <img class="modal-content" id="modalImage" src="" alt="Enlarged view">
+    </div>
+
+    <!-- Chats Sidebar -->
+    <div class="chats-sidebar" id="chatsSidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-title">
+                <i class="fas fa-comments"></i> Your Conversations
+            </div>
+            <button class="close-sidebar" id="closeSidebar">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="chats-list" id="chatsList">
+            <!-- Chats will be dynamically loaded here -->
         </div>
     </div>
 
@@ -789,6 +1281,9 @@
                 <button class="header-btn" id="clearChat" title="Clear Chat">
                     <i class="fas fa-trash"></i>
                 </button>
+                <button class="header-btn" id="showChats" title="Chat History">
+                    <i class="fas fa-history"></i>
+                </button>
             </div>
             <div class="logo">
                 <div class="logo-icon">
@@ -800,6 +1295,9 @@
             <div class="header-controls">
                 <button class="header-btn" id="sessionInfo" title="Session Info">
                     <i class="fas fa-info-circle"></i>
+                </button>
+                <button class="header-btn" id="infoBtn" title="About">
+                    <i class="fas fa-info"></i>
                 </button>
             </div>
         </div>
@@ -827,14 +1325,31 @@
                     </div>
                     
                     <p style="font-size: 12px; opacity: 0.8; margin-top: 10px;">
-                        💡 <strong>New Features:</strong> Code execution, math calculations, session management!
+                        💡 <strong>New Features:</strong> Session management, code execution, math calculations!
+                    </p>
+                    <p style="font-size: 12px; opacity: 0.8; margin-top: 10px;">
+                        Am not a human being, but I think like a human. Though I can make errors.
+                    </p>
+                    <p style="font-size: 12px; opacity: 0.8; margin-top: 10px;">
+                        Ask me anything about technology, coding, or our services! 💫
                     </p>
                 </div>
             </div>
         </div>
 
         <div class="chat-input-area">
-            <div class="chat-input-wrapper">
+            <div class="chat-input-wrapper" id="inputWrapper">
+                <div class="input-controls">
+                    <div class="file-input-wrapper">
+                        <input type="file" id="imageUpload" accept="image/*" class="file-input">
+                        <button class="input-btn" id="imageBtn" title="Upload Image">
+                            <i class="fas fa-image"></i>
+                        </button>
+                    </div>
+                    <button class="input-btn voice-btn" id="voiceBtn" title="Voice Message">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                </div>
                 <textarea id="input" placeholder="Type a message or ask me to calculate something..." rows="1"></textarea>
                 <button id="send">
                     <i class="fas fa-paper-plane send-icon"></i>
@@ -848,24 +1363,57 @@
         const chatBox = document.getElementById('chat');
         const input = document.getElementById('input');
         const sendBtn = document.getElementById('send');
+        const newChatBtn = document.getElementById('newChat');
+        const clearChatBtn = document.getElementById('clearChat');
+        const showChatsBtn = document.getElementById('showChats');
+        const closeSidebarBtn = document.getElementById('closeSidebar');
+        const chatsSidebar = document.getElementById('chatsSidebar');
+        const chatsList = document.getElementById('chatsList');
+        const infoBtn = document.getElementById('infoBtn');
+        const sessionInfoBtn = document.getElementById('sessionInfo');
+        const imageUpload = document.getElementById('imageUpload');
+        const imageBtn = document.getElementById('imageBtn');
+        const voiceBtn = document.getElementById('voiceBtn');
+        const imageModal = document.getElementById('imageModal');
+        const modalImage = document.getElementById('modalImage');
+        const modalClose = document.getElementById('modalClose');
+        const inputWrapper = document.getElementById('inputWrapper');
         const sessionStatus = document.getElementById('sessionStatus');
         const sessionMessage = document.getElementById('sessionMessage');
         const chatLock = document.getElementById('chatLock');
-        const newChatBtn = document.getElementById('newChat');
-        const clearChatBtn = document.getElementById('clearChat');
-        const sessionInfoBtn = document.getElementById('sessionInfo');
+
+        // Profile images
+        const JOVIRA_AVATAR = 'https://myaidnest.com/images/jovira.png';
+        const USER_AVATAR = 'https://myaidnest.com/images/user.png';
 
         // State
+        let currentChatId = null;
+        let isTyping = false;
+        let isRecording = false;
+        let mediaRecorder = null;
+        let audioChunks = [];
         let currentSession = null;
         let sessionTimer = null;
         let isSessionActive = true;
 
-        // Initialize the application
-        function initializeApp() {
-            checkSessionStatus();
+        // Initialize chat system
+        function initializeChatSystem() {
+            const savedChats = getChatsList();
+            if (savedChats.length === 0) {
+                createNewChat();
+            } else {
+                currentChatId = savedChats[0].id;
+                loadChatHistory(currentChatId);
+            }
+            updateChatsList();
             setupEventListeners();
+            initializeSessionManagement();
+        }
+
+        // Initialize session management
+        function initializeSessionManagement() {
+            checkSessionStatus();
             startSessionTimer();
-            loadWelcomeMessage();
         }
 
         // Check session status from server
@@ -927,7 +1475,7 @@
                 if (data.status === 'success') {
                     isSessionActive = true;
                     chatLock.style.display = 'none';
-                    clearChat();
+                    clearCurrentChat();
                     addMessage('Bot', data.reply);
                     checkSessionStatus();
                     showToast('New session started! 🎉');
@@ -938,69 +1486,394 @@
             }
         }
 
-        // Clear current chat
-        function clearChat() {
-            if (confirm('Are you sure you want to clear this chat? This action cannot be undone.')) {
-                chatBox.innerHTML = '';
-                loadWelcomeMessage();
-                showToast('Chat cleared! 🗑️');
-            }
-        }
-
-        // View chat history (placeholder)
-        function viewChatHistory() {
-            showToast('Chat history feature coming soon! 📚');
-        }
-
         // Setup event listeners
         function setupEventListeners() {
-            sendBtn.onclick = sendMessage;
+            // Image upload handling
+            imageBtn.addEventListener('click', () => imageUpload.click());
+            imageUpload.addEventListener('change', handleImageUpload);
             
-            input.addEventListener('keypress', function(event) {
-                if (event.key === 'Enter' && !event.shiftKey) {
-                    event.preventDefault();
-                    sendMessage();
+            // Voice recording
+            voiceBtn.addEventListener('click', toggleVoiceRecording);
+            
+            // Image modal
+            modalClose.addEventListener('click', closeImageModal);
+            imageModal.addEventListener('click', (e) => {
+                if (e.target === imageModal) closeImageModal();
+            });
+            
+            // Input typing state
+            input.addEventListener('input', handleInputTyping);
+            input.addEventListener('focus', () => {
+                inputWrapper.classList.add('typing');
+            });
+            input.addEventListener('blur', () => {
+                if (!input.value.trim()) {
+                    inputWrapper.classList.remove('typing');
+                }
+            });
+            
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.ctrlKey && e.key === 'k') {
+                    e.preventDefault();
+                    input.focus();
                 }
             });
 
-            newChatBtn.onclick = startNewSession;
-            clearChatBtn.onclick = clearChat;
+            // New chat button
+            newChatBtn.addEventListener('click', startNewSession);
             
-            sessionInfoBtn.onclick = function() {
-                showSessionInfo();
-            };
-
-            // Auto-resize textarea
-            input.addEventListener('input', function() {
-                this.style.height = 'auto';
-                this.style.height = Math.min(this.scrollHeight, 100) + 'px';
-            });
+            // Clear chat button
+            clearChatBtn.addEventListener('click', clearCurrentChat);
+            
+            // Session info button
+            sessionInfoBtn.addEventListener('click', showSessionInfo);
         }
 
         // Show session information
         function showSessionInfo() {
             const timeRemaining = currentSession ? currentSession.time_remaining : 20;
-            addMessage('Bot', `**Session Information**\n\n⏰ **Time Remaining**: ${timeRemaining} minutes\n🔒 **Session Type**: 20-minute chat session\n🔄 **Features**: Code execution, math calculations, file uploads\n💾 **Storage**: Chat history saved locally\n\n**Quick Tips**:\n• Use \`\`\`code\`\`\` for code blocks\n• Ask math questions like "calculate 15% of 200"\n• Upload images for analysis\n• Start new sessions when time expires`);
+            addMessage('Bot', `**Session Information**\n\n⏰ **Time Remaining**: ${timeRemaining} minutes\n🔒 **Session Type**: 20-minute chat session\n🔄 **Features**: Code execution, math calculations\n💾 **Storage**: Chat history saved locally\n\n**Quick Tips**:\n• Use \`\`\`code\`\`\` for code blocks\n• Ask math questions like "calculate 15% of 200"\n• Click "Run" to execute code\n• Click "Copy" to copy code snippets`);
         }
 
-        // Load welcome message
-        function loadWelcomeMessage() {
-            // Welcome message is already in HTML
+        // Handle input typing state
+        function handleInputTyping() {
+            if (input.value.trim()) {
+                inputWrapper.classList.add('typing');
+            } else {
+                inputWrapper.classList.remove('typing');
+            }
         }
 
-        // Ask question from quick action
-        function askQuestion(question) {
-            input.value = question;
-            sendMessage();
+        // Handle image upload
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Check if file is an image
+            if (!file.type.startsWith('image/')) {
+                showToast('Please upload an image file!');
+                return;
+            }
+
+            // Check file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                showToast('Image size should be less than 5MB!');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const imageData = e.target.result;
+                addMessage("User", "I uploaded an image for analysis:", imageData);
+                
+                // Analyze the image
+                analyzeImage(file);
+            };
+            reader.readAsDataURL(file);
+
+            // Reset file input
+            event.target.value = '';
         }
 
-        // Enhanced message processing with math and code detection
+        // Analyze uploaded image
+        async function analyzeImage(file) {
+            showTypingIndicator();
+            
+            try {
+                // For now, we'll simulate image analysis
+                // In a real implementation, you would send this to your backend
+                setTimeout(() => {
+                    hideTypingIndicator();
+                    addMessage("Bot", `🔍 **Image Analysis Complete!**\n\nI've received your image (${file.name}, ${(file.size / 1024).toFixed(1)}KB). \n\n*In a full implementation, I would analyze this image and provide insights about its content, generate variations, or answer questions about it!*\n\nYou can ask me to:\n• Describe what's in the image\n• Generate similar images\n• Modify the image style\n• Extract text from the image`);
+                }, 2000);
+            } catch (error) {
+                hideTypingIndicator();
+                addMessage("Bot", "Sorry, I encountered an error while analyzing the image. Please try again.");
+            }
+        }
+
+        // Voice recording functionality
+        async function toggleVoiceRecording() {
+            if (!isRecording) {
+                await startVoiceRecording();
+            } else {
+                stopVoiceRecording();
+            }
+        }
+
+        // Start voice recording
+        async function startVoiceRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    await processAudioRecording(audioBlob);
+                    
+                    // Stop all tracks
+                    stream.getTracks().forEach(track => track.stop());
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                voiceBtn.classList.add('recording');
+                voiceBtn.innerHTML = '<i class="fas fa-stop"></i>';
+                
+                // Add recording indicator to chat
+                addVoiceRecordingIndicator();
+                
+            } catch (error) {
+                console.error('Error starting voice recording:', error);
+                showToast('Microphone access denied or not available');
+            }
+        }
+
+        // Stop voice recording
+        function stopVoiceRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                isRecording = false;
+                voiceBtn.classList.remove('recording');
+                voiceBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+                
+                // Remove recording indicator
+                removeVoiceRecordingIndicator();
+            }
+        }
+
+        // Add voice recording indicator
+        function addVoiceRecordingIndicator() {
+            const recordingDiv = document.createElement('div');
+            recordingDiv.className = 'voice-recording';
+            recordingDiv.id = 'voice-recording-indicator';
+            recordingDiv.innerHTML = `
+                <i class="fas fa-microphone"></i>
+                <div class="voice-visualizer">
+                    <div class="voice-bar"></div>
+                    <div class="voice-bar"></div>
+                    <div class="voice-bar"></div>
+                    <div class="voice-bar"></div>
+                    <div class="voice-bar"></div>
+                </div>
+                <span>Recording... Click stop when done</span>
+            `;
+            chatBox.appendChild(recordingDiv);
+            chatBox.scrollTo({ top: chatBox.scrollHeight, behavior: 'smooth' });
+        }
+
+        // Remove voice recording indicator
+        function removeVoiceRecordingIndicator() {
+            const indicator = document.getElementById('voice-recording-indicator');
+            if (indicator) {
+                indicator.remove();
+            }
+        }
+
+        // Process audio recording
+        async function processAudioRecording(audioBlob) {
+            showTypingIndicator();
+            
+            try {
+                // For now, we'll simulate speech-to-text processing
+                // In a real implementation, you would send this to a speech-to-text API
+                setTimeout(() => {
+                    hideTypingIndicator();
+                    addMessage("Bot", `🎤 **Voice Message Received!**\n\n*In a full implementation, I would transcribe your voice message and respond accordingly!*\n\nFor now, you can type your message or try our other features like image upload.`);
+                }, 1500);
+                
+                // You could also create an audio element to play back the recording
+                const audioUrl = URL.createObjectURL(audioBlob);
+                addMessage("User", "Voice message:", null, audioUrl);
+                
+            } catch (error) {
+                hideTypingIndicator();
+                addMessage("Bot", "Sorry, I couldn't process the voice message. Please try again or type your message.");
+            }
+        }
+
+        // Open image in modal
+        function openImageModal(imageSrc) {
+            modalImage.src = imageSrc;
+            imageModal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Close image modal
+        function closeImageModal() {
+            imageModal.classList.remove('active');
+            document.body.style.overflow = 'auto';
+            setTimeout(() => {
+                modalImage.src = '';
+            }, 300);
+        }
+
+        // Create avatar element
+        function createAvatar(sender, imageUrl) {
+            const avatarDiv = document.createElement('div');
+            avatarDiv.className = 'message-avatar';
+            
+            const img = document.createElement('img');
+            img.src = imageUrl;
+            img.alt = `${sender} avatar`;
+            img.onerror = function() {
+                this.style.display = 'none';
+                const fallback = document.createElement('div');
+                fallback.className = 'avatar-fallback';
+                fallback.textContent = sender === 'User' ? 'U' : 'J';
+                avatarDiv.appendChild(fallback);
+            };
+            
+            avatarDiv.appendChild(img);
+            return avatarDiv;
+        }
+
+        // Generate unique chat ID
+        function generateChatId() {
+            return 'chat_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        // Get all chats list
+        function getChatsList() {
+            const chats = JSON.parse(localStorage.getItem('netragpt_chats') || '[]');
+            return chats.sort((a, b) => new Date(b.lastActivity) - new Date(a.lastActivity));
+        }
+
+        // Save chats list
+        function saveChatsList(chats) {
+            localStorage.setItem('netragpt_chats', JSON.stringify(chats));
+        }
+
+        // Generate chat title from first message
+        function generateChatTitle(message) {
+            const words = message.split(' ').slice(0, 5).join(' ');
+            return words.length > 30 ? words.substring(0, 30) + '...' : words;
+        }
+
+        // Update chat in list
+        function updateChatInList(chatId, message = '', isNew = false) {
+            const chats = getChatsList();
+            let existingChat = chats.find(chat => chat.id === chatId);
+            
+            if (existingChat) {
+                existingChat.lastActivity = new Date().toISOString();
+                if (message) {
+                    existingChat.lastMessage = message.substring(0, 100) + (message.length > 100 ? '...' : '');
+                }
+            } else {
+                const newChat = {
+                    id: chatId,
+                    title: generateChatTitle(message) || 'New Chat',
+                    lastMessage: message.substring(0, 100) + (message.length > 100 ? '...' : ''),
+                    lastActivity: new Date().toISOString(),
+                    messageCount: 1
+                };
+                chats.unshift(newChat);
+                existingChat = newChat;
+            }
+            
+            saveChatsList(chats);
+            updateChatsList();
+            return existingChat;
+        }
+
+        // Update chats list display
+        function updateChatsList() {
+            const chats = getChatsList();
+            chatsList.innerHTML = '';
+
+            if (chats.length === 0) {
+                chatsList.innerHTML = `
+                    <div class="no-chats">
+                        <i class="fas fa-comment-slash"></i>
+                        <div>No conversations yet</div>
+                        <div style="font-size: 12px; margin-top: 8px;">Start a new chat to begin!</div>
+                    </div>
+                `;
+                return;
+            }
+
+            chats.forEach(chat => {
+                const chatItem = document.createElement('div');
+                chatItem.className = `chat-item ${chat.id === currentChatId ? 'active' : ''}`;
+                chatItem.innerHTML = `
+                    <div class="chat-item-header">
+                        <div class="chat-title">${chat.title}</div>
+                        <div class="chat-date">${formatDate(chat.lastActivity)}</div>
+                    </div>
+                    <div class="chat-preview">${chat.lastMessage || 'No messages yet'}</div>
+                `;
+                chatItem.onclick = () => switchToChat(chat.id);
+                chatsList.appendChild(chatItem);
+            });
+        }
+
+        // Format date for display
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffTime = Math.abs(now - date);
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 0) {
+                return 'Today';
+            } else if (diffDays === 1) {
+                return 'Yesterday';
+            } else if (diffDays < 7) {
+                return `${diffDays} days ago`;
+            } else {
+                return date.toLocaleDateString();
+            }
+        }
+
+        // Switch to different chat
+        function switchToChat(chatId) {
+            currentChatId = chatId;
+            loadChatHistory(chatId);
+            closeSidebar();
+            showToast('Chat loaded!');
+        }
+
+        // Create new chat
+        function createNewChat() {
+            currentChatId = generateChatId();
+            updateChatInList(currentChatId, '', true);
+            loadChatHistory(currentChatId);
+            showToast('New chat started!');
+        }
+
+        // Show sidebar
+        function showSidebar() {
+            chatsSidebar.classList.add('active');
+            updateChatsList();
+        }
+
+        // Close sidebar
+        function closeSidebar() {
+            chatsSidebar.classList.remove('active');
+        }
+
+        // Auto-resize textarea
+        input.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+        });
+
+        // Process message content for special formatting
         function processMessageContent(text) {
             // Convert URLs to clickable links
             text = text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="message-link">$1</a>');
             
-            // Process math expressions (simple detection)
-            text = text.replace(/(\d+[\+\-\*\/]\d+)/g, '<span class="math-expression">$1</span>');
+            // Process math expressions
+            text = text.replace(/🧮 Calculation Result:\s*```\s*([^`]+)\s*```/g, function(match, calculation) {
+                return `<div class="math-result">${calculation}</div>`;
+            });
             
             // Convert code blocks with enhanced features
             text = text.replace(/```(\w+)?\n([\s\S]*?)```/g, function(match, language, code) {
@@ -1021,7 +1894,7 @@
                         </div>
                     </div>
                     <div class="code-content">
-                        <pre id="${codeId}"><code class="language-${lang}">${escapeHtml(code)}</code></pre>
+                        <pre id="${codeId}"><code>${escapeHtml(code)}</code></pre>
                     </div>
                 </div>`;
             });
@@ -1031,11 +1904,6 @@
             
             // Convert line breaks
             text = text.replace(/\n/g, '<br>');
-            
-            // Highlight math results
-            text = text.replace(/🧮 Calculation Result:[\s\S]*?```([\s\S]*?)```/g, function(match, calculation) {
-                return `<div class="math-result">${calculation}</div>`;
-            });
             
             return text;
         }
@@ -1047,37 +1915,30 @@
             return div.innerHTML;
         }
 
-        // Run code (simulated - in real implementation, this would use a code execution API)
+        // Run code (simulated)
         function runCode(codeId) {
             const codeElement = document.getElementById(codeId);
             if (!codeElement) return;
             
             const code = codeElement.textContent;
-            const language = codeElement.className.replace('language-', '');
+            const language = 'python'; // Default for demo
             
             showToast(`Running ${language.toUpperCase()} code...`);
             
             // Simulate code execution
             setTimeout(() => {
-                // In a real implementation, you would send the code to a code execution API
-                // For now, we'll show a simulated output
                 const output = simulateCodeExecution(code, language);
                 addMessage('Bot', `**Code Execution Result**\n\n**Language**: ${language}\n**Output**:\n\`\`\`\n${output}\n\`\`\``);
             }, 1000);
         }
 
-        // Simulate code execution (placeholder)
+        // Simulate code execution
         function simulateCodeExecution(code, language) {
-            // Simple simulation for demonstration
             if (language === 'python') {
                 if (code.includes('print(')) {
                     return 'Hello from Python!\nCode executed successfully.';
                 } else if (code.includes('def ')) {
                     return 'Function defined successfully.\nNo output generated (function not called).';
-                }
-            } else if (language === 'javascript') {
-                if (code.includes('console.log')) {
-                    return 'Hello from JavaScript!\nCode executed successfully.';
                 }
             }
             return 'Code executed successfully.\nNo visible output generated.';
@@ -1097,8 +1958,8 @@
             });
         }
 
-        // Add message to chat
-        function addMessage(sender, text, imageUrl = null) {
+        // Add message with enhanced features
+        function addMessage(sender, text, imageUrl = null, audioUrl = null) {
             if (!isSessionActive && sender === 'User') {
                 showToast('Session expired. Please start a new session.');
                 return;
@@ -1106,6 +1967,9 @@
 
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message', sender.toLowerCase());
+            
+            // Create avatar
+            const avatar = createAvatar(sender, sender === 'User' ? USER_AVATAR : JOVIRA_AVATAR);
             
             const contentDiv = document.createElement('div');
             contentDiv.classList.add('message-content');
@@ -1118,31 +1982,172 @@
             if (imageUrl) {
                 const img = document.createElement('img');
                 img.src = imageUrl;
-                img.classList.add('uploaded-image');
-                img.alt = 'Uploaded image';
+                if (sender === 'User') {
+                    img.classList.add('uploaded-image');
+                    img.alt = 'Uploaded image';
+                    img.onclick = () => openImageModal(imageUrl);
+                } else {
+                    img.classList.add('message-image');
+                    img.alt = 'Generated image';
+                    img.onclick = () => openImageModal(imageUrl);
+                }
                 contentDiv.appendChild(img);
             }
             
-            messageDiv.appendChild(contentDiv);
-            chatBox.appendChild(messageDiv);
-            
-            // Apply syntax highlighting
-            document.querySelectorAll('pre code').forEach((block) => {
-                hljs.highlightElement(block);
-            });
-            
-            // Render MathJax
-            if (window.MathJax) {
-                MathJax.typesetPromise([messageDiv]).catch((err) => {
-                    console.log('MathJax typeset error:', err);
-                });
+            // Add audio if available
+            if (audioUrl) {
+                const audio = document.createElement('audio');
+                audio.controls = true;
+                audio.src = audioUrl;
+                audio.style.width = '100%';
+                audio.style.marginTop = '8px';
+                contentDiv.appendChild(audio);
             }
+            
+            // Add elements to message
+            if (sender === 'User') {
+                messageDiv.appendChild(contentDiv);
+                messageDiv.appendChild(avatar);
+            } else {
+                messageDiv.appendChild(avatar);
+                messageDiv.appendChild(contentDiv);
+            }
+            
+            chatBox.appendChild(messageDiv);
             
             // Smooth scroll to bottom
             chatBox.scrollTo({
                 top: chatBox.scrollHeight,
                 behavior: 'smooth'
             });
+            
+            // Save to localStorage
+            saveMessageToHistory(sender, text, imageUrl, audioUrl);
+        }
+
+        // Show typing indicator
+        function showTypingIndicator() {
+            if (isTyping) return;
+            
+            isTyping = true;
+            const typingDiv = document.createElement('div');
+            typingDiv.classList.add('message-typing');
+            typingDiv.id = 'typing-indicator';
+            
+            const avatar = createAvatar('Bot', JOVIRA_AVATAR);
+            
+            typingDiv.innerHTML = `
+                <div class="typing-dots">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+                <span>Jovira is typing...</span>
+            `;
+            
+            typingDiv.prepend(avatar);
+            chatBox.appendChild(typingDiv);
+            chatBox.scrollTo({
+                top: chatBox.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+
+        // Hide typing indicator
+        function hideTypingIndicator() {
+            isTyping = false;
+            const typingIndicator = document.getElementById('typing-indicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+        }
+
+        // Save message to history
+        function saveMessageToHistory(sender, text, imageUrl = null, audioUrl = null) {
+            const chatHistory = JSON.parse(localStorage.getItem(currentChatId) || '[]');
+            chatHistory.push({
+                sender,
+                text,
+                imageUrl,
+                audioUrl,
+                timestamp: new Date().toISOString()
+            });
+            localStorage.setItem(currentChatId, JSON.stringify(chatHistory));
+            
+            // Update chat list
+            if (sender === 'User') {
+                updateChatInList(currentChatId, text);
+            }
+        }
+
+        // Load chat history
+        function loadChatHistory(chatId) {
+            const chatHistory = JSON.parse(localStorage.getItem(chatId) || '[]');
+            chatBox.innerHTML = '';
+            
+            // Add welcome message if no history
+            if (chatHistory.length === 0) {
+                const welcomeMsg = document.createElement('div');
+                welcomeMsg.classList.add('welcome-message');
+                welcomeMsg.innerHTML = `
+                    <i class="fas fa-sparkles"></i>
+                    <h3 style="margin-bottom: 8px; color: var(--text-primary);">Hello! I'm Jovira 🌟</h3>
+                    <p style="margin-bottom: 15px; line-height: 1.5;">Your intelligent assistant from Aidnest Africa! What would you like to know?</p>
+                    
+                    <div class="quick-actions">
+                        <div class="quick-action" onclick="askQuestion('Calculate 25 * 4 + 15')">
+                            <i class="fas fa-calculator"></i> Math
+                        </div>
+                        <div class="quick-action" onclick="askQuestion('Show me Python code for a calculator')">
+                            <i class="fas fa-code"></i> Code
+                        </div>
+                        <div class="quick-action" onclick="askQuestion('Tell me about Netra services')">
+                            <i class="fas fa-mobile-alt"></i> Netra
+                        </div>
+                        <div class="quick-action" onclick="askQuestion('What is 15% of 200?')">
+                            <i class="fas fa-percentage"></i> Percentage
+                        </div>
+                    </div>
+                `;
+                chatBox.appendChild(welcomeMsg);
+            }
+            
+            // Load messages
+            chatHistory.forEach(msg => {
+                addMessage(msg.sender, msg.text, msg.imageUrl, msg.audioUrl);
+            });
+        }
+
+        // Clear current chat
+        function clearCurrentChat() {
+            if (confirm('Are you sure you want to clear this chat? This action cannot be undone.')) {
+                chatBox.innerHTML = '';
+                loadWelcomeMessage();
+                showToast('Chat cleared! 🗑️');
+            }
+        }
+
+        // Load welcome message
+        function loadWelcomeMessage() {
+            // Welcome message is already in HTML
+        }
+
+        // Ask question from quick action
+        function askQuestion(question) {
+            input.value = question;
+            sendMessage();
+        }
+
+        // Show toast notification
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = `<i class="fas fa-info-circle"></i> ${message}`;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
         }
 
         // Send message function
@@ -1159,15 +2164,20 @@
             input.value = '';
             input.style.height = 'auto';
             sendBtn.disabled = true;
+            inputWrapper.classList.remove('typing');
+
+            // Show typing indicator
+            showTypingIndicator();
 
             try {
                 const response = await fetch("/chat", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ message: msg })
+                    body: JSON.stringify({ message: msg, chatId: currentChatId })
                 });
 
                 const data = await response.json();
+                hideTypingIndicator();
                 
                 if (data.session_expired) {
                     isSessionActive = false;
@@ -1175,7 +2185,11 @@
                     sessionStatus.style.display = 'none';
                     addMessage("Bot", data.reply);
                 } else {
-                    addMessage("Bot", data.reply);
+                    if (data.image_url) {
+                        addMessage("Bot", data.reply, data.image_url);
+                    } else {
+                        addMessage("Bot", data.reply);
+                    }
                     
                     // Update session status if provided
                     if (data.time_remaining !== undefined) {
@@ -1183,33 +2197,59 @@
                     }
                 }
             } catch (err) {
-                addMessage("Bot", "I'm having trouble connecting right now. Please check your internet connection and try again.");
+                hideTypingIndicator();
+                addMessage("Bot", "I'm having trouble connecting right now. Please check your internet connection and try again. ");
             } finally {
                 sendBtn.disabled = false;
                 input.focus();
             }
         }
 
-        // Show toast notification
-        function showToast(message) {
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            toast.innerHTML = `<i class="fas fa-info-circle"></i> ${message}`;
-            document.body.appendChild(toast);
-            
-            setTimeout(() => {
-                toast.remove();
-            }, 3000);
+        // Initialize chat
+        function initializeChat() {
+            initializeChatSystem();
         }
 
-        // Initialize the app
-        window.addEventListener('load', initializeApp);
+        // Event listeners
+        sendBtn.onclick = sendMessage;
+
+        input.addEventListener("keypress", function(event) {
+            if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        });
+
+        showChatsBtn.addEventListener('click', showSidebar);
+        closeSidebarBtn.addEventListener('click', closeSidebar);
+
+        infoBtn.addEventListener('click', function() {
+            addMessage("Bot", ` **About Jovira**\n\nI'm your intelligent assistant from **Aidnest Africa**! Here's what I can help you with:\n\n **Netra App**: Service marketplace connecting providers and clients across Africa\n **Aidnest Africa**: Innovative tech company driving digital transformation\n💻 **Kakore Labs**: Our development hub building amazing applications\n **Coding Help**: Python, JavaScript, web development, and more!\n🎨 **Image Analysis**: Upload images for analysis and generation\n🎤 **Voice Messages**: Record and send voice messages\n🔗 **Smart Features**: I recognize links, code blocks, and provide copy-paste functionality\n\n**Try these features:**\n• Upload an image for analysis\n• Record a voice message\n• Ask for code examples\n• Learn about African technology\n\nFeel free to ask me anything! 💫`);
+        });
+
+        // Close sidebar when clicking outside on mobile
+        chatsSidebar.addEventListener('click', (e) => {
+            if (e.target === chatsSidebar) {
+                closeSidebar();
+            }
+        });
+
+        // Load chat on startup
+        window.addEventListener('load', initializeChat);
 
         // Handle page visibility changes
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) {
-                checkSessionStatus();
+                input.focus();
             }
+        });
+
+        // Add interactive background effects
+        document.addEventListener('mousemove', (e) => {
+            const particles = document.querySelector('.floating-particles');
+            const x = (e.clientX / window.innerWidth) * 100;
+            const y = (e.clientY / window.innerHeight) * 100;
+            particles.style.transform = `translate(${x * 0.02}px, ${y * 0.02}px)`;
         });
 
         // Handle logo loading
@@ -1223,6 +2263,11 @@
                 this.style.display = 'none';
                 this.nextElementSibling.style.display = 'flex';
             };
+        }
+
+        // View chat history function
+        function viewChatHistory() {
+            showSidebar();
         }
     </script>
 </body>
