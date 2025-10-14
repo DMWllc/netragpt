@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, session
 from flask_cors import CORS
 from openai import OpenAI
 import os
@@ -15,15 +15,20 @@ import json
 from urllib.parse import urljoin, urlparse, quote_plus
 from collections import Counter
 from datetime import datetime, timezone, timedelta
+import math
+import secrets
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("SESSION_SECRET", secrets.token_hex(32))
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=20)  # 20-minute sessions
+
 CORS(app)
 
 # Initialize OpenAI client
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
-# Enhanced conversation memory with persistent storage
-conversation_history = {}
+# Session storage for conversation history
+session_conversations = {}
 
 # Knowledge domains for diverse capabilities
 KNOWLEDGE_DOMAINS = {
@@ -66,32 +71,262 @@ KNOWLEDGE_DOMAINS = {
         'name': 'Science & Facts',
         'keywords': ['science', 'fact', 'history', 'physics', 'chemistry', 'biology', 'space', 'earth', 'nature'],
         'description': 'Scientific facts and historical information'
+    },
+    'calculations': {
+        'name': 'Calculations & Math',
+        'keywords': ['calculate', 'math', 'equation', 'formula', 'solve', 'compute', 'percentage', 'area', 'volume'],
+        'description': 'Mathematical calculations and problem solving'
     }
 }
 
-def get_user_session(user_id):
-    if user_id not in conversation_history:
-        conversation_history[user_id] = {
-            'last_interaction': time.time(),
-            'conversation_context': [],
-            'last_topic': None,
-            'question_count': 0,
-            'user_name': None,
-            'user_interests': [],
-            'conversation_stage': 'greeting',
-            'mood': 'friendly',
-            'remembered_facts': {},
-            'recent_topics': [],
-            'personal_details': {},
-            'image_requests': 0,
-            'coding_help_requests': 0,
-            'voice_requests': 0,
-            'browsing_sessions': 0,
-            'preferred_domains': [],
-            'knowledge_usage': {domain: 0 for domain in KNOWLEDGE_DOMAINS.keys()},
-            'external_searches': 0
+# Company information
+COMPANY_INFO = {
+    'ceo': {
+        'name': 'Nowamaani Donath',
+        'title': 'CEO & Founder',
+        'companies': ['Aidnest Africa', 'Netra App', 'Kakore Labs'],
+        'location': 'Kampala, Uganda, East Africa',
+        'bio': 'Visionary entrepreneur leading digital transformation in Africa through innovative service platforms.'
+    },
+    'companies': {
+        'Aidnest Africa': 'Parent company focused on digital solutions for African markets',
+        'Netra App': 'Premier service marketplace connecting providers with clients across Africa',
+        'Kakore Labs': 'Programming and innovation hub developing cutting-edge technology solutions'
+    }
+}
+
+def initialize_user_session():
+    """Initialize a new user session with 20-minute lifetime"""
+    session.permanent = True
+    session['session_start'] = time.time()
+    session['session_id'] = secrets.token_hex(16)
+    session['conversation_count'] = 0
+    session['last_activity'] = time.time()
+    
+    # Initialize session data
+    session_data = {
+        'session_start': session['session_start'],
+        'conversation_context': [],
+        'last_topic': None,
+        'question_count': 0,
+        'user_name': None,
+        'user_interests': [],
+        'conversation_stage': 'greeting',
+        'mood': 'friendly',
+        'remembered_facts': {},
+        'recent_topics': [],
+        'personal_details': {},
+        'image_requests': 0,
+        'coding_help_requests': 0,
+        'voice_requests': 0,
+        'browsing_sessions': 0,
+        'preferred_domains': [],
+        'knowledge_usage': {domain: 0 for domain in KNOWLEDGE_DOMAINS.keys()},
+        'external_searches': 0,
+        'memory_retention': {},
+        'calculation_history': [],
+        'session_warnings': 0
+    }
+    
+    session_conversations[session['session_id']] = session_data
+    return session_data
+
+def get_user_session():
+    """Get current user session or create new one"""
+    if 'session_id' not in session:
+        return initialize_user_session()
+    
+    session_id = session['session_id']
+    
+    # Check if session exists in storage
+    if session_id not in session_conversations:
+        return initialize_user_session()
+    
+    # Update last activity
+    session['last_activity'] = time.time()
+    session_conversations[session_id]['last_activity'] = time.time()
+    
+    return session_conversations[session_id]
+
+def is_session_expired():
+    """Check if current session has expired (20 minutes)"""
+    if 'session_start' not in session:
+        return True
+    
+    session_duration = time.time() - session['session_start']
+    return session_duration > 1200  # 20 minutes in seconds
+
+def get_session_time_remaining():
+    """Get remaining time in session in minutes"""
+    if 'session_start' not in session:
+        return 0
+    
+    elapsed = time.time() - session['session_start']
+    remaining = 1200 - elapsed  # 20 minutes in seconds
+    return max(0, int(remaining / 60))  # Convert to minutes
+
+def get_session_warning(user_session):
+    """Get session warning message if needed"""
+    time_remaining = get_session_time_remaining()
+    
+    if time_remaining <= 5 and time_remaining > 0 and user_session['session_warnings'] < 2:
+        user_session['session_warnings'] += 1
+        if time_remaining == 1:
+            return "⏰ **Session Alert**: Your chat session will expire in 1 minute. Please complete your conversation."
+        else:
+            return f"⏰ **Session Alert**: Your chat session will expire in {time_remaining} minutes. Please complete your conversation."
+    
+    return None
+
+def cleanup_expired_sessions():
+    """Clean up expired sessions (older than 20 minutes)"""
+    current_time = time.time()
+    expired_sessions = []
+    
+    for session_id, session_data in session_conversations.items():
+        if current_time - session_data.get('session_start', 0) > 1200:  # 20 minutes
+            expired_sessions.append(session_id)
+    
+    for session_id in expired_sessions:
+        del session_conversations[session_id]
+
+def enhance_memory_retention(user_session, message, response):
+    """Enhanced memory system to prevent conversation breaks"""
+    message_lower = message.lower()
+    
+    # Store important facts from conversation
+    important_patterns = {
+        'user_name': r'(?:my name is|i am|call me) ([^.?!]+)',
+        'user_location': r'(?:i live in|i am from|based in) ([^.?!]+)',
+        'user_interests': r'(?:i like|i love|i enjoy|interested in) ([^.?!]+)',
+        'user_profession': r'(?:i work as|i am a|my job is) ([^.?!]+)'
+    }
+    
+    for fact_type, pattern in important_patterns.items():
+        match = re.search(pattern, message_lower)
+        if match and fact_type not in user_session['memory_retention']:
+            user_session['memory_retention'][fact_type] = match.group(1).strip()
+    
+    # Store calculation results
+    if any(word in message_lower for word in ['calculate', 'compute', 'solve', 'math']):
+        calculation_match = re.search(r'([\d\s\+\-\*\/\(\)\.]+)=?', message)
+        if calculation_match:
+            user_session['calculation_history'].append({
+                'query': message,
+                'result': response,
+                'timestamp': time.time()
+            })
+    
+    # Keep only recent calculations (last 10)
+    if len(user_session['calculation_history']) > 10:
+        user_session['calculation_history'] = user_session['calculation_history'][-10:]
+
+def get_memory_context(user_session):
+    """Get comprehensive memory context for AI"""
+    memory_parts = []
+    
+    # Personal information
+    if user_session.get('user_name'):
+        memory_parts.append(f"User's name: {user_session['user_name']}")
+    
+    if user_session['memory_retention']:
+        for fact_type, value in user_session['memory_retention'].items():
+            memory_parts.append(f"{fact_type.replace('_', ' ').title()}: {value}")
+    
+    # Recent topics
+    if user_session['recent_topics']:
+        memory_parts.append(f"Recent topics: {', '.join(user_session['recent_topics'][-3:])}")
+    
+    # Domain preferences
+    top_domains = sorted(user_session['knowledge_usage'].items(), key=lambda x: x[1], reverse=True)[:2]
+    if top_domains:
+        domain_names = [KNOWLEDGE_DOMAINS[domain]['name'] for domain, count in top_domains if count > 0]
+        if domain_names:
+            memory_parts.append(f"User frequently asks about: {', '.join(domain_names)}")
+    
+    # Session info
+    time_remaining = get_session_time_remaining()
+    memory_parts.append(f"Session time remaining: {time_remaining} minutes")
+    
+    return " | ".join(memory_parts) if memory_parts else "New conversation"
+
+def perform_calculation(expression):
+    """Perform mathematical calculations safely"""
+    try:
+        # Clean the expression
+        expression = expression.replace('×', '*').replace('÷', '/').replace('^', '**')
+        
+        # Remove any non-math characters for safety
+        safe_chars = set('0123456789+-*/.()% ')
+        clean_expression = ''.join(char for char in expression if char in safe_chars)
+        
+        if not clean_expression:
+            return None
+            
+        # Evaluate the expression safely
+        result = eval(clean_expression, {"__builtins__": None}, {})
+        
+        return {
+            'expression': expression,
+            'result': result,
+            'formatted': f"{expression} = {result}"
         }
-    return conversation_history[user_id]
+        
+    except Exception as e:
+        print(f"Calculation error: {e}")
+        return None
+
+def handle_calculations(query):
+    """Handle mathematical calculations and problem solving"""
+    query_lower = query.lower()
+    
+    # Math calculation patterns
+    calculation_patterns = [
+        r'calculate (.+)',
+        r'what is (.+)',
+        r'solve (.+)',
+        r'compute (.+)',
+        r'(.+) equals',
+        r'(.+) ='
+    ]
+    
+    for pattern in calculation_patterns:
+        match = re.search(pattern, query_lower)
+        if match:
+            expression = match.group(1).strip()
+            # Remove question marks and other non-math chars
+            expression = re.sub(r'[?\s]+', '', expression)
+            
+            result = perform_calculation(expression)
+            if result:
+                return f"🧮 Calculation Result:\n```\n{result['formatted']}\n```"
+    
+    # Special calculations
+    if 'percentage' in query_lower:
+        percentage_match = re.search(r'(\d+)% of (\d+)', query_lower)
+        if percentage_match:
+            percentage = float(percentage_match.group(1))
+            number = float(percentage_match.group(2))
+            result = (percentage / 100) * number
+            return f"🧮 Percentage Calculation:\n```\n{percentage}% of {number} = {result}\n```"
+    
+    # Area calculations
+    if 'area' in query_lower:
+        if 'circle' in query_lower:
+            radius_match = re.search(r'radius[^\d]*(\d+)', query_lower)
+            if radius_match:
+                radius = float(radius_match.group(1))
+                area = math.pi * radius ** 2
+                return f"🧮 Circle Area:\n```\nArea = π × r² = {math.pi:.2f} × {radius}² = {area:.2f}\n```"
+    
+    return None
+
+def format_code_response(code, language=''):
+    """Format code blocks for proper display"""
+    if language:
+        return f"```{language}\n{code}\n```"
+    else:
+        return f"```\n{code}\n```"
 
 def search_google(query, num_results=5):
     """Search Google for information using a free approach"""
@@ -215,6 +450,17 @@ def search_person_info(person_name):
     try:
         print(f"Searching for person: {person_name}")
         
+        # Check if it's Nowamaani Donath (CEO information)
+        if 'nowamaani' in person_name.lower() or 'donath' in person_name.lower():
+            ceo_info = COMPANY_INFO['ceo']
+            return {
+                'source': 'company_database',
+                'name': ceo_info['name'],
+                'information': f"{ceo_info['title']} of {', '.join(ceo_info['companies'])}. Based in {ceo_info['location']}. {ceo_info['bio']}",
+                'url': 'https://myaidnest.com',
+                'confidence': 'high'
+            }
+        
         # Try Wikipedia first for reliable biographical information
         wiki_result = search_wikipedia(person_name)
         if wiki_result and len(wiki_result.get('extract', '')) > 50:
@@ -286,7 +532,7 @@ def should_search_externally(query):
         'search about', 'look up', 'find info', 'information on', 'who is'
     ]) and any(word in query_lower for word in ['called', 'named', 'person', 'someone'])
     
-    return has_external_phrase or has_external_topic or is_complex_factual or has_person_pattern or is_person_search
+    return has_external_phrase or has_external_topic or is_complex_factual or has_person_pattern or is_complex_factual
 
 def get_external_knowledge(query):
     """Get information from external sources (Google + Wikipedia) - ENHANCED VERSION"""
@@ -350,6 +596,10 @@ def analyze_query_domain(query):
     if any(word in query_lower for word in ['fact', 'science', 'history', 'research', 'study']):
         domain_scores['science'] += 2
     
+    # Boost calculations for math queries
+    if any(word in query_lower for word in ['calculate', 'compute', 'solve', 'math', 'equation']):
+        domain_scores['calculations'] += 3
+    
     # Sort by relevance
     sorted_domains = sorted(domain_scores.items(), key=lambda x: x[1], reverse=True)
     relevant_domains = [domain for domain, score in sorted_domains if score > 0]
@@ -357,24 +607,23 @@ def analyze_query_domain(query):
     return relevant_domains[:3] if relevant_domains else ['general_tech']
 
 def get_current_time(timezone_str=None):
-    """Get current time in different timezones without pytz"""
+    """Get current time in different timezones - ENHANCED FOR EAST AFRICA"""
     try:
-        # Timezone offsets in hours (simplified without pytz)
+        # Timezone offsets in hours (East Africa focused)
         timezone_offsets = {
+            'eat': 3, 'east africa': 3, 'nairobi': 3, 'kampala': 3, 'dar es salaam': 3,
+            'kigali': 2, 'addis ababa': 3, 'juba': 2,
             'est': -5, 'edt': -4,  # Eastern
             'pst': -8, 'pdt': -7,  # Pacific
             'cst': -6, 'cdt': -5,  # Central
             'mst': -7, 'mdt': -6,  # Mountain
-            'gmt': 0, 'utc': 0,    # GMT/UTC
+            'gmt': 0, 'utc': 0, 'zulu': 0,    # GMT/UTC/Zulu
             'ist': 5.5,            # India
             'cet': 1, 'cedt': 2,   # Central European
             'aest': 10,            # Australian Eastern
-            'eat': 3,              # East Africa
-            'cat': 2,              # Central Africa
             'west': 1,             # West Africa
-            'wast': 2,             # West Africa Summer
+            'cat': 2,              # Central Africa
             'lagos': 1,            # Nigeria
-            'nairobi': 3,          # Kenya
             'accra': 0,            # Ghana
             'johannesburg': 2      # South Africa
         }
@@ -385,24 +634,27 @@ def get_current_time(timezone_str=None):
             for tz_name, offset in timezone_offsets.items():
                 if tz_name in tz_lower:
                     utc_offset = timedelta(hours=offset)
+                    tz_display = tz_name.upper()
                     break
             else:
-                # Default to UTC if no match found
-                utc_offset = timedelta(hours=0)
+                # Default to East Africa Time if no match found
+                utc_offset = timedelta(hours=3)
+                tz_display = "EAT"
         else:
-            utc_offset = timedelta(hours=0)
+            # Default to East Africa Time
+            utc_offset = timedelta(hours=3)
+            tz_display = "EAT"
         
         # Calculate time with offset
         current_utc = datetime.now(timezone.utc)
         current_time = current_utc + utc_offset
         
-        # Format the time
-        timezone_name = timezone_str.upper() if timezone_str else "UTC"
-        return current_time.strftime(f"%Y-%m-%d %H:%M:%S {timezone_name}")
+        # Format the time with clear timezone indication
+        return current_time.strftime(f"%Y-%m-%d %H:%M:%S {tz_display}")
     
     except Exception as e:
         print(f"Timezone error: {e}")
-        return datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")
+        return datetime.now().strftime("%Y-%m-%d %H:%M:%S EAT")
 
 def get_currency_rates(base_currency='USD'):
     """Get current currency exchange rates"""
@@ -413,8 +665,8 @@ def get_currency_rates(base_currency='USD'):
             data = response.json()
             rates = data.get('rates', {})
             
-            # Return major currencies
-            major_currencies = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY', 'KES', 'GHS', 'NGN', 'ZAR']
+            # Return major currencies with focus on African currencies
+            major_currencies = ['USD', 'EUR', 'GBP', 'KES', 'UGX', 'TZS', 'NGN', 'GHS', 'ZAR', 'CNY']
             result = {}
             for currency in major_currencies:
                 if currency in rates and currency != base_currency:
@@ -1062,6 +1314,11 @@ def build_diverse_context(user_session, relevant_domains, query, external_info):
         
         context_parts.append(external_context)
     
+    # Add memory context
+    memory_context = get_memory_context(user_session)
+    if memory_context != "New conversation":
+        context_parts.append(f"CONVERSATION MEMORY:\n{memory_context}")
+    
     # Add domain-specific context
     domain_descriptions = []
     for domain in relevant_domains:
@@ -1071,21 +1328,16 @@ def build_diverse_context(user_session, relevant_domains, query, external_info):
     
     context_parts.append(f"RELEVANT KNOWLEDGE DOMAINS: {', '.join(domain_descriptions)}")
     
-    # Add user preferences if available
-    if user_session['preferred_domains']:
-        context_parts.append(f"USER PREFERRED DOMAINS: {', '.join(user_session['preferred_domains'])}")
-    
     return "\n\n".join(context_parts)
 
 def handle_special_queries(message):
-    """Handle special queries like time, weather, news, etc."""
+    """Handle special queries like time, weather, calculations, etc."""
     message_lower = message.lower()
     
     # Time queries
-    time_pattern = r'(?:time|current time|what time is it)\s*(?:in|at)?\s*([^.?]+)?'
-    time_match = re.search(time_pattern, message_lower)
-    if time_match:
-        location = time_match.group(1)
+    if any(word in message_lower for word in ['time', 'current time', 'what time']):
+        time_match = re.search(r'(?:in|at)?\s*([^.?]+)?', message_lower)
+        location = time_match.group(1) if time_match and time_match.group(1) else None
         current_time = get_current_time(location.strip() if location else None)
         return f"⏰ {current_time}"
     
@@ -1112,13 +1364,22 @@ def handle_special_queries(message):
         else:
             return f"I couldn't fetch weather information for {city}. You might want to check a weather service directly."
     
+    # Calculation queries
+    calculation_result = handle_calculations(message)
+    if calculation_result:
+        return calculation_result
+    
     return None
 
 def get_ai_response(message, conversation_context, user_session=None):
-    """Enhanced AI response with diverse knowledge and external research - IMPROVED PERSON SEARCH"""
+    """Enhanced AI response with memory, calculations, and proper formatting"""
     try:
         user_name = user_session.get('user_name', 'there')
-        memory_context = build_memory_context(user_session)
+        
+        # Check for special queries first (time, calculations, etc.)
+        special_response = handle_special_queries(message)
+        if special_response:
+            return special_response
         
         # Analyze which knowledge domains are relevant
         relevant_domains = analyze_query_domain(message)
@@ -1135,53 +1396,66 @@ def get_ai_response(message, conversation_context, user_session=None):
                 if domain not in user_session['preferred_domains']:
                     user_session['preferred_domains'].append(domain)
         
-        # Check for special queries (time, weather, etc.)
-        special_response = handle_special_queries(message)
-        if special_response:
-            return special_response
-        
-        # Get diverse context including Netra information and external research
+        # Get diverse context including memory, Netra information and external research
         diverse_context = build_diverse_context(user_session, relevant_domains, message, external_info)
         
-        # Build comprehensive system message
+        # Build comprehensive system message with enhanced memory
         system_message = f"""
         You are Jovira, an AI assistant created by Kakore Labs (Aidnest Africa's programming hub). 
         You serve as a team member for Netra but have diverse knowledge across multiple domains.
 
-        YOUR IDENTITY & CAPABILITIES:
+        COMPANY INFORMATION:
+        - CEO: Nowamaani Donath
+        - Companies: Aidnest Africa, Netra App, Kakore Labs
+        - Location: Kampala, Uganda, East Africa
+        - Timezone: East Africa Time (EAT, UTC+3)
+
+        YOUR CAPABILITIES:
         - Primary role: Netra customer service and support
         - Secondary: General AI assistant with diverse knowledge
-        - You can help with technology, productivity, education, business, creative work, science, and daily life
-        - You have access to external knowledge sources (Wikipedia, Google) for factual queries and person searches
-        - Always maintain Netra expertise while being helpful in other areas
+        - Mathematical calculations and problem solving
+        - Code generation and explanation
+        - External research via Wikipedia and Google
+        - Memory retention across conversations
 
         CURRENT CONTEXT:
         {diverse_context}
 
         RESPONSE GUIDELINES:
         - For Netra/service queries: Provide specific, accurate information using current website data
+        - For calculations: Show step-by-step working and final result in code blocks
+        - For code: Format code properly using markdown code blocks with language specification
         - For factual queries: Use external research when available, cite sources when helpful
         - For person searches: Use the search results to provide information about the person
-        - If no information is found: Be honest but mention you searched external sources
-        - For other topics: Be helpful while occasionally mentioning Netra when relevant
-        - Balance between being specialized and versatile
+        - Maintain conversation continuity using memory context
         - Use emojis to make conversations engaging
         - Speak as a knowledgeable team member, not just a service bot
-        - When unsure, be honest and suggest checking Netra website for service-specific questions
-        - For external research, mention you looked it up to provide accurate information
+        - For time: Always specify timezone (EAT/UTC/Zulu etc.)
+        - Format mathematical expressions and code clearly
+        - Mention session time remaining when appropriate
+
+        MEMORY & CONTINUITY:
+        - Remember user preferences and previous topics
+        - Maintain context across multiple messages
+        - Reference previous calculations or discussions when relevant
+
+        SESSION INFORMATION:
+        - This chat session lasts for 20 minutes
+        - User will need to start a new session after 20 minutes
+        - Current session time remaining: {get_session_time_remaining()} minutes
 
         USER CONTEXT:
         - Name: {user_name}
-        - Memory: {memory_context}
-        - Relevant domains for this query: {', '.join([KNOWLEDGE_DOMAINS[d]['name'] for d in relevant_domains])}
+        - Memory: {get_memory_context(user_session)}
+        - Relevant domains: {', '.join([KNOWLEDGE_DOMAINS[d]['name'] for d in relevant_domains])}
         - External sources used: {', '.join(external_info['sources_used']) if external_info['sources_used'] else 'None'}
         """
         
         context_messages = [{"role": "system", "content": system_message}]
         
-        # Add conversation history
+        # Add conversation history (increased from 6 to 10 for better memory)
         if conversation_context:
-            for msg in conversation_context[-6:]:
+            for msg in conversation_context[-10:]:  # Increased context window
                 role = "user" if msg.get('sender') == 'user' else "assistant"
                 context_messages.append({"role": role, "content": msg.get('text', '')})
         
@@ -1191,11 +1465,16 @@ def get_ai_response(message, conversation_context, user_session=None):
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=context_messages,
-            max_tokens=700,
+            max_tokens=800,  # Increased for better explanations
             temperature=0.7
         )
         
-        return response.choices[0].message.content.strip()
+        ai_response = response.choices[0].message.content.strip()
+        
+        # Enhance memory with this interaction
+        enhance_memory_retention(user_session, message, ai_response)
+        
+        return ai_response
         
     except Exception as e:
         print(f"AI response error: {e}")
@@ -1222,47 +1501,36 @@ def update_conversation_memory(user_session, message, response):
     user_session['last_interaction'] = time.time()
     user_session['last_topic'] = message_lower
 
-def build_memory_context(user_session):
-    """Build comprehensive memory context"""
-    memory_parts = []
-    
-    if user_session['user_name']:
-        memory_parts.append(f"User's name: {user_session['user_name']}")
-    
-    if user_session['user_interests']:
-        memory_parts.append(f"Interests: {', '.join(user_session['user_interests'])}")
-    
-    if user_session['recent_topics']:
-        memory_parts.append(f"Recent topics: {', '.join(user_session['recent_topics'][-3:])}")
-    
-    # Add domain usage information
-    top_domains = sorted(user_session['knowledge_usage'].items(), key=lambda x: x[1], reverse=True)[:3]
-    if top_domains:
-        domain_names = [KNOWLEDGE_DOMAINS[domain]['name'] for domain, count in top_domains if count > 0]
-        if domain_names:
-            memory_parts.append(f"Frequently discussed: {', '.join(domain_names)}")
-    
-    # Add external search count
-    if user_session.get('external_searches', 0) > 0:
-        memory_parts.append(f"External searches: {user_session['external_searches']}")
-    
-    return " | ".join(memory_parts) if memory_parts else "New conversation"
-
 @app.route("/")
 def home():
     return render_template("index.html")
 
 @app.route("/chat", methods=["POST"])
 def chat():
+    # Clean up expired sessions periodically
+    if random.random() < 0.1:  # 10% chance to cleanup on each request
+        cleanup_expired_sessions()
+    
     data = request.get_json()
     message = data.get("message", "").strip()
-    user_id = request.remote_addr
-
+    
     if not message:
         return jsonify({"reply": "Please enter a message."}), 400
 
     try:
-        user_session = get_user_session(user_id)
+        # Get user session
+        user_session = get_user_session()
+        
+        # Check if session is expired
+        if is_session_expired():
+            session.clear()
+            return jsonify({
+                "reply": "⏰ **Session Expired**: Your 20-minute chat session has ended. Please refresh the page to start a new session with Jovira.",
+                "session_expired": True
+            })
+        
+        # Check for session warning
+        session_warning = get_session_warning(user_session)
         
         # Update conversation context
         user_session['conversation_context'].append({
@@ -1285,7 +1553,14 @@ def chat():
                 'timestamp': time.time()
             })
             
-            return jsonify({"reply": ai_response})
+            response_data = {"reply": ai_response}
+            
+            # Add session warning if needed
+            if session_warning:
+                response_data["session_warning"] = session_warning
+                response_data["time_remaining"] = get_session_time_remaining()
+            
+            return jsonify(response_data)
         
         # Fallback response
         fallback_responses = [
@@ -1303,7 +1578,12 @@ def chat():
             'timestamp': time.time()
         })
         
-        return jsonify({"reply": reply})
+        response_data = {"reply": reply}
+        if session_warning:
+            response_data["session_warning"] = session_warning
+            response_data["time_remaining"] = get_session_time_remaining()
+        
+        return jsonify(response_data)
 
     except Exception as e:
         print(f"Chat error: {e}")
@@ -1312,6 +1592,55 @@ def chat():
             "My services seem to be temporarily unavailable. You can visit https://myaidnest.com directly for Netra information! 🌐",
         ]
         return jsonify({"reply": random.choice(error_responses)})
+
+@app.route("/session_status", methods=["GET"])
+def session_status():
+    """Get current session status and time remaining"""
+    if 'session_id' not in session:
+        return jsonify({
+            "active": False,
+            "time_remaining": 0,
+            "message": "No active session"
+        })
+    
+    if is_session_expired():
+        session.clear()
+        return jsonify({
+            "active": False,
+            "time_remaining": 0,
+            "message": "Session expired"
+        })
+    
+    time_remaining = get_session_time_remaining()
+    return jsonify({
+        "active": True,
+        "time_remaining": time_remaining,
+        "message": f"Session active - {time_remaining} minutes remaining"
+    })
+
+@app.route("/start_new_session", methods=["POST"])
+def start_new_session():
+    """Start a new session"""
+    session.clear()
+    user_session = initialize_user_session()
+    
+    welcome_messages = [
+        "🔄 **New Session Started**! Welcome back! You now have 20 minutes to chat with Jovira. How can I help you today?",
+        "🌟 **Fresh Session Activated**! Hello again! Your 20-minute chat timer has started. What would you like to discuss?",
+        "🆕 **New Chat Session**! Great to see you! You have 20 minutes for this conversation. How may I assist you?"
+    ]
+    
+    user_session['conversation_context'].append({
+        'sender': 'assistant',
+        'text': random.choice(welcome_messages),
+        'timestamp': time.time()
+    })
+    
+    return jsonify({
+        "status": "success",
+        "message": "New session started",
+        "reply": random.choice(welcome_messages)
+    })
 
 @app.route("/analyze_image", methods=["POST"])
 def analyze_image_endpoint():
@@ -1430,29 +1759,15 @@ def generate_image_endpoint():
 @app.route("/clear_history", methods=["POST"])
 def clear_history():
     """Endpoint to clear conversation history"""
-    user_id = request.remote_addr
-    if user_id in conversation_history:
-        conversation_history[user_id] = {
-            'last_interaction': time.time(),
-            'conversation_context': [],
-            'last_topic': None,
-            'question_count': 0,
-            'user_name': None,
-            'user_interests': [],
-            'conversation_stage': 'greeting',
-            'mood': 'friendly',
-            'remembered_facts': {},
-            'recent_topics': [],
-            'personal_details': {},
-            'image_requests': 0,
-            'coding_help_requests': 0,
-            'voice_requests': 0,
-            'browsing_sessions': 0,
-            'preferred_domains': [],
-            'knowledge_usage': {domain: 0 for domain in KNOWLEDGE_DOMAINS.keys()},
-            'external_searches': 0
-        }
-    return jsonify({"status": "success", "message": "Conversation history cleared"})
+    user_session = get_user_session()
+    user_session['conversation_context'] = []
+    user_session['memory_retention'] = {}
+    user_session['calculation_history'] = []
+    
+    return jsonify({
+        "status": "success", 
+        "message": "Conversation history cleared. Your 20-minute session continues."
+    })
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
