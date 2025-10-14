@@ -87,16 +87,6 @@
             --border-radius: 20px;
             --border-radius-small: 16px;
             --transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-            
-            /* New color variables for special content */
-            --equation-bg: rgba(255, 215, 0, 0.15); /* Gold background for equations */
-            --equation-border: rgba(255, 215, 0, 0.4);
-            --calculation-bg: rgba(135, 206, 235, 0.15); /* Sky blue for calculations */
-            --calculation-border: rgba(135, 206, 235, 0.4);
-            --code-bg: rgba(30, 41, 59, 0.8); /* Dark blue for code */
-            --code-border: rgba(56, 189, 248, 0.4);
-            --symbol-bg: rgba(255, 165, 0, 0.15); /* Orange for symbols */
-            --symbol-border: rgba(255, 165, 0, 0.4);
         }
 
         * {
@@ -386,14 +376,13 @@
             border-radius: 10px;
         }
 
-        /* Messages - UPDATED FOR BETTER FITTING */
+        /* Messages */
         .message {
             display: flex;
             margin-bottom: 8px;
             animation: messageSlide 0.4s ease-out;
             gap: 12px;
             align-items: flex-start;
-            max-width: 100%;
         }
 
         .message.user {
@@ -438,9 +427,8 @@
             background: var(--accent-gradient);
         }
 
-        /* Message Content - UPDATED FOR BETTER FITTING */
         .message-content {
-            max-width: 85%; /* Increased from 70% to prevent overflow */
+            max-width: 70%;
             padding: 16px 20px;
             border-radius: var(--border-radius);
             font-size: 14px;
@@ -448,8 +436,6 @@
             position: relative;
             transition: var(--transition);
             word-wrap: break-word;
-            overflow-wrap: break-word;
-            word-break: break-word;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
         }
 
@@ -541,7 +527,7 @@
             color: var(--dark-bg);
         }
 
-        /* Enhanced Code Blocks - UPDATED COLORS */
+        /* Enhanced Code Blocks */
         .code-block {
             background: var(--code-bg);
             border: 1px solid var(--code-border);
@@ -634,7 +620,7 @@
         .code-variable { color: #8be9fd; }
         .code-class { color: #8be9fd; font-weight: bold; }
 
-        /* Inline Code - UPDATED COLORS */
+        /* Inline Code */
         .inline-code {
             background: var(--code-bg);
             border: 1px solid var(--code-border);
@@ -642,24 +628,23 @@
             padding: 2px 6px;
             font-family: 'Fira Code', monospace;
             font-size: 12px;
-            color: #8be9fd; /* Changed to light blue for better visibility */
+            color: var(--text-accent);
         }
 
-        /* Enhanced Math Expression Styling - UPDATED COLORS */
+        /* Enhanced Math Expression Styling */
         .math-expression {
-            background: var(--equation-bg);
-            border: 1px solid var(--equation-border);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 8px;
             padding: 16px;
             margin: 8px 0;
             text-align: center;
             font-size: 16px;
             font-family: 'Fira Code', monospace;
-            color: #ffd700; /* Gold color for equations */
         }
 
         .math-result {
-            background: var(--calculation-bg);
+            background: var(--success-gradient);
             color: white;
             padding: 12px 16px;
             border-radius: 8px;
@@ -669,7 +654,6 @@
             align-items: center;
             gap: 8px;
             font-family: 'Fira Code', monospace;
-            border: 1px solid var(--calculation-border);
         }
 
         .math-result::before {
@@ -678,8 +662,8 @@
         }
 
         .math-calculation {
-            background: var(--calculation-bg);
-            border: 1px solid var(--calculation-border);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 8px;
             padding: 16px;
             margin: 8px 0;
@@ -702,7 +686,6 @@
         .math-expression-symbols {
             font-size: 18px;
             font-weight: 600;
-            color: #ffd700; /* Gold for symbols */
         }
 
         .math-equals {
@@ -710,22 +693,10 @@
             margin: 0 10px;
         }
 
-        /* Calculation Symbols - NEW STYLING */
-        .calculation-symbol {
-            background: var(--symbol-bg);
-            border: 1px solid var(--symbol-border);
-            border-radius: 4px;
-            padding: 2px 6px;
-            font-family: 'Fira Code', monospace;
-            font-size: 14px;
-            color: #ffa500; /* Orange for calculation symbols */
-            margin: 0 4px;
-        }
-
-        /* LaTeX Equation Styling - UPDATED COLORS */
+        /* LaTeX Equation Styling */
         .latex-equation {
-            background: var(--equation-bg);
-            border: 1px solid var(--equation-border);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 8px;
             padding: 20px;
             margin: 12px 0;
@@ -1307,7 +1278,7 @@
             }
 
             .message-content {
-                max-width: 80%; /* Adjusted for mobile */
+                max-width: 75%;
                 padding: 14px 18px;
             }
 
@@ -1387,18 +1358,6 @@
 
         mjx-container {
             text-align: center !important;
-        }
-        
-        /* Animation for message appearance */
-        @keyframes messageSlide {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
         }
     </style>
 </head>
@@ -2137,7 +2096,7 @@
             this.style.height = Math.min(this.scrollHeight, 100) + 'px';
         });
 
-        // Process message content for special formatting - UPDATED FOR BETTER STYLING
+        // Process message content for special formatting
         function processMessageContent(text) {
             // Convert URLs to clickable links
             text = text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="message-link">$1</a>');
@@ -2194,16 +2153,6 @@
             
             // Process bold text
             text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-            
-            // Process mathematical expressions with special styling
-            text = text.replace(/(\d+[\+\-\*\/\×\÷]\d+)/g, function(match, expression) {
-                return `<span class="math-expression-symbols">${expression}</span>`;
-            });
-            
-            // Process calculation symbols
-            text = text.replace(/([\+\-\*\/\×\÷\=\%])/g, function(match, symbol) {
-                return `<span class="calculation-symbol">${symbol}</span>`;
-            });
             
             return text;
         }
