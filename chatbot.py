@@ -12,7 +12,7 @@ import urllib.parse
 import base64
 from io import BytesIO
 import json
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin, urlparse, quote_plus
 from collections import Counter
 from datetime import datetime, timezone, timedelta
 
@@ -24,6 +24,50 @@ client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 # Enhanced conversation memory with persistent storage
 conversation_history = {}
+
+# Knowledge domains for diverse capabilities
+KNOWLEDGE_DOMAINS = {
+    'netra': {
+        'name': 'Netra Services',
+        'keywords': ['netra', 'service', 'provider', 'booking', 'category', 'clean', 'repair', 'beauty', 'fitness', 'aidnest'],
+        'description': 'Africa\'s premier service marketplace'
+    },
+    'general_tech': {
+        'name': 'Technology',
+        'keywords': ['computer', 'phone', 'app', 'software', 'tech', 'internet', 'website', 'digital', 'code', 'programming'],
+        'description': 'General technology and digital assistance'
+    },
+    'productivity': {
+        'name': 'Productivity',
+        'keywords': ['schedule', 'organize', 'plan', 'time management', 'task', 'reminder', 'efficiency', 'productivity'],
+        'description': 'Help with productivity and organization'
+    },
+    'education': {
+        'name': 'Education & Learning',
+        'keywords': ['learn', 'study', 'teach', 'education', 'course', 'skill', 'knowledge', 'research', 'school', 'university'],
+        'description': 'Educational support and learning assistance'
+    },
+    'business': {
+        'name': 'Business & Entrepreneurship',
+        'keywords': ['business', 'startup', 'entrepreneur', 'marketing', 'sales', 'customer', 'strategy', 'finance', 'investment'],
+        'description': 'Business advice and entrepreneurial guidance'
+    },
+    'creative': {
+        'name': 'Creative Work',
+        'keywords': ['write', 'design', 'create', 'content', 'story', 'art', 'creative', 'brainstorm', 'music', 'drawing'],
+        'description': 'Creative writing and content creation'
+    },
+    'daily_life': {
+        'name': 'Daily Life',
+        'keywords': ['cook', 'travel', 'health', 'fitness', 'home', 'family', 'relationship', 'advice', 'food', 'recipe'],
+        'description': 'Everyday life advice and support'
+    },
+    'science': {
+        'name': 'Science & Facts',
+        'keywords': ['science', 'fact', 'history', 'physics', 'chemistry', 'biology', 'space', 'earth', 'nature'],
+        'description': 'Scientific facts and historical information'
+    }
+}
 
 def get_user_session(user_id):
     if user_id not in conversation_history:
@@ -42,9 +86,171 @@ def get_user_session(user_id):
             'image_requests': 0,
             'coding_help_requests': 0,
             'voice_requests': 0,
-            'browsing_sessions': 0
+            'browsing_sessions': 0,
+            'preferred_domains': [],
+            'knowledge_usage': {domain: 0 for domain in KNOWLEDGE_DOMAINS.keys()},
+            'external_searches': 0
         }
     return conversation_history[user_id]
+
+def search_google(query, num_results=5):
+    """Search Google for information using a free approach"""
+    try:
+        # Using a simple Google search through their basic HTML interface
+        search_url = f"https://www.google.com/search?q={quote_plus(query)}&num={num_results}"
+        
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        
+        response = requests.get(search_url, headers=headers, timeout=10)
+        soup = BeautifulSoup(response.content, 'html.parser')
+        
+        results = []
+        
+        # Extract search results
+        for g in soup.find_all('div', class_='g'):
+            title_element = g.find('h3')
+            link_element = g.find('a')
+            desc_element = g.find('span', class_='aCOpRe')
+            
+            if title_element and link_element:
+                title = title_element.get_text()
+                link = link_element.get('href')
+                description = desc_element.get_text() if desc_element else "No description available"
+                
+                # Clean the link
+                if link.startswith('/url?q='):
+                    link = link[7:].split('&')[0]
+                
+                results.append({
+                    'title': title,
+                    'link': link,
+                    'description': description[:200]  # Limit description length
+                })
+                
+                if len(results) >= num_results:
+                    break
+        
+        return results
+        
+    except Exception as e:
+        print(f"Google search error: {e}")
+        return []
+
+def search_wikipedia(query):
+    """Search Wikipedia for information"""
+    try:
+        # Search Wikipedia API
+        search_url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{quote_plus(query)}"
+        
+        response = requests.get(search_url, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            return {
+                'title': data.get('title', ''),
+                'extract': data.get('extract', ''),
+                'url': data.get('content_urls', {}).get('desktop', {}).get('page', ''),
+                'thumbnail': data.get('thumbnail', {}).get('source', '')
+            }
+        else:
+            # Try search instead of direct page
+            search_url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={quote_plus(query)}&format=json&srlimit=1"
+            response = requests.get(search_url, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data['query']['search']:
+                    page_title = data['query']['search'][0]['title']
+                    return search_wikipedia(page_title)  # Recursive call with exact title
+            
+        return None
+        
+    except Exception as e:
+        print(f"Wikipedia search error: {e}")
+        return None
+
+def get_external_knowledge(query):
+    """Get information from external sources (Google + Wikipedia)"""
+    external_info = {
+        'google_results': [],
+        'wikipedia_result': None,
+        'sources_used': []
+    }
+    
+    try:
+        # Only search for complex or factual queries
+        if should_search_externally(query):
+            print(f"Searching externally for: {query}")
+            
+            # Search Wikipedia first (more reliable for facts)
+            wiki_result = search_wikipedia(query)
+            if wiki_result and len(wiki_result.get('extract', '')) > 50:
+                external_info['wikipedia_result'] = wiki_result
+                external_info['sources_used'].append('wikipedia')
+            
+            # Search Google for additional context
+            google_results = search_google(query, num_results=3)
+            if google_results:
+                external_info['google_results'] = google_results
+                external_info['sources_used'].append('google')
+        
+        return external_info
+        
+    except Exception as e:
+        print(f"External knowledge error: {e}")
+        return external_info
+
+def should_search_externally(query):
+    """Determine if a query should trigger external search"""
+    query_lower = query.lower()
+    
+    # Questions that typically need external knowledge
+    external_keywords = [
+        'what is', 'who is', 'when was', 'where is', 'how does', 'why does',
+        'history of', 'facts about', 'definition of', 'explain', 'tell me about',
+        'current', 'latest', 'recent', 'news about', 'update on'
+    ]
+    
+    # Topics that benefit from external sources
+    external_topics = [
+        'scientific', 'historical', 'biography', 'geography', 'technology news',
+        'medical', 'space', 'physics', 'chemistry', 'biology', 'mathematics'
+    ]
+    
+    # Check if query matches external search criteria
+    has_external_phrase = any(phrase in query_lower for phrase in external_keywords)
+    has_external_topic = any(topic in query_lower for topic in external_topics)
+    is_complex_factual = len(query.split()) > 3 and any(word in query_lower for word in ['fact', 'information', 'details', 'research'])
+    
+    return has_external_phrase or has_external_topic or is_complex_factual
+
+def analyze_query_domain(query):
+    """Analyze which knowledge domains are relevant to the query"""
+    query_lower = query.lower()
+    domain_scores = {}
+    
+    for domain, info in KNOWLEDGE_DOMAINS.items():
+        score = 0
+        for keyword in info['keywords']:
+            if keyword in query_lower:
+                score += 1
+        domain_scores[domain] = score
+    
+    # Boost Netra for service-related queries
+    if any(word in query_lower for word in ['service', 'provider', 'book', 'hire', 'clean', 'repair', 'netra', 'aidnest']):
+        domain_scores['netra'] += 3
+    
+    # Boost science for factual queries
+    if any(word in query_lower for word in ['fact', 'science', 'history', 'research', 'study']):
+        domain_scores['science'] += 2
+    
+    # Sort by relevance
+    sorted_domains = sorted(domain_scores.items(), key=lambda x: x[1], reverse=True)
+    relevant_domains = [domain for domain, score in sorted_domains if score > 0]
+    
+    return relevant_domains[:3] if relevant_domains else ['general_tech']
 
 def get_current_time(timezone_str=None):
     """Get current time in different timezones without pytz"""
@@ -116,164 +322,31 @@ def get_currency_rates(base_currency='USD'):
         print(f"Currency API error: {e}")
         return {}
 
-def extract_service_providers_from_category_page(soup, url):
-    """Extract service providers from category_services.php page"""
-    providers = []
+def get_weather(city="Nairobi"):
+    """Get current weather information"""
     try:
-        # Look for provider listings in category pages
-        provider_elements = soup.find_all(['div', 'tr', 'li'], class_=re.compile(r'provider|service|card|listing|item', re.I))
-        
-        for element in provider_elements:
-            provider_text = element.get_text().strip()
-            if len(provider_text) > 20:
-                # Extract provider ID or name for detail lookup
-                provider_id = extract_provider_id(element, provider_text)
-                provider_name = extract_provider_name(provider_text)
-                
-                provider_data = {
-                    'id': provider_id,
-                    'name': provider_name,
-                    'category': extract_category_from_url(url),
-                    'summary': provider_text[:150],
-                    'source_url': url
-                }
-                
-                if provider_data['name'] and provider_data['id']:
-                    providers.append(provider_data)
-                    
-    except Exception as e:
-        print(f"Category provider extraction error: {e}")
-    
-    return providers
-
-def extract_provider_id(element, provider_text):
-    """Extract provider ID from element for detail lookup"""
-    try:
-        # Look for data attributes
-        if element.has_attr('data-provider-id'):
-            return element['data-provider-id']
-        if element.has_attr('data-id'):
-            return element['data-id']
-        
-        # Look for links that might contain provider IDs
-        links = element.find_all('a', href=True)
-        for link in links:
-            href = link['href']
-            if 'provider_id=' in href:
-                match = re.search(r'provider_id=([^&]+)', href)
-                if match:
-                    return match.group(1)
-            elif 'id=' in href:
-                match = re.search(r'id=([^&]+)', href)
-                if match:
-                    return match.group(1)
-        
-        # Generate ID from name as fallback
-        name = extract_provider_name(provider_text)
-        if name:
-            return hashlib.md5(name.encode()).hexdigest()[:8]
+        # Using OpenWeatherMap API (you'll need to add your API key)
+        api_key = os.environ.get("OPENWEATHER_API_KEY")
+        if not api_key:
+            return None
             
+        response = requests.get(
+            f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric",
+            timeout=10
+        )
+        if response.status_code == 200:
+            data = response.json()
+            return {
+                'city': data['name'],
+                'temperature': data['main']['temp'],
+                'description': data['weather'][0]['description'],
+                'humidity': data['main']['humidity'],
+                'wind_speed': data['wind']['speed']
+            }
+        return None
     except Exception as e:
-        print(f"Provider ID extraction error: {e}")
-    
-    return "unknown"
-
-def extract_category_from_url(url):
-    """Extract service category from URL"""
-    try:
-        if 'category_services.php' in url:
-            match = re.search(r'category=([^&]+)', url)
-            if match:
-                return urllib.parse.unquote(match.group(1))
-        return "general"
-    except:
-        return "general"
-
-def get_provider_details(provider_id):
-    """Get detailed information about a specific provider from detail_services.php"""
-    try:
-        # Construct detail page URL
-        detail_url = f"https://myaidnest.com/detail_services.php?provider_id={provider_id}"
-        
-        response = requests.get(detail_url, timeout=10, headers={
-            'User-Agent': 'Mozilla/5.0 (compatible; Jovira-Bot/1.0; +https://myaidnest.com)'
-        })
-        soup = BeautifulSoup(response.content, 'html.parser')
-        
-        # Extract detailed provider information
-        details = extract_provider_details_from_page(soup, provider_id)
-        details['detail_url'] = detail_url
-        
-        return details
-        
-    except Exception as e:
-        print(f"Provider details error: {e}")
-        return {'error': 'Could not fetch provider details'}
-
-def extract_provider_details_from_page(soup, provider_id):
-    """Extract detailed provider information from detail_services.php"""
-    details = {
-        'id': provider_id,
-        'name': 'Unknown Provider',
-        'rating': None,
-        'services': [],
-        'description': '',
-        'contact_info': {},
-        'reviews': [],
-        'experience': None,
-        'location': '',
-        'response_time': '',
-        'pricing': {}
-    }
-    
-    try:
-        # Extract provider name
-        name_element = soup.find(['h1', 'h2', 'h3'], class_=re.compile(r'provider|name|title', re.I))
-        if name_element:
-            details['name'] = name_element.get_text().strip()
-        
-        # Extract rating
-        rating_element = soup.find(class_=re.compile(r'rating|stars|score', re.I))
-        if rating_element:
-            rating_text = rating_element.get_text()
-            rating_match = re.search(r'(\d+\.?\d*)', rating_text)
-            if rating_match:
-                details['rating'] = float(rating_match.group(1))
-        
-        # Extract services
-        service_elements = soup.find_all(class_=re.compile(r'service|skill|offering', re.I))
-        for element in service_elements[:10]:
-            service_text = element.get_text().strip()
-            if service_text and len(service_text) < 100:
-                details['services'].append(service_text)
-        
-        # Extract description
-        desc_element = soup.find(class_=re.compile(r'description|bio|about', re.I))
-        if desc_element:
-            details['description'] = desc_element.get_text().strip()[:200]
-        
-        # Extract contact information
-        contact_elements = soup.find_all(class_=re.compile(r'contact|phone|email|location', re.I))
-        for element in contact_elements:
-            text = element.get_text().strip()
-            if '@' in text and 'email' not in details['contact_info']:
-                details['contact_info']['email'] = text
-            elif re.search(r'(\+?[\d\s\-\(\)]+)', text) and 'phone' not in details['contact_info']:
-                details['contact_info']['phone'] = text
-            elif any(word in text.lower() for word in ['location', 'address', 'city']) and 'location' not in details:
-                details['location'] = text
-        
-        # Extract reviews
-        review_elements = soup.find_all(class_=re.compile(r'review|comment|testimonial', re.I))
-        for element in review_elements[:5]:
-            review_text = element.get_text().strip()
-            if len(review_text) > 10:
-                details['reviews'].append(review_text[:100])
-        
-    except Exception as e:
-        print(f"Provider details extraction error: {e}")
-    
-    return details
+        print(f"Weather API error: {e}")
+        return None
 
 def enhanced_web_browsing(query, max_pages=8, deep_analysis=False):
     """Enhanced browsing that can navigate through Netra website pages with deep analysis"""
@@ -437,6 +510,79 @@ def identify_relevant_pages(query, netra_pages, deep_analysis=False):
         sorted_pages = ['home', 'services', 'category_services', 'detail_services', 'about']
     
     return sorted_pages
+
+def extract_service_providers_from_category_page(soup, url):
+    """Extract service providers from category_services.php page"""
+    providers = []
+    try:
+        # Look for provider listings in category pages
+        provider_elements = soup.find_all(['div', 'tr', 'li'], class_=re.compile(r'provider|service|card|listing|item', re.I))
+        
+        for element in provider_elements:
+            provider_text = element.get_text().strip()
+            if len(provider_text) > 20:
+                # Extract provider ID or name for detail lookup
+                provider_id = extract_provider_id(element, provider_text)
+                provider_name = extract_provider_name(provider_text)
+                
+                provider_data = {
+                    'id': provider_id,
+                    'name': provider_name,
+                    'category': extract_category_from_url(url),
+                    'summary': provider_text[:150],
+                    'source_url': url
+                }
+                
+                if provider_data['name'] and provider_data['id']:
+                    providers.append(provider_data)
+                    
+    except Exception as e:
+        print(f"Category provider extraction error: {e}")
+    
+    return providers
+
+def extract_provider_id(element, provider_text):
+    """Extract provider ID from element for detail lookup"""
+    try:
+        # Look for data attributes
+        if element.has_attr('data-provider-id'):
+            return element['data-provider-id']
+        if element.has_attr('data-id'):
+            return element['data-id']
+        
+        # Look for links that might contain provider IDs
+        links = element.find_all('a', href=True)
+        for link in links:
+            href = link['href']
+            if 'provider_id=' in href:
+                match = re.search(r'provider_id=([^&]+)', href)
+                if match:
+                    return match.group(1)
+            elif 'id=' in href:
+                match = re.search(r'id=([^&]+)', href)
+                if match:
+                    return match.group(1)
+        
+        # Generate ID from name as fallback
+        name = extract_provider_name(provider_text)
+        if name:
+            return hashlib.md5(name.encode()).hexdigest()[:8]
+            
+    except Exception as e:
+        print(f"Provider ID extraction error: {e}")
+    
+    return "unknown"
+
+def extract_category_from_url(url):
+    """Extract service category from URL"""
+    try:
+        if 'category_services.php' in url:
+            match = re.search(r'category=([^&]+)', url)
+            if match:
+                return urllib.parse.unquote(match.group(1))
+        return "general"
+    except:
+        return "general"
 
 def extract_page_content(soup, url, page_type):
     """Extract structured content from a webpage"""
@@ -773,26 +919,180 @@ def get_static_netra_info(query):
     For the most current information about providers, services, and ratings, please visit our website directly.
     """
 
+def build_diverse_context(user_session, relevant_domains, query, external_info):
+    """Build context for diverse knowledge domains"""
+    context_parts = []
+    
+    # Add Netra context for service-related queries
+    if 'netra' in relevant_domains:
+        netra_info = get_dynamic_netra_info(query)
+        context_parts.append(f"NETRA KNOWLEDGE BASE:\n{netra_info}")
+    
+    # Add external knowledge if available
+    if external_info['sources_used']:
+        external_context = "EXTERNAL RESEARCH RESULTS:\n"
+        
+        if external_info['wikipedia_result']:
+            wiki = external_info['wikipedia_result']
+            external_context += f"📚 Wikipedia: {wiki.get('extract', 'No information found')}\n"
+            if wiki.get('url'):
+                external_context += f"🔗 Source: {wiki['url']}\n"
+        
+        if external_info['google_results']:
+            external_context += "🌐 Google Results:\n"
+            for i, result in enumerate(external_info['google_results'][:2], 1):
+                external_context += f"{i}. {result['title']}: {result['description']}\n"
+        
+        context_parts.append(external_context)
+    
+    # Add domain-specific context
+    domain_descriptions = []
+    for domain in relevant_domains:
+        domain_info = KNOWLEDGE_DOMAINS[domain]
+        domain_descriptions.append(f"{domain_info['name']}: {domain_info['description']}")
+        user_session['knowledge_usage'][domain] += 1
+    
+    context_parts.append(f"RELEVANT KNOWLEDGE DOMAINS: {', '.join(domain_descriptions)}")
+    
+    # Add user preferences if available
+    if user_session['preferred_domains']:
+        context_parts.append(f"USER PREFERRED DOMAINS: {', '.join(user_session['preferred_domains'])}")
+    
+    return "\n\n".join(context_parts)
+
+def get_ai_response(message, conversation_context, user_session=None):
+    """Enhanced AI response with diverse knowledge and external research"""
+    try:
+        user_name = user_session.get('user_name', 'there')
+        memory_context = build_memory_context(user_session)
+        
+        # Analyze which knowledge domains are relevant
+        relevant_domains = analyze_query_domain(message)
+        
+        # Get external knowledge for factual queries
+        external_info = get_external_knowledge(message)
+        if external_info['sources_used']:
+            user_session['external_searches'] += 1
+        
+        # Update user preferences based on usage
+        if len(user_session['preferred_domains']) < 5:
+            for domain in relevant_domains:
+                if domain not in user_session['preferred_domains']:
+                    user_session['preferred_domains'].append(domain)
+        
+        # Check for special queries (time, weather, etc.)
+        special_response = handle_special_queries(message)
+        if special_response:
+            return special_response
+        
+        # Get diverse context including Netra information and external research
+        diverse_context = build_diverse_context(user_session, relevant_domains, message, external_info)
+        
+        # Build comprehensive system message
+        system_message = f"""
+        You are Jovira, an AI assistant created by Kakore Labs (Aidnest Africa's programming hub). 
+        You serve as a team member for Netra but have diverse knowledge across multiple domains.
+
+        YOUR IDENTITY & CAPABILITIES:
+        - Primary role: Netra customer service and support
+        - Secondary: General AI assistant with diverse knowledge
+        - You can help with technology, productivity, education, business, creative work, science, and daily life
+        - You have access to external knowledge sources (Wikipedia, Google) for factual queries
+        - Always maintain Netra expertise while being helpful in other areas
+
+        CURRENT CONTEXT:
+        {diverse_context}
+
+        RESPONSE GUIDELINES:
+        - For Netra/service queries: Provide specific, accurate information using current website data
+        - For factual queries: Use external research when available, cite sources when helpful
+        - For other topics: Be helpful while occasionally mentioning Netra when relevant
+        - Balance between being specialized and versatile
+        - Use emojis to make conversations engaging
+        - Speak as a knowledgeable team member, not just a service bot
+        - When unsure, be honest and suggest checking Netra website for service-specific questions
+        - For external research, mention you looked it up if it adds credibility
+
+        USER CONTEXT:
+        - Name: {user_name}
+        - Memory: {memory_context}
+        - Relevant domains for this query: {', '.join([KNOWLEDGE_DOMAINS[d]['name'] for d in relevant_domains])}
+        - External sources used: {', '.join(external_info['sources_used']) if external_info['sources_used'] else 'None'}
+        """
+        
+        context_messages = [{"role": "system", "content": system_message}]
+        
+        # Add conversation history
+        if conversation_context:
+            for msg in conversation_context[-6:]:
+                role = "user" if msg.get('sender') == 'user' else "assistant"
+                context_messages.append({"role": role, "content": msg.get('text', '')})
+        
+        # Add current message
+        context_messages.append({"role": "user", "content": message})
+        
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=context_messages,
+            max_tokens=700,
+            temperature=0.7
+        )
+        
+        return response.choices[0].message.content.strip()
+        
+    except Exception as e:
+        print(f"AI response error: {e}")
+        return "I'm having trouble accessing information right now. For Netra-specific questions, please visit https://myaidnest.com directly."
+
+def handle_special_queries(message):
+    """Handle special queries like time, weather, news, etc."""
+    message_lower = message.lower()
+    
+    # Time queries
+    time_pattern = r'(?:time|current time|what time is it)\s*(?:in|at)?\s*([^.?]+)?'
+    time_match = re.search(time_pattern, message_lower)
+    if time_match:
+        location = time_match.group(1)
+        current_time = get_current_time(location.strip() if location else None)
+        return f"⏰ {current_time}"
+    
+    # Currency queries
+    currency_pattern = r'(?:currency|exchange rate|convert)\s+([^.?]+)'
+    currency_match = re.search(currency_pattern, message_lower)
+    if currency_match:
+        currency_query = currency_match.group(1)
+        rates = get_currency_rates()
+        if rates:
+            rates_text = "\n".join([f"💱 {currency}: {rate:.2f}" for currency, rate in list(rates.items())[:5]])
+            return f"💰 Current Exchange Rates (Base: USD):\n{rates_text}"
+        else:
+            return "I couldn't fetch current exchange rates. Please check a financial website for the most up-to-date information."
+    
+    # Weather queries
+    weather_pattern = r'(?:weather|temperature)\s*(?:in|at)?\s*([^.?]+)'
+    weather_match = re.search(weather_pattern, message_lower)
+    if weather_match:
+        city = weather_match.group(1).strip()
+        weather = get_weather(city)
+        if weather:
+            return f"🌤️ Weather in {weather['city']}: {weather['temperature']}°C, {weather['description']}, Humidity: {weather['humidity']}%, Wind: {weather['wind_speed']} m/s"
+        else:
+            return f"I couldn't fetch weather information for {city}. You might want to check a weather service directly."
+    
+    return None
+
 def update_conversation_memory(user_session, message, response):
     """Enhanced conversation memory tracking"""
     message_lower = message.lower()
     
+    # Track domain usage
+    relevant_domains = analyze_query_domain(message)
+    for domain in relevant_domains:
+        user_session['knowledge_usage'][domain] = user_session['knowledge_usage'].get(domain, 0) + 1
+    
     # Track browsing sessions
     if any(word in message_lower for word in ['browse', 'analyze', 'find', 'search', 'look up']):
         user_session['browsing_sessions'] = user_session.get('browsing_sessions', 0) + 1
-    
-    # Track user interests
-    interest_keywords = {
-        'providers': ['provider', 'service person', 'professional', 'expert'],
-        'services': ['service', 'category', 'booking', 'hire'],
-        'ratings': ['rating', 'review', 'stars', 'score', 'best'],
-        'technical': ['app', 'download', 'install', 'technical', 'bug']
-    }
-    
-    for interest, keywords in interest_keywords.items():
-        if any(keyword in message_lower for keyword in keywords):
-            if interest not in user_session['user_interests']:
-                user_session['user_interests'].append(interest)
     
     # Update recent topics
     if len(user_session['recent_topics']) >= 5:
@@ -815,172 +1115,18 @@ def build_memory_context(user_session):
     if user_session['recent_topics']:
         memory_parts.append(f"Recent topics: {', '.join(user_session['recent_topics'][-3:])}")
     
-    if user_session.get('browsing_sessions', 0) > 0:
-        memory_parts.append(f"Browsing sessions: {user_session['browsing_sessions']}")
+    # Add domain usage information
+    top_domains = sorted(user_session['knowledge_usage'].items(), key=lambda x: x[1], reverse=True)[:3]
+    if top_domains:
+        domain_names = [KNOWLEDGE_DOMAINS[domain]['name'] for domain, count in top_domains if count > 0]
+        if domain_names:
+            memory_parts.append(f"Frequently discussed: {', '.join(domain_names)}")
+    
+    # Add external search count
+    if user_session.get('external_searches', 0) > 0:
+        memory_parts.append(f"External searches: {user_session['external_searches']}")
     
     return " | ".join(memory_parts) if memory_parts else "New conversation"
-
-def get_ai_response(message, conversation_context, user_session=None):
-    """Enhanced AI response with real-time web browsing and analysis"""
-    try:
-        user_name = user_session.get('user_name', 'there')
-        memory_context = build_memory_context(user_session)
-        
-        # Check for time queries
-        time_pattern = r'(?:time|current time|what time is it)\s*(?:in|at)?\s*([^.?]+)?'
-        time_match = re.search(time_pattern, message, re.I)
-        if time_match:
-            location = time_match.group(1)
-            current_time = get_current_time(location.strip() if location else None)
-            return f"⏰ {current_time}"
-        
-        # Check for currency queries
-        currency_pattern = r'(?:currency|exchange rate|convert)\s+([^.?]+)'
-        currency_match = re.search(currency_pattern, message, re.I)
-        if currency_match:
-            currency_query = currency_match.group(1)
-            rates = get_currency_rates()
-            if rates:
-                rates_text = "\n".join([f"💱 {currency}: {rate:.2f}" for currency, rate in list(rates.items())[:5]])
-                return f"💰 Current Exchange Rates (Base: USD):\n{rates_text}"
-            else:
-                return "I couldn't fetch current exchange rates. Please check a financial website for the most up-to-date information."
-        
-        # Get real-time information from Netra website
-        web_info = get_dynamic_netra_info(message)
-        
-        # Build comprehensive system message
-        system_message = f"""
-        You are Jovira, a real team member at Netra - Africa's premier service marketplace.
-
-        YOUR IDENTITY:
-        - You work for Netra (not "Netra website" - just "Netra")
-        - You are part of the team building Africa's service marketplace
-        - Refer to Netra as "we", "our", "us" - like you work there
-        - Example: "At Netra, we recommend..." or "Our service providers..."
-
-        YOUR CAPABILITIES:
-        - Browse Netra website in real-time for current information
-        - Analyze provider ratings and service popularity
-        - Find top-rated providers and popular services
-        - Get detailed provider information from our database
-        - Guide users to specific pages on our website
-        - Provide deep analysis of our service marketplace
-
-        CURRENT NETRA WEBSITE INFORMATION (Real-time):
-        {web_info}
-
-        YOUR ROLE:
-        - Provide accurate, up-to-date information from our live website
-        - Perform analysis on providers and services when asked
-        - Guide users to relevant pages with direct URLs
-        - Help with app downloads and provider registration
-        - Explain current service categories and features
-
-        RESPONSE GUIDELINES:
-        - Always reference current website information when available
-        - Provide specific URLs for users to visit relevant pages
-        - When analyzing, mention if data is from live website browsing
-        - Be honest about limitations of automated analysis
-        - Encourage visiting our actual website for most current info
-        - Use emojis to make the conversation engaging
-        - Speak as a Netra team member, not as a website
-
-        CONVERSATION CONTEXT:
-        - User: {user_name}
-        - Memory: {memory_context}
-        """
-        
-        context_messages = [{"role": "system", "content": system_message}]
-        
-        # Add conversation history
-        if conversation_context:
-            for msg in conversation_context[-6:]:
-                role = "user" if msg.get('sender') == 'user' else "assistant"
-                context_messages.append({"role": role, "content": msg.get('text', '')})
-        
-        # Add current message
-        context_messages.append({"role": "user", "content": message})
-        
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=context_messages,
-            max_tokens=600,
-            temperature=0.7
-        )
-        
-        return response.choices[0].message.content.strip()
-        
-    except Exception as e:
-        print(f"AI response error: {e}")
-        return "I'm having trouble accessing our current information. Please visit https://myaidnest.com for the most up-to-date details about Netra services and providers."
-
-def get_fallback_response(message, user_id="default"):
-    """Enhanced fallback with browsing awareness"""
-    user_session = get_user_session(user_id)
-    message_lower = message.lower().strip()
-    
-    user_session['question_count'] += 1
-    
-    # Name handling
-    if user_session['conversation_stage'] == 'greeting':
-        user_session['conversation_stage'] = 'get_name'
-        greetings = [
-            "Hey there! 👋 I'm Jovira from the Netra team! I can browse our website to get you current information. What should I call you?",
-            "Hello! 🌟 Welcome! I'm Jovira and I can analyze Netra's live data. What's your name?",
-            "Hi! 🚀 Great to connect! I'm Jovira from Netra and I can browse our services in real-time. What do you prefer to be called?",
-        ]
-        return random.choice(greetings)
-    
-    if user_session['conversation_stage'] == 'get_name' and not user_session['user_name']:
-        potential_name = message.strip()
-        if len(potential_name) < 30 and not any(word in potential_name.lower() for word in ['netra', 'aidnest', 'hello', 'hi']):
-            user_session['user_name'] = potential_name
-            user_session['conversation_stage'] = 'main_conversation'
-            
-            responses = [
-                f"Perfect, {potential_name}! 🎉 Now I can help you with real Netra data! I can browse services, analyze providers, and find current information. What would you like to explore?",
-                f"Hey {potential_name}! 👋 Great name! I'm excited to browse Netra's live data for you - services, providers, ratings, and more! What interests you?",
-            ]
-            return random.choice(responses)
-    
-    user_name = user_session.get('user_name', '')
-    name_prefix = f"{user_name}, " if user_name else ""
-    
-    # Feature suggestions
-    if any(word in message_lower for word in ['what can you do', 'help', 'features', 'capabilities']):
-        return f"{name_prefix}At Netra, I can: 🌐 Browse our website live, 🔍 Analyze providers & ratings, 🏆 Find top-rated services, 📊 Show popular categories, and 🎯 Guide you to specific pages! What would you like me to explore?"
-    
-    # Analysis capabilities
-    if any(word in message_lower for word in ['analyze', 'find top', 'best provider', 'ratings']):
-        return f"{name_prefix}I can browse Netra and analyze provider ratings! 🕵️‍♀️ Let me search through our services and find the top-rated providers for you. Want me to start analyzing?"
-    
-    # Time queries
-    if any(word in message_lower for word in ['time', 'current time']):
-        current_time = get_current_time()
-        return f"{name_prefix}⏰ {current_time}"
-    
-    # Currency queries
-    if any(word in message_lower for word in ['currency', 'exchange rate', 'convert']):
-        rates = get_currency_rates()
-        if rates:
-            rates_text = "\n".join([f"💱 {currency}: {rate:.2f}" for currency, rate in list(rates.items())[:5]])
-            return f"{name_prefix}💰 Current Exchange Rates (Base: USD):\n{rates_text}"
-    
-    # Casual conversation
-    if any(word in message_lower for word in ['how are you', 'how do you do']):
-        return f"{name_prefix}I'm doing great! 😊 Just been browsing Netra's services and analyzing provider data. Ready to explore some live information with you!"
-    
-    if any(word in message_lower for word in ['thank', 'thanks']):
-        return f"{name_prefix}You're very welcome! Happy to browse and analyze Netra data for you. We have so much current information to explore! 🌟"
-    
-    # Default engaging response
-    engaging_responses = [
-        f"{name_prefix}That's interesting! 🤔 I can browse Netra's current services to find specific information about that. Should I search for providers, services, or something else?",
-        f"{name_prefix}Fascinating topic! 💡 Let me browse Netra's live data to get you the most current information. What specific aspect should I focus on?",
-        f"{name_prefix}Great question! 🌟 I'll browse Netra to find the latest information. Would you like me to analyze providers, services, or general information?"
-    ]
-    return random.choice(engaging_responses)
 
 @app.route("/")
 def home():
@@ -1023,9 +1169,9 @@ def chat():
         
         # Fallback response
         fallback_responses = [
-            "I've browsed our services but couldn't find specific information for your query. Could you try asking in a different way?",
-            "Let me check our services again... In the meantime, you can visit https://myaidnest.com for direct access to all Netra services.",
-            "I'm having trouble finding that specific information in our current data. Would you like me to help you with something else?"
+            "I've searched my knowledge but couldn't find specific information for your query. Could you try asking in a different way?",
+            "Let me check my knowledge base... In the meantime, for Netra-specific questions you can visit https://myaidnest.com",
+            "I'm having trouble finding that specific information. Would you like me to help you with something else?"
         ]
         
         reply = random.choice(fallback_responses)
@@ -1042,8 +1188,8 @@ def chat():
     except Exception as e:
         print(f"Chat error: {e}")
         error_responses = [
-            "I'm experiencing some technical difficulties accessing our services right now. Please try again in a moment! 🔄",
-            "Our services seem to be temporarily unavailable for browsing. You can visit https://myaidnest.com directly for current information! 🌐",
+            "I'm experiencing some technical difficulties right now. Please try again in a moment! 🔄",
+            "My services seem to be temporarily unavailable. You can visit https://myaidnest.com directly for Netra information! 🌐",
         ]
         return jsonify({"reply": random.choice(error_responses)})
 
@@ -1181,7 +1327,10 @@ def clear_history():
             'image_requests': 0,
             'coding_help_requests': 0,
             'voice_requests': 0,
-            'browsing_sessions': 0
+            'browsing_sessions': 0,
+            'preferred_domains': [],
+            'knowledge_usage': {domain: 0 for domain in KNOWLEDGE_DOMAINS.keys()},
+            'external_searches': 0
         }
     return jsonify({"status": "success", "message": "Conversation history cleared"})
 
