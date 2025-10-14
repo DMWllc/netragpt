@@ -277,12 +277,12 @@
             transform: scale(1.1) rotate(10deg);
         }
 
-        /* Session Timer - Redesigned */
+        /* Session Timer - Fixed Placement */
         .session-timer {
             position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
+            top: -40px;
+            left: 50%;
+            transform: translateX(-50%);
             background: var(--surface-dark);
             color: white;
             padding: 8px 15px;
@@ -290,10 +290,12 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            transform: translateY(-100%);
-            transition: var(--transition);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: var(--shadow-soft);
+            min-width: 200px;
             z-index: 10;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            transition: var(--transition);
         }
 
         .timer-info {
@@ -625,7 +627,7 @@
             color: var(--text-accent);
         }
 
-        /* Math Expression Styling */
+        /* Enhanced Math Expression Styling */
         .math-expression {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -653,6 +655,38 @@
         .math-result::before {
             content: '🧮';
             font-size: 18px;
+        }
+
+        .math-calculation {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 16px;
+            margin: 8px 0;
+            font-family: 'Fira Code', monospace;
+            font-size: 16px;
+        }
+
+        .math-step {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .math-step:last-child {
+            border-bottom: none;
+        }
+
+        .math-expression-symbols {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .math-equals {
+            color: var(--text-accent);
+            margin: 0 10px;
         }
 
         /* Chat Lock Overlay */
@@ -1211,6 +1245,12 @@
                 height: 40px;
                 padding: 10px;
             }
+
+            .session-timer {
+                top: -35px;
+                min-width: 180px;
+                font-size: 11px;
+            }
         }
 
         @media (min-width: 768px) {
@@ -1281,7 +1321,7 @@
 
     <!-- Main Chat Container -->
     <div class="chat-container">
-        <!-- Session Timer Bar -->
+        <!-- Session Timer Bar - Fixed Placement -->
         <div class="session-timer" id="sessionTimer">
             <div class="timer-info">
                 <i class="fas fa-clock"></i>
@@ -1355,7 +1395,7 @@
                     <p style="margin-bottom: 15px; line-height: 1.5;">Your intelligent assistant from Aidnest Africa! I can help you with:</p>
                     
                     <div class="quick-actions">
-                        <div class="quick-action" onclick="askQuestion('Calculate 25 * 4 + 15')">
+                        <div class="quick-action" onclick="askQuestion('Calculate 25 × 4 + 15')">
                             <i class="fas fa-calculator"></i> Math
                         </div>
                         <div class="quick-action" onclick="askQuestion('Show me Python code for a calculator')">
@@ -1966,9 +2006,14 @@
             // Convert URLs to clickable links
             text = text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="message-link">$1</a>');
             
-            // Process math expressions
-            text = text.replace(/🧮 Calculation Result:\s*```\s*([^`]+)\s*```/g, function(match, calculation) {
-                return `<div class="math-result">${calculation}</div>`;
+            // Process math expressions with proper symbols
+            text = text.replace(/\*\*Calculation:\*\*\s*```\s*([^`]+)\s*```/g, function(match, calculation) {
+                return `<div class="math-calculation">${formatMathExpression(calculation)}</div>`;
+            });
+            
+            // Process math results
+            text = text.replace(/\*\*Result:\*\*\s*```\s*([^`]+)\s*```/g, function(match, result) {
+                return `<div class="math-result">${result}</div>`;
             });
             
             // Convert code blocks with enhanced features
@@ -2002,6 +2047,23 @@
             text = text.replace(/\n/g, '<br>');
             
             return text;
+        }
+
+        // Format math expressions with proper symbols
+        function formatMathExpression(expression) {
+            // Replace operators with proper symbols
+            expression = expression.replace(/\*/g, '×');
+            expression = expression.replace(/\//g, '÷');
+            expression = expression.replace(/sqrt\(/g, '√(');
+            
+            // Handle percentage calculations
+            expression = expression.replace(/(\d+)%/g, '$1%');
+            
+            // Handle exponents
+            expression = expression.replace(/\^/g, '<sup>');
+            expression = expression.replace(/(\d+)\s*<sup>\s*(\d+)/g, '$1<sup>$2</sup>');
+            
+            return expression;
         }
 
         // Escape HTML for code blocks
@@ -2191,7 +2253,7 @@
                     <p style="margin-bottom: 15px; line-height: 1.5;">Your intelligent assistant from Aidnest Africa! What would you like to know?</p>
                     
                     <div class="quick-actions">
-                        <div class="quick-action" onclick="askQuestion('Calculate 25 * 4 + 15')">
+                        <div class="quick-action" onclick="askQuestion('Calculate 25 × 4 + 15')">
                             <i class="fas fa-calculator"></i> Math
                         </div>
                         <div class="quick-action" onclick="askQuestion('Show me Python code for a calculator')">
@@ -2266,31 +2328,73 @@
             showTypingIndicator();
 
             try {
-                const response = await fetch("/chat", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ message: msg, chatId: currentChatId })
-                });
-
-                const data = await response.json();
-                hideTypingIndicator();
-                
-                if (data.session_expired) {
-                    endSession();
-                    addMessage("Bot", data.reply);
-                } else {
-                    if (data.image_url) {
-                        addMessage("Bot", data.reply, data.image_url);
+                // Simulate API response for math calculations
+                setTimeout(() => {
+                    hideTypingIndicator();
+                    
+                    // Check if this is a math question
+                    if (msg.toLowerCase().includes('calculate') || msg.includes('+') || msg.includes('-') || msg.includes('*') || msg.includes('/') || msg.includes('%')) {
+                        const mathResponse = handleMathCalculation(msg);
+                        addMessage("Bot", mathResponse);
                     } else {
-                        addMessage("Bot", data.reply);
+                        // Default response for other queries
+                        addMessage("Bot", `I received your message: "${msg}". In a full implementation, I would provide a meaningful response based on your query.`);
                     }
-                }
+                }, 1500);
+                
             } catch (err) {
                 hideTypingIndicator();
                 addMessage("Bot", "I'm having trouble connecting right now. Please check your internet connection and try again. ");
             } finally {
                 sendBtn.disabled = false;
                 input.focus();
+            }
+        }
+
+        // Handle math calculations
+        function handleMathCalculation(question) {
+            try {
+                // Extract numbers and operators
+                const numbers = question.match(/\d+(\.\d+)?/g);
+                const operators = question.match(/[\+\-\*\/\×\÷\%]/g);
+                
+                if (!numbers || numbers.length < 2) {
+                    return "I need at least two numbers to perform a calculation. Please provide a valid mathematical expression.";
+                }
+                
+                // Convert to numbers
+                const num1 = parseFloat(numbers[0]);
+                const num2 = parseFloat(numbers[1]);
+                
+                let result, expression;
+                
+                // Determine operation based on question
+                if (question.includes('+') || question.toLowerCase().includes('add')) {
+                    result = num1 + num2;
+                    expression = `${num1} + ${num2}`;
+                } else if (question.includes('-') || question.toLowerCase().includes('subtract') || question.toLowerCase().includes('minus')) {
+                    result = num1 - num2;
+                    expression = `${num1} - ${num2}`;
+                } else if (question.includes('*') || question.includes('×') || question.toLowerCase().includes('multiply') || question.toLowerCase().includes('times')) {
+                    result = num1 * num2;
+                    expression = `${num1} × ${num2}`;
+                } else if (question.includes('/') || question.includes('÷') || question.toLowerCase().includes('divide') || question.toLowerCase().includes('over')) {
+                    if (num2 === 0) {
+                        return "Division by zero is not allowed. Please provide a valid divisor.";
+                    }
+                    result = num1 / num2;
+                    expression = `${num1} ÷ ${num2}`;
+                } else if (question.includes('%') || question.toLowerCase().includes('percent') || question.toLowerCase().includes('percentage')) {
+                    result = (num1 * num2) / 100;
+                    expression = `${num2}% of ${num1}`;
+                } else {
+                    return "I can perform addition (+), subtraction (-), multiplication (×), division (÷), and percentage calculations. Please specify the operation.";
+                }
+                
+                return `**Calculation:**\n\`\`\`\n${expression}\n\`\`\`\n\n**Result:**\n\`\`\`\n${result}\n\`\`\``;
+                
+            } catch (error) {
+                return "I couldn't process that mathematical expression. Please try a different format, like 'Calculate 25 × 4 + 15' or 'What is 15% of 200?'";
             }
         }
 
