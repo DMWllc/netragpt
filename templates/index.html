@@ -280,13 +280,13 @@
         /* Digital Session Timer */
         .session-timer {
             position: absolute;
-            top: 10px;
-            right: 10px;
+            top: 70px;
+            left: 20px;
             background: rgba(0, 0, 0, 0.5);
             border-radius: 12px;
-            padding: 8px 12px;
+            padding: 6px 10px;
             font-family: 'Fira Code', monospace;
-            font-size: 12px;
+            font-size: 11px;
             display: flex;
             align-items: center;
             gap: 6px;
@@ -372,6 +372,7 @@
             flex-shrink: 0;
             overflow: hidden;
             border: 2px solid rgba(255, 255, 255, 0.2);
+            position: relative;
         }
 
         .message-avatar img {
@@ -1549,6 +1550,17 @@
             
             // Session info button
             sessionInfoBtn.addEventListener('click', showSessionInfo);
+
+            // Send button click
+            sendBtn.addEventListener('click', sendMessage);
+
+            // Enter key to send message
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
         }
 
         // Show session information
@@ -2301,7 +2313,7 @@
         }
 
         // Send message function
-        async function sendMessage() {
+        function sendMessage() {
             const msg = input.value.trim();
             if (!msg) return;
 
@@ -2319,58 +2331,68 @@
             // Show typing indicator
             showTypingIndicator();
 
-            try {
-                // Simulate API response with different content types
-                setTimeout(() => {
-                    hideTypingIndicator();
-                    
-                    // Generate appropriate response based on query
-                    let response = "";
-                    
-                    if (msg.toLowerCase().includes('calculate') || msg.includes('+') || msg.includes('-') || msg.includes('*') || msg.includes('/')) {
-                        // Math calculation response
+            // Simulate API response with different content types
+            setTimeout(() => {
+                hideTypingIndicator();
+                
+                // Generate appropriate response based on query
+                let response = "";
+                
+                if (msg.toLowerCase().includes('calculate') || msg.includes('+') || msg.includes('-') || msg.includes('*') || msg.includes('/')) {
+                    // Math calculation response
+                    try {
+                        const expression = msg.replace('calculate', '').trim();
+                        const result = eval(expression.replace(/[^-()\d/*+.]/g, ''));
                         response = `<div class="calculation-card">
                             <div class="calculation-content">
                                 <div class="calculation-title">Calculation Result</div>
-                                <div class="calculation-expression">${msg.replace('calculate', '').trim()}</div>
-                                <div class="calculation-result">= ${eval(msg.replace('calculate', '').replace(/[^-()\d/*+.]/g, '')) || 'Cannot calculate'}</div>
+                                <div class="calculation-expression">${expression}</div>
+                                <div class="calculation-result">= ${result}</div>
                             </div>
                         </div>`;
-                    } else if (msg.toLowerCase().includes('h2') || msg.toLowerCase().includes('o2') || msg.toLowerCase().includes('chemistry')) {
-                        // Chemistry response
-                        response = `<div class="chemistry-card">
-                            <div class="chemistry-content">
-                                <div class="chemistry-title">Chemical Equation</div>
-                                <div class="chemical-equation">2H<sub>2</sub> + O<sub>2</sub> → 2H<sub>2</sub>O</div>
+                    } catch (e) {
+                        response = `<div class="info-card">
+                            <div class="info-card-content">
+                                <div class="info-title">Calculation Error</div>
+                                <div class="info-text">I couldn't calculate that expression. Please check if it's a valid mathematical expression.</div>
+                            </div>
+                        </div>`;
+                    }
+                } else if (msg.toLowerCase().includes('h2') || msg.toLowerCase().includes('o2') || msg.toLowerCase().includes('chemistry')) {
+                    // Chemistry response
+                    response = `<div class="chemistry-card">
+                        <div class="chemistry-content">
+                            <div class="chemistry-title">Chemical Equation</div>
+                            <div class="chemical-equation">2H<sub>2</sub> + O<sub>2</sub> → 2H<sub>2</sub>O</div>
+                        </div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-card-content">
+                            <div class="info-title">Explanation</div>
+                            <div class="info-text">
+                                This is the balanced equation for the formation of water from hydrogen and oxygen gases.<br>
+                                Two molecules of hydrogen gas react with one molecule of oxygen gas to form two molecules of water.
                             </div>
                         </div>
-                        <div class="info-card">
-                            <div class="info-card-content">
-                                <div class="info-title">Explanation</div>
-                                <div class="info-text">
-                                    This is the balanced equation for the formation of water from hydrogen and oxygen gases.<br>
-                                    Two molecules of hydrogen gas react with one molecule of oxygen gas to form two molecules of water.
-                                </div>
+                    </div>`;
+                } else if (msg.toLowerCase().includes('python') || msg.toLowerCase().includes('code')) {
+                    // Code response
+                    response = `<div class="code-block">
+                        <div class="code-header">
+                            <span class="code-language">
+                                <i class="fas fa-code"></i> PYTHON
+                            </span>
+                            <div class="code-actions">
+                                <button class="code-btn run-btn" onclick="runCode('example_code')">
+                                    <i class="fas fa-play"></i> Run
+                                </button>
+                                <button class="code-btn copy-btn" onclick="copyCode('example_code')">
+                                    <i class="far fa-copy"></i> Copy
+                                </button>
                             </div>
-                        </div>`;
-                    } else if (msg.toLowerCase().includes('python') || msg.toLowerCase().includes('code')) {
-                        // Code response
-                        response = `<div class="code-block">
-                            <div class="code-header">
-                                <span class="code-language">
-                                    <i class="fas fa-code"></i> PYTHON
-                                </span>
-                                <div class="code-actions">
-                                    <button class="code-btn run-btn" onclick="runCode('example_code')">
-                                        <i class="fas fa-play"></i> Run
-                                    </button>
-                                    <button class="code-btn copy-btn" onclick="copyCode('example_code')">
-                                        <i class="far fa-copy"></i> Copy
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="code-content">
-                                <pre id="example_code"><code class="hljs python">def calculate(a, b, operation):
+                        </div>
+                        <div class="code-content">
+                            <pre id="example_code"><code class="hljs python">def calculate(a, b, operation):
     if operation == '+':
         return a + b
     elif operation == '-':
@@ -2385,30 +2407,24 @@
 # Example usage
 result = calculate(10, 5, '+')
 print(f"10 + 5 = {result}")</code></pre>
+                        </div>
+                    </div>`;
+                } else {
+                    // General response
+                    response = `<div class="info-card">
+                        <div class="info-card-content">
+                            <div class="info-title">Response</div>
+                            <div class="info-text">
+                                I understand you asked: "${msg}"<br><br>
+                                This is a simulated response. In a real implementation, I would use AI to generate a meaningful answer to your question.
                             </div>
-                        </div>`;
-                    } else {
-                        // General response
-                        response = `<div class="info-card">
-                            <div class="info-card-content">
-                                <div class="info-title">Response</div>
-                                <div class="info-text">
-                                    I understand you asked: "${msg}"<br><br>
-                                    This is a simulated response. In a real implementation, I would use AI to generate a meaningful answer to your question.
-                                </div>
-                            </div>
-                        </div>`;
-                    }
-                    
-                    addMessage("Bot", response);
-                }, 1500);
-            } catch (err) {
-                hideTypingIndicator();
-                addMessage("Bot", "I'm having trouble connecting right now. Please check your internet connection and try again.");
-            } finally {
+                        </div>
+                    </div>`;
+                }
+                
+                addMessage("Bot", response);
                 sendBtn.disabled = false;
-                input.focus();
-            }
+            }, 1500);
         }
 
         // Initialize chat
@@ -2417,18 +2433,6 @@ print(f"10 + 5 = {result}")</code></pre>
         }
 
         // Event listeners
-        sendBtn.onclick = sendMessage;
-
-        input.addEventListener("keypress", function(event) {
-            if (event.key === "Enter" && !event.shiftKey) {
-                event.preventDefault();
-                sendMessage();
-            }
-        });
-
-        showChatsBtn.addEventListener('click', showSidebar);
-        closeSidebarBtn.addEventListener('click', closeSidebar);
-
         infoBtn.addEventListener('click', function() {
             addMessage("Bot", 
                 `<div class="info-card">
