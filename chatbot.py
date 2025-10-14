@@ -171,15 +171,143 @@ def search_wikipedia(query):
         print(f"Wikipedia search error: {e}")
         return None
 
+def extract_person_name(query):
+    """Extract person name from search query"""
+    query_lower = query.lower()
+    
+    # Patterns that indicate person search
+    patterns = [
+        r'someone called (.+)',
+        r'person named (.+)',
+        r'who is (.+)',
+        r'search (?:for|about) (.+)',
+        r'look up (.+)',
+        r'information about (.+)',
+        r'details about (.+)',
+        r'tell me about (.+)',
+        r'do you know (.+)'
+    ]
+    
+    for pattern in patterns:
+        match = re.search(pattern, query_lower)
+        if match:
+            name = match.group(1).strip()
+            # Clean up the name - remove question marks, extra words
+            name = re.sub(r'[?.!].*$', '', name)  # Remove everything after ?.! 
+            name = name.replace('?', '').strip()
+            
+            # If name contains multiple words, take the first few as the person's name
+            words = name.split()
+            if len(words) > 4:  # Probably not a person name if too many words
+                continue
+                
+            return name.title()  # Return with proper capitalization
+    
+    # If no pattern matches but query looks like a name (2-4 capitalized words)
+    words = query.split()
+    if 2 <= len(words) <= 4 and all(word[0].isupper() for word in words if word):
+        return query
+    
+    return None
+
+def search_person_info(person_name):
+    """Enhanced search specifically for person information"""
+    try:
+        print(f"Searching for person: {person_name}")
+        
+        # Try Wikipedia first for reliable biographical information
+        wiki_result = search_wikipedia(person_name)
+        if wiki_result and len(wiki_result.get('extract', '')) > 50:
+            return {
+                'source': 'wikipedia',
+                'name': person_name,
+                'information': wiki_result['extract'],
+                'url': wiki_result.get('url', ''),
+                'confidence': 'high'
+            }
+        
+        # If Wikipedia fails, try Google search
+        google_results = search_google(f"{person_name} biography information", num_results=3)
+        if google_results:
+            # Combine information from multiple Google results
+            combined_info = ""
+            for result in google_results:
+                if person_name.lower() in result['title'].lower() or 'biography' in result['description'].lower():
+                    combined_info += f"{result['title']}: {result['description']}\n"
+            
+            if combined_info:
+                return {
+                    'source': 'google',
+                    'name': person_name,
+                    'information': combined_info[:500],  # Limit length
+                    'url': google_results[0]['link'],
+                    'confidence': 'medium'
+                }
+        
+        return None
+        
+    except Exception as e:
+        print(f"Person search error: {e}")
+        return None
+
+def should_search_externally(query):
+    """Determine if a query should trigger external search - ENHANCED VERSION"""
+    query_lower = query.lower()
+    
+    # Questions that typically need external knowledge
+    external_keywords = [
+        'what is', 'who is', 'when was', 'where is', 'how does', 'why does',
+        'history of', 'facts about', 'definition of', 'explain', 'tell me about',
+        'current', 'latest', 'recent', 'news about', 'update on', 'search for',
+        'look up', 'find information', 'information about', 'details about'
+    ]
+    
+    # Topics that benefit from external sources
+    external_topics = [
+        'scientific', 'historical', 'biography', 'geography', 'technology news',
+        'medical', 'space', 'physics', 'chemistry', 'biology', 'mathematics',
+        'person', 'people', 'celebrity', 'politician', 'scientist', 'inventor'
+    ]
+    
+    # Person search patterns
+    person_patterns = [
+        'someone called', 'person named', 'who is', 'information about',
+        'search for', 'look up', 'do you know'
+    ]
+    
+    # Check if query matches external search criteria
+    has_external_phrase = any(phrase in query_lower for phrase in external_keywords)
+    has_external_topic = any(topic in query_lower for topic in external_topics)
+    has_person_pattern = any(pattern in query_lower for pattern in person_patterns)
+    is_complex_factual = len(query.split()) > 3 and any(word in query_lower for word in ['fact', 'information', 'details', 'research', 'search'])
+    
+    # Special case: Direct requests to search for people
+    is_person_search = any(indicator in query_lower for indicator in [
+        'search about', 'look up', 'find info', 'information on', 'who is'
+    ]) and any(word in query_lower for word in ['called', 'named', 'person', 'someone'])
+    
+    return has_external_phrase or has_external_topic or is_complex_factual or has_person_pattern or is_person_search
+
 def get_external_knowledge(query):
-    """Get information from external sources (Google + Wikipedia)"""
+    """Get information from external sources (Google + Wikipedia) - ENHANCED VERSION"""
     external_info = {
         'google_results': [],
         'wikipedia_result': None,
+        'person_info': None,
         'sources_used': []
     }
     
     try:
+        # Check if this is a person search
+        person_name = extract_person_name(query)
+        if person_name:
+            print(f"Detected person search for: {person_name}")
+            person_info = search_person_info(person_name)
+            if person_info:
+                external_info['person_info'] = person_info
+                external_info['sources_used'].append(person_info['source'])
+                return external_info
+        
         # Only search for complex or factual queries
         if should_search_externally(query):
             print(f"Searching externally for: {query}")
@@ -201,30 +329,6 @@ def get_external_knowledge(query):
     except Exception as e:
         print(f"External knowledge error: {e}")
         return external_info
-
-def should_search_externally(query):
-    """Determine if a query should trigger external search"""
-    query_lower = query.lower()
-    
-    # Questions that typically need external knowledge
-    external_keywords = [
-        'what is', 'who is', 'when was', 'where is', 'how does', 'why does',
-        'history of', 'facts about', 'definition of', 'explain', 'tell me about',
-        'current', 'latest', 'recent', 'news about', 'update on'
-    ]
-    
-    # Topics that benefit from external sources
-    external_topics = [
-        'scientific', 'historical', 'biography', 'geography', 'technology news',
-        'medical', 'space', 'physics', 'chemistry', 'biology', 'mathematics'
-    ]
-    
-    # Check if query matches external search criteria
-    has_external_phrase = any(phrase in query_lower for phrase in external_keywords)
-    has_external_topic = any(topic in query_lower for topic in external_topics)
-    is_complex_factual = len(query.split()) > 3 and any(word in query_lower for word in ['fact', 'information', 'details', 'research'])
-    
-    return has_external_phrase or has_external_topic or is_complex_factual
 
 def analyze_query_domain(query):
     """Analyze which knowledge domains are relevant to the query"""
@@ -920,7 +1024,7 @@ def get_static_netra_info(query):
     """
 
 def build_diverse_context(user_session, relevant_domains, query, external_info):
-    """Build context for diverse knowledge domains"""
+    """Build context for diverse knowledge domains - ENHANCED VERSION"""
     context_parts = []
     
     # Add Netra context for service-related queries
@@ -932,16 +1036,29 @@ def build_diverse_context(user_session, relevant_domains, query, external_info):
     if external_info['sources_used']:
         external_context = "EXTERNAL RESEARCH RESULTS:\n"
         
-        if external_info['wikipedia_result']:
+        # Handle person information
+        if external_info['person_info']:
+            person = external_info['person_info']
+            external_context += f"👤 PERSON SEARCH RESULTS for {person['name']}:\n"
+            external_context += f"📝 Information: {person['information']}\n"
+            external_context += f"🔍 Source: {person['source'].title()} (Confidence: {person['confidence']})\n"
+            if person.get('url'):
+                external_context += f"🔗 More info: {person['url']}\n"
+        
+        # Handle Wikipedia results
+        elif external_info['wikipedia_result']:
             wiki = external_info['wikipedia_result']
             external_context += f"📚 Wikipedia: {wiki.get('extract', 'No information found')}\n"
             if wiki.get('url'):
                 external_context += f"🔗 Source: {wiki['url']}\n"
         
-        if external_info['google_results']:
+        # Handle Google results
+        if external_info['google_results'] and not external_info['person_info']:
             external_context += "🌐 Google Results:\n"
             for i, result in enumerate(external_info['google_results'][:2], 1):
                 external_context += f"{i}. {result['title']}: {result['description']}\n"
+                if result.get('link'):
+                    external_context += f"   🔗 {result['link']}\n"
         
         context_parts.append(external_context)
     
@@ -959,90 +1076,6 @@ def build_diverse_context(user_session, relevant_domains, query, external_info):
         context_parts.append(f"USER PREFERRED DOMAINS: {', '.join(user_session['preferred_domains'])}")
     
     return "\n\n".join(context_parts)
-
-def get_ai_response(message, conversation_context, user_session=None):
-    """Enhanced AI response with diverse knowledge and external research"""
-    try:
-        user_name = user_session.get('user_name', 'there')
-        memory_context = build_memory_context(user_session)
-        
-        # Analyze which knowledge domains are relevant
-        relevant_domains = analyze_query_domain(message)
-        
-        # Get external knowledge for factual queries
-        external_info = get_external_knowledge(message)
-        if external_info['sources_used']:
-            user_session['external_searches'] += 1
-        
-        # Update user preferences based on usage
-        if len(user_session['preferred_domains']) < 5:
-            for domain in relevant_domains:
-                if domain not in user_session['preferred_domains']:
-                    user_session['preferred_domains'].append(domain)
-        
-        # Check for special queries (time, weather, etc.)
-        special_response = handle_special_queries(message)
-        if special_response:
-            return special_response
-        
-        # Get diverse context including Netra information and external research
-        diverse_context = build_diverse_context(user_session, relevant_domains, message, external_info)
-        
-        # Build comprehensive system message
-        system_message = f"""
-        You are Jovira, an AI assistant created by Kakore Labs (Aidnest Africa's programming hub). 
-        You serve as a team member for Netra but have diverse knowledge across multiple domains.
-
-        YOUR IDENTITY & CAPABILITIES:
-        - Primary role: Netra customer service and support
-        - Secondary: General AI assistant with diverse knowledge
-        - You can help with technology, productivity, education, business, creative work, science, and daily life
-        - You have access to external knowledge sources (Wikipedia, Google) for factual queries
-        - Always maintain Netra expertise while being helpful in other areas
-
-        CURRENT CONTEXT:
-        {diverse_context}
-
-        RESPONSE GUIDELINES:
-        - For Netra/service queries: Provide specific, accurate information using current website data
-        - For factual queries: Use external research when available, cite sources when helpful
-        - For other topics: Be helpful while occasionally mentioning Netra when relevant
-        - Balance between being specialized and versatile
-        - Use emojis to make conversations engaging
-        - Speak as a knowledgeable team member, not just a service bot
-        - When unsure, be honest and suggest checking Netra website for service-specific questions
-        - For external research, mention you looked it up if it adds credibility
-
-        USER CONTEXT:
-        - Name: {user_name}
-        - Memory: {memory_context}
-        - Relevant domains for this query: {', '.join([KNOWLEDGE_DOMAINS[d]['name'] for d in relevant_domains])}
-        - External sources used: {', '.join(external_info['sources_used']) if external_info['sources_used'] else 'None'}
-        """
-        
-        context_messages = [{"role": "system", "content": system_message}]
-        
-        # Add conversation history
-        if conversation_context:
-            for msg in conversation_context[-6:]:
-                role = "user" if msg.get('sender') == 'user' else "assistant"
-                context_messages.append({"role": role, "content": msg.get('text', '')})
-        
-        # Add current message
-        context_messages.append({"role": "user", "content": message})
-        
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=context_messages,
-            max_tokens=700,
-            temperature=0.7
-        )
-        
-        return response.choices[0].message.content.strip()
-        
-    except Exception as e:
-        print(f"AI response error: {e}")
-        return "I'm having trouble accessing information right now. For Netra-specific questions, please visit https://myaidnest.com directly."
 
 def handle_special_queries(message):
     """Handle special queries like time, weather, news, etc."""
@@ -1080,6 +1113,93 @@ def handle_special_queries(message):
             return f"I couldn't fetch weather information for {city}. You might want to check a weather service directly."
     
     return None
+
+def get_ai_response(message, conversation_context, user_session=None):
+    """Enhanced AI response with diverse knowledge and external research - IMPROVED PERSON SEARCH"""
+    try:
+        user_name = user_session.get('user_name', 'there')
+        memory_context = build_memory_context(user_session)
+        
+        # Analyze which knowledge domains are relevant
+        relevant_domains = analyze_query_domain(message)
+        
+        # Get external knowledge for factual queries
+        external_info = get_external_knowledge(message)
+        if external_info['sources_used']:
+            user_session['external_searches'] += 1
+            print(f"External search performed. Sources used: {external_info['sources_used']}")
+        
+        # Update user preferences based on usage
+        if len(user_session['preferred_domains']) < 5:
+            for domain in relevant_domains:
+                if domain not in user_session['preferred_domains']:
+                    user_session['preferred_domains'].append(domain)
+        
+        # Check for special queries (time, weather, etc.)
+        special_response = handle_special_queries(message)
+        if special_response:
+            return special_response
+        
+        # Get diverse context including Netra information and external research
+        diverse_context = build_diverse_context(user_session, relevant_domains, message, external_info)
+        
+        # Build comprehensive system message
+        system_message = f"""
+        You are Jovira, an AI assistant created by Kakore Labs (Aidnest Africa's programming hub). 
+        You serve as a team member for Netra but have diverse knowledge across multiple domains.
+
+        YOUR IDENTITY & CAPABILITIES:
+        - Primary role: Netra customer service and support
+        - Secondary: General AI assistant with diverse knowledge
+        - You can help with technology, productivity, education, business, creative work, science, and daily life
+        - You have access to external knowledge sources (Wikipedia, Google) for factual queries and person searches
+        - Always maintain Netra expertise while being helpful in other areas
+
+        CURRENT CONTEXT:
+        {diverse_context}
+
+        RESPONSE GUIDELINES:
+        - For Netra/service queries: Provide specific, accurate information using current website data
+        - For factual queries: Use external research when available, cite sources when helpful
+        - For person searches: Use the search results to provide information about the person
+        - If no information is found: Be honest but mention you searched external sources
+        - For other topics: Be helpful while occasionally mentioning Netra when relevant
+        - Balance between being specialized and versatile
+        - Use emojis to make conversations engaging
+        - Speak as a knowledgeable team member, not just a service bot
+        - When unsure, be honest and suggest checking Netra website for service-specific questions
+        - For external research, mention you looked it up to provide accurate information
+
+        USER CONTEXT:
+        - Name: {user_name}
+        - Memory: {memory_context}
+        - Relevant domains for this query: {', '.join([KNOWLEDGE_DOMAINS[d]['name'] for d in relevant_domains])}
+        - External sources used: {', '.join(external_info['sources_used']) if external_info['sources_used'] else 'None'}
+        """
+        
+        context_messages = [{"role": "system", "content": system_message}]
+        
+        # Add conversation history
+        if conversation_context:
+            for msg in conversation_context[-6:]:
+                role = "user" if msg.get('sender') == 'user' else "assistant"
+                context_messages.append({"role": role, "content": msg.get('text', '')})
+        
+        # Add current message
+        context_messages.append({"role": "user", "content": message})
+        
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=context_messages,
+            max_tokens=700,
+            temperature=0.7
+        )
+        
+        return response.choices[0].message.content.strip()
+        
+    except Exception as e:
+        print(f"AI response error: {e}")
+        return "I'm having trouble accessing information right now. For Netra-specific questions, please visit https://myaidnest.com directly."
 
 def update_conversation_memory(user_session, message, response):
     """Enhanced conversation memory tracking"""
