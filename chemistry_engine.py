@@ -4,9 +4,6 @@ from io import BytesIO
 import base64
 from matplotlib.patches import Circle, FancyBboxPatch, ConnectionPatch # type: ignore
 import networkx as nx # type: ignore
-from rdkit import Chem # type: ignore
-from rdkit.Chem import Draw # type: ignore
-import io
 
 class ChemistryEngine:
     def __init__(self):
@@ -267,7 +264,7 @@ class ChemistryEngine:
                bbox=dict(boxstyle="round,pad=0.2", facecolor='green', alpha=0.5))
         
         # Key insight box
-        insight_text = "Key Insight:\nInstall Ortho/Ppara directors FIRST,\nthen Meta directors for desired positioning"
+        insight_text = "Key Insight:\nInstall Ortho/Para directors FIRST,\nthen Meta directors for desired positioning"
         ax.text(5.5, 2.5, insight_text, color='yellow', fontsize=12,
                ha='center', va='center',
                bbox=dict(boxstyle="round,pad=0.5", facecolor='purple', alpha=0.7))
