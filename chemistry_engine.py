@@ -53,6 +53,8 @@ class ChemistryEngine:
                 return self._create_substituent_effects_diagram(ax, parameters, fig)
             elif mechanism_type == 'synthesis_planning':
                 return self._create_synthesis_planning_diagram(ax, parameters, fig)
+            elif mechanism_type == 'benzene_nitration':
+                return self._create_benzene_nitration_mechanism(ax, parameters, fig)
                 
         except Exception as e:
             print(f"Mechanism diagram error: {e}")
@@ -73,6 +75,115 @@ class ChemistryEngine:
         ax.add_patch(circle)
         
         return x, y
+    
+    def _create_benzene_nitration_mechanism(self, ax, parameters, fig):
+        """Create benzene nitration mechanism diagram"""
+        ax.set_xlim(-2, 12)
+        ax.set_ylim(-2, 10)
+        
+        # Title
+        ax.text(5, 9.5, 'Nitration of Benzene Mechanism', color='white', fontsize=16, weight='bold', ha='center')
+        
+        # Step 1: Electrophile formation
+        ax.text(2, 8, 'Step 1: Electrophile Formation', color='yellow', fontsize=12, weight='bold')
+        ax.text(2, 7.5, 'HNO₃ + H₂SO₄ → NO₂⁺ + HSO₄⁻ + H₂O', color='cyan', fontsize=10)
+        
+        # Draw nitric acid and sulfuric acid
+        ax.text(1, 6.5, 'H-O-NO₂', color='orange', fontsize=10)
+        ax.text(3, 6.5, 'H₂SO₄', color='orange', fontsize=10)
+        ax.arrow(1.5, 6.3, 1.0, 0, head_width=0.1, head_length=0.2, fc='white', ec='white')
+        
+        # Draw nitronium ion formation
+        ax.text(2, 5.5, '→ NO₂⁺', color='red', fontsize=12, weight='bold')
+        ax.text(2, 5.0, '(Nitronium Ion)', color='red', fontsize=9)
+        
+        # Step 2: Electrophilic attack
+        ax.text(7, 8, 'Step 2: Electrophilic Attack', color='yellow', fontsize=12, weight='bold')
+        
+        # Draw benzene ring with attacking nitronium ion
+        self._create_benzene_ring(ax, center_x=7, center_y=6, size=0.8)
+        ax.text(8.2, 6.5, 'NO₂⁺', color='red', fontsize=12)
+        ax.arrow(8.0, 6.4, -0.6, -0.3, head_width=0.1, head_length=0.1, fc='red', ec='red')
+        
+        # Step 3: Arenium ion intermediate
+        ax.text(7, 4, 'Step 3: Arenium Ion Intermediate', color='yellow', fontsize=12, weight='bold')
+        
+        # Draw arenium ion
+        self._create_benzene_ring(ax, center_x=7, center_y=2.5, size=0.8)
+        ax.plot([7, 7.8], [2.5+0.8, 3.0], color='white', linewidth=2)  # Broken aromaticity
+        ax.text(7.8, 3.2, 'NO₂', color='green', fontsize=10)
+        ax.text(7.8, 2.8, 'H', color='cyan', fontsize=10)
+        ax.text(7, 1.5, 'σ-Complex (Arenium Ion)', color='orange', fontsize=10)
+        
+        # Step 4: Proton loss
+        ax.text(7, 0.5, 'Step 4: Proton Loss', color='yellow', fontsize=12, weight='bold')
+        
+        # Draw final product
+        self._create_benzene_ring(ax, center_x=7, center_y=-1, size=0.8)
+        ax.text(7.8, -0.7, 'NO₂', color='green', fontsize=10)
+        ax.text(7, -1.8, 'Nitrobenzene (Product)', color='green', fontsize=10)
+        
+        # Draw proton loss arrow
+        ax.arrow(7, 1.8, 0, -0.8, head_width=0.1, head_length=0.1, fc='orange', ec='orange')
+        ax.text(7.5, 1.0, 'H⁺', color='orange', fontsize=10)
+        
+        # Reaction arrows
+        ax.arrow(3.5, 5.5, 2.0, 0, head_width=0.1, head_length=0.2, fc='white', ec='white', linestyle='--')
+        ax.arrow(7, 5.0, 0, -1.0, head_width=0.1, head_length=0.2, fc='white', ec='white', linestyle='--')
+        ax.arrow(7, 1.0, 0, -1.0, head_width=0.1, head_length=0.2, fc='white', ec='white', linestyle='--')
+        
+        ax.axis('off')
+        return self.save_plot_to_base64(fig)
+    
+    def _create_nitro_group_explanation(self, ax, parameters, fig):
+        """Create diagram explaining why nitro group is meta-directing"""
+        ax.set_xlim(-1, 10)
+        ax.set_ylim(-1, 8)
+        
+        # Title
+        ax.text(4.5, 7.5, 'Why Nitro Group (-NO₂) is Meta-Directing', color='white', fontsize=14, weight='bold', ha='center')
+        
+        # Draw nitrobenzene structure
+        ax.text(2, 6.5, 'Nitrobenzene Structure:', color='yellow', fontsize=12)
+        self._create_benzene_ring(ax, center_x=2, center_y=5.5, size=0.6)
+        ax.text(2.8, 5.5, 'NO₂', color='red', fontsize=10)
+        
+        # Resonance structures
+        ax.text(6, 6.5, 'Resonance Structures:', color='yellow', fontsize=12)
+        
+        # Positive charge positions
+        positions = [
+            (5, 5.0, 'Ortho', 'red'),
+            (6, 4.5, 'Meta', 'green'), 
+            (7, 5.0, 'Para', 'red')
+        ]
+        
+        for x, y, position, color in positions:
+            self._create_benzene_ring(ax, center_x=x, center_y=y, size=0.4)
+            ax.text(x+0.6, y, 'NO₂', color='red', fontsize=8)
+            ax.text(x, y-0.7, f'{position}', color=color, fontsize=9, weight='bold')
+            if color == 'red':
+                ax.text(x, y+0.6, 'δ⁺', color='red', fontsize=10, weight='bold')
+            else:
+                ax.text(x, y+0.6, 'δ⁻', color='green', fontsize=10, weight='bold')
+        
+        # Electron withdrawal explanation
+        ax.text(4.5, 3.0, 'Electron-Withdrawing Effect:', color='cyan', fontsize=12, weight='bold', ha='center')
+        
+        explanation_points = [
+            "• Nitro group is strongly electron-withdrawing",
+            "• Withdraws electron density via -I and -M effects", 
+            "• Deactivates benzene ring towards electrophilic attack",
+            "• Meta position is least deactivated (more electron-rich)",
+            "• Ortho/para positions have partial positive charges",
+            "• Electrophiles prefer electron-rich meta position"
+        ]
+        
+        for i, point in enumerate(explanation_points):
+            ax.text(1, 2.0 - i*0.4, point, color='white', fontsize=9)
+        
+        ax.axis('off')
+        return self.save_plot_to_base64(fig)
     
     def _create_friedel_crafts_mechanism(self, ax, parameters, fig):
         """Create Friedel-Crafts acylation/alkylation mechanism diagram"""
@@ -329,7 +440,7 @@ class ChemistryEngine:
         
         message_lower = message.lower()
         
-        # Mechanism detection
+        # Mechanism detection - UPDATED WITH NITRATION
         mechanism_keywords = {
             'friedel crafts': 'friedel_crafts',
             'electrophilic aromatic substitution': 'electrophilic_aromatic_substitution', 
@@ -337,7 +448,10 @@ class ChemistryEngine:
             'substituent effect': 'substituent_effects',
             'ortho para meta': 'substituent_effects',
             'synthesis planning': 'synthesis_planning',
-            'order of operations': 'synthesis_planning'
+            'order of operations': 'synthesis_planning',
+            'nitration of benzene': 'benzene_nitration',
+            'benzene nitration': 'benzene_nitration',
+            'hno3 h2so4': 'benzene_nitration'
         }
         
         # Create visualizations
@@ -355,6 +469,38 @@ class ChemistryEngine:
                         'type': diagram_type,
                         'image': visualization
                     })
+        
+        # Handle nitration-specific explanations
+        if any(word in message_lower for word in ['nitration', 'nitro', 'no2', 'hno3']):
+            # Add nitration mechanism explanation
+            chemistry_content['explanations'].extend([
+                "**Nitration of Benzene Mechanism:**",
+                "1. **Electrophile Formation**: HNO₃ + H₂SO₄ → NO₂⁺ + HSO₄⁻ + H₂O",
+                "2. **Electrophilic Attack**: NO₂⁺ attacks benzene ring",
+                "3. **Arenium Ion**: Forms resonance-stabilized intermediate", 
+                "4. **Proton Loss**: Regenerates aromaticity to form nitrobenzene",
+                "",
+                "**Why Nitro Group is Meta-Directing:**",
+                "• Strong electron-withdrawing group (-I and -M effects)",
+                "• Deactivates benzene ring towards electrophilic attack",
+                "• Withdraws electron density from ortho/para positions",
+                "• Meta position is least deactivated (more electron-rich)",
+                "• Electrophiles prefer attacking meta position"
+            ])
+            
+            # Create nitro group explanation diagram
+            try:
+                fig, ax = plt.subplots(figsize=(12, 8))
+                ax.set_facecolor('#0f0f23')
+                fig.patch.set_facecolor('#0f0f23')
+                nitro_explanation = self._create_nitro_group_explanation(ax, {}, fig)
+                if nitro_explanation:
+                    chemistry_content['visualizations'].append({
+                        'type': 'nitro_group_explanation',
+                        'image': nitro_explanation
+                    })
+            except Exception as e:
+                print(f"Nitro group explanation error: {e}")
         
         # Perform calculations
         if any(word in message_lower for word in ['calculate', 'yield', 'concentration']):
