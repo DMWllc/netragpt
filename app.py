@@ -1,12 +1,13 @@
-from flask import Flask, request, jsonify, render_template, session
-from flask_cors import CORS
-from openai import OpenAI
+from flask import Flask, request, jsonify, render_template, session # type: ignore
+from flask_cors import CORS # type: ignore
+from openai import OpenAI # type: ignore
 import os
 import random
 import re
 import time
 import secrets
 from datetime import timedelta
+import base64 # type: ignore
 
 # Import from our new modules
 from session_manager import (
@@ -23,6 +24,12 @@ from web_utils import (
 )
 from knowledge_base import KNOWLEDGE_DOMAINS, COMPANY_INFO
 
+# IMPORT THE NEW ENGINES
+from physics_engine import physics_engine
+from chemistry_engine import chemistry_engine
+from biology_engine import biology_engine
+from netra_engine import netra_engine
+
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", secrets.token_hex(32))
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=20)
@@ -31,6 +38,119 @@ CORS(app)
 
 # Initialize OpenAI client
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+def route_to_engine(message):
+    """Determine which engine to use based on message content"""
+    message_lower = message.lower()
+    
+    # Customer service queries (AidNest Africa) - HIGHEST PRIORITY
+    customer_keywords = [
+        'support', 'help', 'service', 'issue', 'problem', 'ticket',
+        'aidnest', 'africa', 'technical', 'billing', 'invoice',
+        'not working', 'broken', 'error', 'urgent', 'netra',
+        'customer', 'complaint', 'request', 'assistance'
+    ]
+    
+    if any(keyword in message_lower for keyword in customer_keywords):
+        return 'netra'
+    
+    # Physics queries
+    physics_keywords = [
+        'physics', 'force', 'velocity', 'acceleration', 'energy',
+        'projectile', 'pendulum', 'circular motion', 'inclined plane',
+        'newton', 'kinematics', 'mechanics', 'gravity', 'friction',
+        'momentum', 'torque', 'electric field', 'magnetic field'
+    ]
+    
+    if any(keyword in message_lower for keyword in physics_keywords):
+        return 'physics'
+    
+    # Chemistry queries
+    chemistry_keywords = [
+        'chemistry', 'chemical', 'reaction', 'molecule', 'compound',
+        'organic', 'inorganic', 'periodic', 'bond', 'reaction',
+        'synthesis', 'aromatic', 'benzene', 'friedel', 'crafts',
+        'atom', 'element', 'periodic table', 'organic chemistry'
+    ]
+    
+    if any(keyword in message_lower for keyword in chemistry_keywords):
+        return 'chemistry'
+    
+    # Biology queries
+    biology_keywords = [
+        'biology', 'biological', 'cell', 'dna', 'protein',
+        'metabolism', 'krebs', 'glycolysis', 'mitochondria',
+        'enzyme', 'respiration', 'photosynthesis', 'krebs cycle',
+        'cell structure', 'dna replication', 'protein synthesis'
+    ]
+    
+    if any(keyword in message_lower for keyword in biology_keywords):
+        return 'biology'
+    
+    # Default to general AI (your existing OpenAI flow)
+    return 'general'
+
+def format_engine_response(engine_response, engine_type):
+    """Format engine responses into a consistent chat format"""
+    if not engine_response:
+        return None
+    
+    if engine_type == 'netra':
+        # Format Netra customer service response
+        response_parts = []
+        
+        if 'greeting' in engine_response:
+            response_parts.append(f"👋 {engine_response['greeting']}")
+        
+        if 'immediate_assistance' in engine_response:
+            response_parts.extend(engine_response['immediate_assistance'])
+        
+        if 'next_steps' in engine_response:
+            response_parts.append("\n**Next Steps:**")
+            response_parts.extend([f"• {step}" for step in engine_response['next_steps']])
+        
+        if 'ticket_number' in engine_response:
+            response_parts.append(f"\n🎫 **Ticket Number**: {engine_response['ticket_number']}")
+        
+        if 'farewell' in engine_response:
+            response_parts.append(f"\n{engine_response['farewell']}")
+        
+        return "\n\n".join(response_parts)
+    
+    elif engine_type in ['physics', 'chemistry', 'biology']:
+        # Format science engine responses
+        response_parts = []
+        
+        # Add visualizations if available
+        if 'visualizations' in engine_response and engine_response['visualizations']:
+            for viz in engine_response['visualizations']:
+                response_parts.append(f"📊 **{viz['type'].replace('_', ' ').title()} Diagram**")
+                # In a real implementation, you'd serve the image via a separate endpoint
+                response_parts.append(f"*[Scientific visualization generated for {viz['type']}]*")
+        
+        # Add calculations if available
+        if 'calculations' in engine_response and engine_response['calculations']:
+            response_parts.append("🧮 **Calculations:**")
+            for calc in engine_response['calculations']:
+                for key, value in calc.items():
+                    response_parts.append(f"• {key.replace('_', ' ').title()}: {value}")
+        
+        # Add explanations if available
+        if 'explanations' in engine_response and engine_response['explanations']:
+            response_parts.append("📚 **Explanation:**")
+            response_parts.extend(engine_response['explanations'])
+        
+        # Add predictions if available
+        if 'predictions' in engine_response and engine_response['predictions']:
+            for pred in engine_response['predictions']:
+                response_parts.append(f"🔮 **Prediction**: {pred.get('prediction', '')}")
+                if 'explanation' in pred:
+                    response_parts.append(f"*{pred['explanation']}*")
+        
+        if response_parts:
+            return "\n\n".join(response_parts)
+    
+    return None
 
 @app.route("/")
 def home():
@@ -70,8 +190,33 @@ def chat():
             'timestamp': time.time()
         })
         
-        # Get AI response
-        ai_response = get_ai_response(message, user_session['conversation_context'], user_session)
+        # ROUTE TO APPROPRIATE ENGINE
+        engine_type = route_to_engine(message)
+        engine_response = None
+        
+        if engine_type == 'netra':
+            # Use Netra Engine for customer service
+            engine_response = netra_engine.process_customer_query(message)
+            ai_response = format_engine_response(engine_response, 'netra')
+            
+        elif engine_type == 'physics':
+            # Use Physics Engine
+            engine_response = physics_engine.process_physics_query(message)
+            ai_response = format_engine_response(engine_response, 'physics')
+            
+        elif engine_type == 'chemistry':
+            # Use Chemistry Engine
+            engine_response = chemistry_engine.process_chemistry_query(message)
+            ai_response = format_engine_response(engine_response, 'chemistry')
+            
+        elif engine_type == 'biology':
+            # Use Biology Engine
+            engine_response = biology_engine.process_biology_query(message)
+            ai_response = format_engine_response(engine_response, 'biology')
+            
+        else:
+            # Use existing OpenAI flow for general queries
+            ai_response = get_ai_response(message, user_session['conversation_context'], user_session)
         
         if ai_response:
             # Update memory with this interaction
@@ -86,6 +231,10 @@ def chat():
             })
             
             response_data = {"reply": ai_response}
+            
+            # Add engine metadata if available
+            if engine_response and 'engine_used' in engine_response:
+                response_data["engine_used"] = engine_response['engine_used']
             
             # Add session warning if needed
             if session_warning:
