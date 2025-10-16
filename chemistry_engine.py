@@ -1,479 +1,535 @@
-import random
-import requests
-import json
-import re
-from datetime import datetime, timedelta
-from bs4 import BeautifulSoup
-from typing import Dict, List, Optional, Tuple
-import hashlib
-import uuid
+import numpy as np # type: ignore
+import matplotlib.pyplot as plt # type: ignore
+from io import BytesIO
+import base64
+from matplotlib.patches import Circle, FancyBboxPatch, ConnectionPatch # type: ignore
+import networkx as nx # type: ignore
 
-class NetraEngine:
+class ChemistryEngine:
     def __init__(self):
-        self.company_info = {
-            'name': 'AidNest Africa',
-            'website': 'https://myaidnest.com',
-            'foundation_year': '2023',
-            'headquarters': 'Kampala, Uganda',
-            'mission': 'Empowering African communities through accessible technology services',
-            'vision': 'To be Africa\'s leading platform for trusted service connections',
-            'contact': {
-                'primary_email': 'support@myaidnest.com',
-                'technical_email': 'tech@myaidnest.com',
-                'billing_email': 'accounts@myaidnest.com',
-                'careers_email': 'careers@myaidnest.com',
-                'phone': '+254-700-123-456',
-                'emergency_phone': '+254-711-987-654',
-                'whatsapp': '+254-722-555-777'
-            }
+        self.chemical_constants = {
+            'R': 8.314,  # Gas constant J/(mol·K)
+            'F': 96485,  # Faraday constant C/mol
+            'Na': 6.022e23,  # Avogadro's number
+            'h': 6.626e-34,  # Planck's constant
+            'k': 1.381e-23,  # Boltzmann constant
         }
         
-        # Service categories and details
-        self.service_categories = {
-            'home_services': {
-                'name': 'Home Services',
-                'subcategories': [
-                    'Cleaning & Sanitation',
-                    'Plumbing Repairs',
-                    'Electrical Works',
-                    'Painting & Decorating',
-                    'Furniture Assembly',
-                    'Pest Control',
-                    'Gardening & Landscaping'
-                ],
-                'average_pricing': 'KES 1,500 - 15,000',
-                'booking_lead_time': '24-48 hours'
-            },
-            'professional_services': {
-                'name': 'Professional Services',
-                'subcategories': [
-                    'Legal Consultation',
-                    'Accounting & Tax',
-                    'Business Consulting',
-                    'IT Support & Training',
-                    'Marketing Services',
-                    'Tutoring & Education',
-                    'Career Coaching'
-                ],
-                'average_pricing': 'KES 2,000 - 25,000',
-                'booking_lead_time': '1-5 business days'
-            },
-            'technical_services': {
-                'name': 'Technical Services',
-                'subcategories': [
-                    'Computer Repair',
-                    'Phone & Tablet Repair',
-                    'Network Setup',
-                    'Software Installation',
-                    'Data Recovery',
-                    'Smart Home Setup',
-                    'Electronics Repair'
-                ],
-                'average_pricing': 'KES 1,000 - 20,000',
-                'booking_lead_time': '24-72 hours'
-            },
-            'wellness_services': {
-                'name': 'Wellness Services',
-                'subcategories': [
-                    'Massage Therapy',
-                    'Fitness Training',
-                    'Nutrition Counseling',
-                    'Mental Health Support',
-                    'Yoga Instruction',
-                    'Beauty Services',
-                    'Wellness Coaching'
-                ],
-                'average_pricing': 'KES 1,200 - 8,000',
-                'booking_lead_time': '24-48 hours'
-            }
+        # Common substituent effects
+        self.substituent_effects = {
+            'ortho_para_directors': ['-OH', '-NH2', '-OCH3', '-CH3', '-Cl', '-Br'],
+            'meta_directors': ['-NO2', '-CN', '-SO3H', '-COOH', '-CHO', '-COR'],
+            'activators': ['-OH', '-NH2', '-OCH3', '-CH3'],
+            'deactivators': ['-NO2', '-CN', '-SO3H', '-COOH']
+        }
+    
+    def save_plot_to_base64(self, fig):
+        """Save matplotlib figure to base64 string"""
+        try:
+            buffer = BytesIO()
+            fig.savefig(buffer, format='png', dpi=150, bbox_inches='tight',
+                       facecolor=fig.get_facecolor(), edgecolor='none')
+            plt.close(fig)
+            
+            buffer.seek(0)
+            image_base64 = base64.b64encode(buffer.getvalue()).decode()
+            return f"data:image/png;base64,{image_base64}"
+        except Exception as e:
+            print(f"Plot saving error: {e}")
+            return None
+    
+    def create_mechanism_diagram(self, mechanism_type, parameters=None):
+        """Create chemical mechanism diagrams"""
+        try:
+            fig, ax = plt.subplots(figsize=(12, 8))
+            ax.set_facecolor('#0f0f23')
+            fig.patch.set_facecolor('#0f0f23')
+            
+            if mechanism_type == 'friedel_crafts':
+                return self._create_friedel_crafts_mechanism(ax, parameters, fig)
+            elif mechanism_type == 'electrophilic_aromatic_substitution':
+                return self._create_eas_mechanism(ax, parameters, fig)
+            elif mechanism_type == 'substituent_effects':
+                return self._create_substituent_effects_diagram(ax, parameters, fig)
+            elif mechanism_type == 'synthesis_planning':
+                return self._create_synthesis_planning_diagram(ax, parameters, fig)
+            elif mechanism_type == 'benzene_nitration':
+                return self._create_benzene_nitration_mechanism(ax, parameters, fig)
+                
+        except Exception as e:
+            print(f"Mechanism diagram error: {e}")
+            return None
+    
+    def _create_benzene_ring(self, ax, center_x=0, center_y=0, size=1, color='white'):
+        """Draw a benzene ring"""
+        angles = np.linspace(0, 2*np.pi, 7)
+        x = center_x + size * np.cos(angles)
+        y = center_y + size * np.sin(angles)
+        
+        # Draw hexagon
+        ax.plot(x, y, color=color, linewidth=2)
+        
+        # Draw circle inside for aromaticity
+        circle = Circle((center_x, center_y), size*0.7, fill=False, 
+                       color=color, linestyle='--', alpha=0.5)
+        ax.add_patch(circle)
+        
+        return x, y
+    
+    def _create_benzene_nitration_mechanism(self, ax, parameters, fig):
+        """Create benzene nitration mechanism diagram"""
+        ax.set_xlim(-2, 12)
+        ax.set_ylim(-2, 10)
+        
+        # Title
+        ax.text(5, 9.5, 'Nitration of Benzene Mechanism', color='white', fontsize=16, weight='bold', ha='center')
+        
+        # Step 1: Electrophile formation
+        ax.text(2, 8, 'Step 1: Electrophile Formation', color='yellow', fontsize=12, weight='bold')
+        ax.text(2, 7.5, 'HNO₃ + H₂SO₄ → NO₂⁺ + HSO₄⁻ + H₂O', color='cyan', fontsize=10)
+        
+        # Draw nitric acid and sulfuric acid
+        ax.text(1, 6.5, 'H-O-NO₂', color='orange', fontsize=10)
+        ax.text(3, 6.5, 'H₂SO₄', color='orange', fontsize=10)
+        ax.arrow(1.5, 6.3, 1.0, 0, head_width=0.1, head_length=0.2, fc='white', ec='white')
+        
+        # Draw nitronium ion formation
+        ax.text(2, 5.5, '→ NO₂⁺', color='red', fontsize=12, weight='bold')
+        ax.text(2, 5.0, '(Nitronium Ion)', color='red', fontsize=9)
+        
+        # Step 2: Electrophilic attack
+        ax.text(7, 8, 'Step 2: Electrophilic Attack', color='yellow', fontsize=12, weight='bold')
+        
+        # Draw benzene ring with attacking nitronium ion
+        self._create_benzene_ring(ax, center_x=7, center_y=6, size=0.8)
+        ax.text(8.2, 6.5, 'NO₂⁺', color='red', fontsize=12)
+        ax.arrow(8.0, 6.4, -0.6, -0.3, head_width=0.1, head_length=0.1, fc='red', ec='red')
+        
+        # Step 3: Arenium ion intermediate
+        ax.text(7, 4, 'Step 3: Arenium Ion Intermediate', color='yellow', fontsize=12, weight='bold')
+        
+        # Draw arenium ion
+        self._create_benzene_ring(ax, center_x=7, center_y=2.5, size=0.8)
+        ax.plot([7, 7.8], [2.5+0.8, 3.0], color='white', linewidth=2)  # Broken aromaticity
+        ax.text(7.8, 3.2, 'NO₂', color='green', fontsize=10)
+        ax.text(7.8, 2.8, 'H', color='cyan', fontsize=10)
+        ax.text(7, 1.5, 'σ-Complex (Arenium Ion)', color='orange', fontsize=10)
+        
+        # Step 4: Proton loss
+        ax.text(7, 0.5, 'Step 4: Proton Loss', color='yellow', fontsize=12, weight='bold')
+        
+        # Draw final product
+        self._create_benzene_ring(ax, center_x=7, center_y=-1, size=0.8)
+        ax.text(7.8, -0.7, 'NO₂', color='green', fontsize=10)
+        ax.text(7, -1.8, 'Nitrobenzene (Product)', color='green', fontsize=10)
+        
+        # Draw proton loss arrow
+        ax.arrow(7, 1.8, 0, -0.8, head_width=0.1, head_length=0.1, fc='orange', ec='orange')
+        ax.text(7.5, 1.0, 'H⁺', color='orange', fontsize=10)
+        
+        # Reaction arrows
+        ax.arrow(3.5, 5.5, 2.0, 0, head_width=0.1, head_length=0.2, fc='white', ec='white', linestyle='--')
+        ax.arrow(7, 5.0, 0, -1.0, head_width=0.1, head_length=0.2, fc='white', ec='white', linestyle='--')
+        ax.arrow(7, 1.0, 0, -1.0, head_width=0.1, head_length=0.2, fc='white', ec='white', linestyle='--')
+        
+        ax.axis('off')
+        return self.save_plot_to_base64(fig)
+    
+    def _create_nitro_group_explanation(self, ax, parameters, fig):
+        """Create diagram explaining why nitro group is meta-directing"""
+        ax.set_xlim(-1, 10)
+        ax.set_ylim(-1, 8)
+        
+        # Title
+        ax.text(4.5, 7.5, 'Why Nitro Group (-NO₂) is Meta-Directing', color='white', fontsize=14, weight='bold', ha='center')
+        
+        # Draw nitrobenzene structure
+        ax.text(2, 6.5, 'Nitrobenzene Structure:', color='yellow', fontsize=12)
+        self._create_benzene_ring(ax, center_x=2, center_y=5.5, size=0.6)
+        ax.text(2.8, 5.5, 'NO₂', color='red', fontsize=10)
+        
+        # Resonance structures
+        ax.text(6, 6.5, 'Resonance Structures:', color='yellow', fontsize=12)
+        
+        # Positive charge positions
+        positions = [
+            (5, 5.0, 'Ortho', 'red'),
+            (6, 4.5, 'Meta', 'green'), 
+            (7, 5.0, 'Para', 'red')
+        ]
+        
+        for x, y, position, color in positions:
+            self._create_benzene_ring(ax, center_x=x, center_y=y, size=0.4)
+            ax.text(x+0.6, y, 'NO₂', color='red', fontsize=8)
+            ax.text(x, y-0.7, f'{position}', color=color, fontsize=9, weight='bold')
+            if color == 'red':
+                ax.text(x, y+0.6, 'δ⁺', color='red', fontsize=10, weight='bold')
+            else:
+                ax.text(x, y+0.6, 'δ⁻', color='green', fontsize=10, weight='bold')
+        
+        # Electron withdrawal explanation
+        ax.text(4.5, 3.0, 'Electron-Withdrawing Effect:', color='cyan', fontsize=12, weight='bold', ha='center')
+        
+        explanation_points = [
+            "• Nitro group is strongly electron-withdrawing",
+            "• Withdraws electron density via -I and -M effects", 
+            "• Deactivates benzene ring towards electrophilic attack",
+            "• Meta position is least deactivated (more electron-rich)",
+            "• Ortho/para positions have partial positive charges",
+            "• Electrophiles prefer electron-rich meta position"
+        ]
+        
+        for i, point in enumerate(explanation_points):
+            ax.text(1, 2.0 - i*0.4, point, color='white', fontsize=9)
+        
+        ax.axis('off')
+        return self.save_plot_to_base64(fig)
+    
+    def _create_friedel_crafts_mechanism(self, ax, parameters, fig):
+        """Create Friedel-Crafts acylation/alkylation mechanism diagram"""
+        ax.set_xlim(-3, 3)
+        ax.set_ylim(-2, 2)
+        
+        # Draw benzene ring
+        self._create_benzene_ring(ax, center_x=-1, center_y=0, size=0.8)
+        
+        # Draw electrophile formation
+        if parameters.get('reaction_type', 'acylation') == 'acylation':
+            # Acyl chloride + AlCl3
+            ax.text(-2.5, 1.5, 'R-C(=O)-Cl + AlCl₃', color='cyan', fontsize=10)
+            ax.text(-2.5, 1.2, '→ R-C⁺=O + AlCl₄⁻', color='yellow', fontsize=10)
+            
+            # Draw acylium ion
+            ax.text(1, 0.5, 'R-C⁺=O', color='red', fontsize=12, 
+                   bbox=dict(boxstyle="round,pad=0.3", facecolor='black', alpha=0.7))
+            
+        else:  # alkylation
+            # Alkyl halide + AlCl3
+            ax.text(-2.5, 1.5, 'R-X + AlCl₃', color='cyan', fontsize=10)
+            ax.text(-2.5, 1.2, '→ R⁺ + AlCl₄⁻', color='yellow', fontsize=10)
+            
+            # Draw carbocation
+            ax.text(1, 0.5, 'R⁺', color='red', fontsize=12,
+                   bbox=dict(boxstyle="round,pad=0.3", facecolor='black', alpha=0.7))
+        
+        # Draw reaction arrow
+        ax.arrow(-0.2, 0, 0.4, 0, head_width=0.1, head_length=0.1, 
+                fc='magenta', ec='magenta', linewidth=2)
+        
+        # Draw product benzene ring with substituent
+        self._create_benzene_ring(ax, center_x=2, center_y=0, size=0.8)
+        
+        if parameters.get('reaction_type', 'acylation') == 'acylation':
+            ax.text(2.2, 0.3, 'C=O-R', color='green', fontsize=10, rotation=45)
+        else:
+            ax.text(2.2, 0.3, 'R', color='green', fontsize=10)
+        
+        ax.set_title('Friedel-Crafts Reaction Mechanism', color='white', fontsize=16)
+        ax.axis('off')
+        
+        return self.save_plot_to_base64(fig)
+    
+    def _create_eas_mechanism(self, ax, parameters, fig):
+        """Create Electrophilic Aromatic Substitution mechanism"""
+        ax.set_xlim(-2, 8)
+        ax.set_ylim(-2, 2)
+        
+        # Step 1: Electrophile attack
+        self._create_benzene_ring(ax, center_x=1, center_y=0, size=0.7)
+        ax.text(1.8, 0.5, 'E⁺', color='red', fontsize=12)
+        ax.arrow(1.6, 0.4, -0.4, -0.3, head_width=0.1, head_length=0.1, 
+                fc='red', ec='red')
+        
+        ax.text(1, -1.2, 'Step 1: Electrophile Attack', color='yellow', fontsize=10)
+        
+        # Step 2: Arenium ion formation
+        self._create_benzene_ring(ax, center_x=3.5, center_y=0, size=0.7)
+        ax.plot([3.5, 4.0], [0.7, 1.0], color='white', linewidth=2)  # Broken aromaticity
+        ax.text(4.2, 0.8, 'E', color='green', fontsize=10)
+        ax.text(4.2, 0.5, 'H', color='cyan', fontsize=10)
+        
+        ax.text(3.5, -1.2, 'Step 2: Arenium Ion', color='yellow', fontsize=10)
+        
+        # Step 3: Proton loss
+        self._create_benzene_ring(ax, center_x=6, center_y=0, size=0.7)
+        ax.text(6.8, 0.3, 'E', color='green', fontsize=10)
+        ax.text(6.2, -0.8, 'H⁺', color='orange', fontsize=10)
+        ax.arrow(6.5, -0.6, 0.3, 0.8, head_width=0.1, head_length=0.1, 
+                fc='orange', ec='orange')
+        
+        ax.text(6, -1.2, 'Step 3: Proton Loss', color='yellow', fontsize=10)
+        
+        # Reaction arrows between steps
+        ax.arrow(1.8, 0, 1.0, 0, head_width=0.1, head_length=0.1, 
+                fc='white', ec='white', linestyle='--')
+        ax.arrow(4.2, 0, 1.1, 0, head_width=0.1, head_length=0.1, 
+                fc='white', ec='white', linestyle='--')
+        
+        ax.set_title('Electrophilic Aromatic Substitution Mechanism', color='white', fontsize=14)
+        ax.axis('off')
+        
+        return self.save_plot_to_base64(fig)
+    
+    def _create_substituent_effects_diagram(self, ax, parameters, fig):
+        """Create diagram showing ortho/para vs meta directing effects"""
+        ax.set_xlim(-1, 10)
+        ax.set_ylim(-1, 6)
+        
+        # Ortho/Para directors
+        ax.text(1, 5, 'Ortho/Para Directors', color='green', fontsize=12, 
+               weight='bold', ha='center')
+        
+        ortho_para_examples = ['-OH', '-NH₂', '-OCH₃', '-CH₃', '-Cl', '-Br']
+        for i, group in enumerate(ortho_para_examples):
+            # Draw benzene with substituent
+            self._create_benzene_ring(ax, center_x=1, center_y=3.5-i*0.6, size=0.3)
+            ax.text(1.4, 3.5-i*0.6, group, color='cyan', fontsize=9)
+            
+            # Show attack positions
+            if i == 0:  # Just for first example
+                ax.text(1.8, 3.5, 'Attack here', color='yellow', fontsize=8)
+                ax.scatter([1.15, 0.85, 1.0], [3.65, 3.35, 3.2], color='red', s=30)
+        
+        # Meta directors
+        ax.text(5, 5, 'Meta Directors', color='red', fontsize=12, 
+               weight='bold', ha='center')
+        
+        meta_examples = ['-NO₂', '-CN', '-SO₃H', '-COOH', '-CHO']
+        for i, group in enumerate(meta_examples):
+            # Draw benzene with substituent
+            self._create_benzene_ring(ax, center_x=5, center_y=3.5-i*0.6, size=0.3)
+            ax.text(5.4, 3.5-i*0.6, group, color='orange', fontsize=9)
+            
+            # Show attack positions
+            if i == 0:  # Just for first example
+                ax.text(5.8, 3.5, 'Attack here', color='yellow', fontsize=8)
+                ax.scatter([4.7, 5.0, 5.3], [3.2, 3.2, 3.2], color='red', s=30)
+        
+        # Key points
+        key_points = [
+            "Ortho/Para: Electron Donating",
+            "Meta: Electron Withdrawing", 
+            "Order Matters in Synthesis!"
+        ]
+        
+        for i, point in enumerate(key_points):
+            ax.text(8, 4-i*0.8, point, color='white', fontsize=10,
+                   bbox=dict(boxstyle="round,pad=0.3", facecolor='blue', alpha=0.3))
+        
+        ax.set_title('Aromatic Substituent Effects', color='white', fontsize=16)
+        ax.axis('off')
+        
+        return self.save_plot_to_base64(fig)
+    
+    def _create_synthesis_planning_diagram(self, ax, parameters, fig):
+        """Create synthesis planning diagram showing order of operations"""
+        ax.set_xlim(-1, 12)
+        ax.set_ylim(-1, 8)
+        
+        title = "Synthesis Planning: Order of Operations Matters!"
+        ax.text(5.5, 7.5, title, color='yellow', fontsize=14, 
+               weight='bold', ha='center')
+        
+        # Example 1: Meta director first
+        ax.text(2.5, 6.5, 'Path A: Meta Director First', color='cyan', fontsize=11, 
+               weight='bold', ha='center')
+        
+        # Step 1: Install meta director
+        self._create_benzene_ring(ax, center_x=1, center_y=5.5, size=0.4)
+        ax.text(1.5, 5.5, '+ NO₂', color='orange', fontsize=9)
+        ax.arrow(1.8, 5.5, 0.8, 0, head_width=0.1, head_length=0.1, fc='white', ec='white')
+        
+        # Step 2: Try to install ortho/para (fails)
+        self._create_benzene_ring(ax, center_x=3.5, center_y=5.5, size=0.4)
+        ax.text(3.9, 5.5, 'NO₂', color='orange', fontsize=9)
+        ax.text(3.5, 5.0, '+ CH₃ (meta only!)', color='red', fontsize=8)
+        ax.arrow(4.3, 5.5, 0.8, 0, head_width=0.1, head_length=0.1, fc='red', ec='red')
+        
+        # Step 3: Meta product
+        self._create_benzene_ring(ax, center_x=6, center_y=5.5, size=0.4)
+        ax.text(6.4, 5.7, 'CH₃', color='green', fontsize=8)
+        ax.text(6.0, 5.2, 'NO₂', color='orange', fontsize=8)
+        ax.text(6.5, 4.8, 'Meta Product', color='white', fontsize=9, 
+               bbox=dict(boxstyle="round,pad=0.2", facecolor='red', alpha=0.5))
+        
+        # Example 2: Ortho/Para director first  
+        ax.text(8.5, 6.5, 'Path B: Ortho/Para Director First', color='green', fontsize=11,
+               weight='bold', ha='center')
+        
+        # Step 1: Install ortho/para director
+        self._create_benzene_ring(ax, center_x=7, center_y=5.5, size=0.4)
+        ax.text(7.5, 5.5, '+ CH₃', color='green', fontsize=9)
+        ax.arrow(7.8, 5.5, 0.8, 0, head_width=0.1, head_length=0.1, fc='white', ec='white')
+        
+        # Step 2: Install second group (ortho/para)
+        self._create_benzene_ring(ax, center_x=9.5, center_y=5.5, size=0.4)
+        ax.text(9.9, 5.5, 'CH₃', color='green', fontsize=9)
+        ax.text(9.5, 5.0, '+ NO₂ (ortho/para!)', color='cyan', fontsize=8)
+        ax.arrow(10.3, 5.5, 0.8, 0, head_width=0.1, head_length=0.1, fc='white', ec='white')
+        
+        # Step 3: Ortho/Para products
+        self._create_benzene_ring(ax, center_x=12, center_y=5.5, size=0.4)
+        ax.text(12.4, 5.8, 'NO₂', color='orange', fontsize=8)  # ortho
+        ax.text(11.8, 5.2, 'CH₃', color='green', fontsize=8)   # para
+        ax.text(12.5, 4.8, 'Ortho/Para Products', color='white', fontsize=9,
+               bbox=dict(boxstyle="round,pad=0.2", facecolor='green', alpha=0.5))
+        
+        # Key insight box
+        insight_text = "Key Insight:\nInstall Ortho/Para directors FIRST,\nthen Meta directors for desired positioning"
+        ax.text(5.5, 2.5, insight_text, color='yellow', fontsize=12,
+               ha='center', va='center',
+               bbox=dict(boxstyle="round,pad=0.5", facecolor='purple', alpha=0.7))
+        
+        ax.axis('off')
+        
+        return self.save_plot_to_base64(fig)
+    
+    def calculate_reaction_parameters(self, parameters):
+        """Calculate chemical reaction parameters"""
+        try:
+            calculation_type = parameters.get('type', 'yield')
+            
+            if calculation_type == 'yield':
+                theoretical = parameters.get('theoretical_yield', 0)
+                actual = parameters.get('actual_yield', 0)
+                
+                if theoretical > 0:
+                    percent_yield = (actual / theoretical) * 100
+                    return {'percent_yield': percent_yield}
+            
+            elif calculation_type == 'concentration':
+                moles = parameters.get('moles', 0)
+                volume = parameters.get('volume', 1)
+                return {'concentration': moles / volume}
+                
+            elif calculation_type == 'rate_constant':
+                # Arrhenius equation approximation
+                A = parameters.get('pre_exponential', 1e13)
+                Ea = parameters.get('activation_energy', 50000)  # J/mol
+                T = parameters.get('temperature', 298)  # K
+                R = 8.314
+                
+                k = A * np.exp(-Ea / (R * T))
+                return {'rate_constant': k}
+                
+        except Exception as e:
+            print(f"Reaction calculation error: {e}")
+            return None
+    
+    def predict_substitution_pattern(self, existing_group, new_group):
+        """Predict substitution pattern based on existing substituent"""
+        if existing_group in self.substituent_effects['ortho_para_directors']:
+            if new_group in self.substituent_effects['ortho_para_directors']:
+                return "Ortho/Para mixture (both activating)"
+            else:  # new group is meta director
+                return "Ortho/Para positions (existing controls)"
+        else:  # existing is meta director
+            if new_group in self.substituent_effects['ortho_para_directors']:
+                return "Meta position (existing controls)"
+            else:
+                return "Meta position (both deactivating)"
+    
+    def process_chemistry_query(self, message):
+        """Process chemistry-related queries"""
+        chemistry_content = {
+            'visualizations': [],
+            'calculations': [],
+            'explanations': [],
+            'predictions': []
         }
         
-        # User session management (in-memory only)
-        self.user_sessions = {}
-        self.interaction_history = []
-
-    def analyze_query_intent(self, message: str) -> Dict:
-        """Advanced intent analysis for user queries"""
         message_lower = message.lower()
         
-        intent_indicators = {
-            'account_issue': ['account', 'login', 'password', 'profile', 'sign in', 'register'],
-            'booking_help': ['book', 'schedule', 'appointment', 'reserve', 'availability'],
-            'technical_support': ['error', 'bug', 'crash', 'not working', 'technical', 'glitch'],
-            'billing_query': ['payment', 'billing', 'invoice', 'refund', 'charge', 'price'],
-            'provider_info': ['provider', 'service', 'quality', 'rating', 'review', 'verified'],
-            'safety_concern': ['safe', 'security', 'trust', 'reliable', 'background check'],
-            'general_info': ['what is', 'how does', 'tell me about', 'explain']
+        # Mechanism detection - UPDATED WITH NITRATION
+        mechanism_keywords = {
+            'friedel crafts': 'friedel_crafts',
+            'electrophilic aromatic substitution': 'electrophilic_aromatic_substitution', 
+            'eas': 'electrophilic_aromatic_substitution',
+            'substituent effect': 'substituent_effects',
+            'ortho para meta': 'substituent_effects',
+            'synthesis planning': 'synthesis_planning',
+            'order of operations': 'synthesis_planning',
+            'nitration of benzene': 'benzene_nitration',
+            'benzene nitration': 'benzene_nitration',
+            'hno3 h2so4': 'benzene_nitration'
         }
         
-        detected_intents = []
-        confidence_scores = {}
+        # Create visualizations
+        for keyword, diagram_type in mechanism_keywords.items():
+            if keyword in message_lower:
+                params = {}
+                if 'alkylation' in message_lower:
+                    params['reaction_type'] = 'alkylation'
+                elif 'acylation' in message_lower:
+                    params['reaction_type'] = 'acylation'
+                    
+                visualization = self.create_mechanism_diagram(diagram_type, params)
+                if visualization:
+                    chemistry_content['visualizations'].append({
+                        'type': diagram_type,
+                        'image': visualization
+                    })
         
-        for intent, indicators in intent_indicators.items():
-            matches = sum(1 for indicator in indicators if indicator in message_lower)
-            if matches > 0:
-                detected_intents.append(intent)
-                confidence_scores[intent] = min(100, (matches / len(indicators)) * 100)
-        
-        # Determine primary intent
-        primary_intent = max(confidence_scores.items(), key=lambda x: x[1]) if confidence_scores else ('general_info', 0)
-        
-        return {
-            'detected_intents': detected_intents,
-            'primary_intent': primary_intent[0],
-            'confidence': primary_intent[1],
-            'urgency_level': self._assess_urgency(message_lower),
-            'complexity_level': self._assess_complexity(message_lower)
-        }
-
-    def _assess_urgency(self, message: str) -> str:
-        """Assess urgency level of query"""
-        urgent_indicators = ['emergency', 'urgent', 'immediately', 'asap', 'critical', 'not working', 'broken']
-        high_indicators = ['problem', 'issue', 'trouble', 'help needed', 'stuck']
-        
-        if any(indicator in message for indicator in urgent_indicators):
-            return 'critical'
-        elif any(indicator in message for indicator in high_indicators):
-            return 'high'
-        else:
-            return 'normal'
-
-    def _assess_complexity(self, message: str) -> str:
-        """Assess complexity level of query"""
-        complex_indicators = ['multiple', 'several', 'complex', 'advanced', 'configuration', 'integration']
-        medium_indicators = ['how to', 'step by step', 'guide', 'tutorial']
-        
-        if any(indicator in message for indicator in complex_indicators):
-            return 'high'
-        elif any(indicator in message for indicator in medium_indicators):
-            return 'medium'
-        else:
-            return 'low'
-
-    def _handle_account_queries(self, message: str) -> str:
-        """Handle account-related queries"""
-        if any(word in message for word in ['delete', 'remove', 'close account']):
-            return """To delete your Netra account:
-
-1. Open Netra app → Settings → Account Management
-2. Scroll to "Danger Zone" → "Delete Account"
-3. Read important information about data loss
-4. Enter password to confirm
-5. Check email for deletion confirmation
-
-⚠️ This action is permanent and cannot be undone."""
-        
-        elif any(word in message for word in ['create', 'sign up', 'register']):
-            return """Creating a Netra account:
-
-1. Download Netra from App Store or Google Play
-2. Tap "Sign Up" and enter your email
-3. Verify email through the link sent
-4. Complete profile with personal details
-5. Connect payment method
-
-✅ Ready in 5 minutes!"""
-        
-        elif any(word in message for word in ['login', 'sign in', 'password']):
-            return """Login troubleshooting:
-
-🔧 Quick Fixes:
-- Check internet connection
-- Use correct email/password
-- Try "Forgot Password"
-- Restart the app
-
-🔄 If issues persist:
-1. Clear app cache
-2. Update Netra app
-3. Try different device
-4. Contact support@myaidnest.com"""
-        
-        else:
-            return "I can help with account issues: login, profile updates, or account security. What specific problem are you having?"
-
-    def _handle_booking_queries(self, message: str) -> str:
-        """Handle booking-related queries"""
-        if any(word in message for word in ['book', 'schedule', 'new appointment']):
-            return """Booking a service:
-
-1. Browse providers by category/location
-2. Check ratings, reviews, availability
-3. Select preferred date and time
-4. Review service details & pricing
-5. Confirm with secure payment
-
-📱 Most bookings confirmed within 2 hours"""
-        
-        elif any(word in message for word in ['reschedule', 'change booking']):
-            return """Rescheduling:
-
-1. Go to "My Bookings" in app
-2. Select booking → "Reschedule"
-3. Choose new date/time from available slots
-4. Confirm changes
-
-🔄 Free rescheduling up to 2 hours before"""
-        
-        elif any(word in message for word in ['cancel', 'cancel booking']):
-            return """Cancellation:
-
-1. Open "My Bookings"
-2. Select booking → "Cancel"
-3. Select reason → Confirm
-
-🚫 Policy:
-- Free: 24+ hours before
-- 50% charge: within 24 hours
-- Full charge: no-shows"""
-        
-        else:
-            return "I can assist with booking services, managing appointments, or understanding booking policies."
-
-    def _handle_technical_queries(self, message: str) -> str:
-        """Handle technical support queries"""
-        return """Technical support:
-
-🔧 Quick Troubleshooting:
-- Force close and restart Netra app
-- Check internet connection
-- Clear app cache
-- Update to latest version
-
-📋 If issues continue:
-1. Note error messages
-2. Test on WiFi and mobile data
-3. Try different device
-4. Contact tech@myaidnest.com with details"""
-
-    def _handle_billing_queries(self, message: str) -> str:
-        """Handle billing and payment queries"""
-        if any(word in message for word in ['refund', 'money back']):
-            return """Refund Policy:
-
-🔄 Eligible:
-- Services not as described
-- Provider no-show
-- Technical issues
-- Double charges
-
-❌ Not Eligible:
-- Change of mind after service
-- Issues not reported within 24h
-- Partial service completion
-
-📞 Request: accounts@myaidnest.com"""
-        
-        elif any(word in message for word in ['payment failed', 'declined']):
-            return """Payment Issues:
-
-💳 Check:
-- Sufficient funds
-- Correct card details
-- Active mobile money
-- Try different payment method
-
-🔒 Security:
-- Payment may be held for verification
-- Contact bank if declined
-- Check payment limits"""
-        
-        else:
-            return """Billing Information:
-
-💰 Payment Methods:
-- M-Pesa, Airtel Money
-- Visa/Mastercard
-- Bank Transfer
-- PayPal
-
-🌍 Currencies: KES, UGX, TZS, USD
-
-🔐 All payments encrypted and secure"""
-
-    def _handle_provider_queries(self, message: str) -> str:
-        """Handle provider-related queries"""
-        return """Our Providers:
-
-✅ Verification Levels:
-- Basic: ID + Phone verification
-- ⭐ Premium: Background check + Skills assessment  
-- 🏆 Elite: Full background + Insurance + 5+ reviews
-
-All providers undergo rigorous verification for your safety and quality assurance."""
-
-    def _handle_safety_queries(self, message: str) -> str:
-        """Handle safety and security queries"""
-        return """Your Safety First:
-
-🔒 Security Features:
-- Provider background verification
-- Real-time booking tracking
-- Emergency contact integration
-- Encrypted communications
-- Secure payment processing
-- Anonymous rating system
-
-24/7 support available for any concerns."""
-
-    def _handle_general_queries(self, message: str) -> str:
-        """Handle general information queries"""
-        if any(word in message for word in ['what is netra', 'tell me about netra']):
-            return """Netra by AidNest Africa:
-
-A trusted service marketplace connecting African communities with verified service providers.
-
-🏠 Home Services | 💼 Professional Services
-🔧 Technical Services | 💪 Wellness Services
-
-Mission: Empowering African communities through accessible technology
-Founded: 2023 | HQ: Kampala, Uganda"""
-        
-        elif any(word in message for word in ['services', 'what do you offer']):
-            service_list = []
-            for category in self.service_categories.values():
-                service_list.append(f"**{category['name']}**")
-                service_list.extend([f"  • {sub}" for sub in category['subcategories'][:3]])
-                service_list.append(f"  💰 {category['average_pricing']}")
-                service_list.append("")
+        # Handle nitration-specific explanations
+        if any(word in message_lower for word in ['nitration', 'nitro', 'no2', 'hno3']):
+            # Add nitration mechanism explanation
+            chemistry_content['explanations'].extend([
+                "**Nitration of Benzene Mechanism:**",
+                "1. **Electrophile Formation**: HNO₃ + H₂SO₄ → NO₂⁺ + HSO₄⁻ + H₂O",
+                "2. **Electrophilic Attack**: NO₂⁺ attacks benzene ring",
+                "3. **Arenium Ion**: Forms resonance-stabilized intermediate", 
+                "4. **Proton Loss**: Regenerates aromaticity to form nitrobenzene",
+                "",
+                "**Why Nitro Group is Meta-Directing:**",
+                "• Strong electron-withdrawing group (-I and -M effects)",
+                "• Deactivates benzene ring towards electrophilic attack",
+                "• Withdraws electron density from ortho/para positions",
+                "• Meta position is least deactivated (more electron-rich)",
+                "• Electrophiles prefer attacking meta position"
+            ])
             
-            return "\n".join(service_list)
+            # Create nitro group explanation diagram
+            try:
+                fig, ax = plt.subplots(figsize=(12, 8))
+                ax.set_facecolor('#0f0f23')
+                fig.patch.set_facecolor('#0f0f23')
+                nitro_explanation = self._create_nitro_group_explanation(ax, {}, fig)
+                if nitro_explanation:
+                    chemistry_content['visualizations'].append({
+                        'type': 'nitro_group_explanation',
+                        'image': nitro_explanation
+                    })
+            except Exception as e:
+                print(f"Nitro group explanation error: {e}")
         
-        elif any(word in message for word in ['how it works', 'how does it work']):
-            return """How Netra Works:
-
-1. **Browse** - Search services by category/location
-2. **Compare** - Check ratings, reviews, prices
-3. **Book** - Select provider, time, confirm
-4. **Pay** - Secure payment processing
-5. **Enjoy** - Quality service delivery
-6. **Review** - Share your experience
-
-⭐ All providers verified with background checks"""
+        # Perform calculations
+        if any(word in message_lower for word in ['calculate', 'yield', 'concentration']):
+            if 'yield' in message_lower:
+                calc_result = self.calculate_reaction_parameters({'type': 'yield'})
+                if calc_result:
+                    chemistry_content['calculations'].append(calc_result)
+            
+            if 'concentration' in message_lower:
+                calc_result = self.calculate_reaction_parameters({'type': 'concentration'})
+                if calc_result:
+                    chemistry_content['calculations'].append(calc_result)
         
-        else:
-            return """Hello! I'm Netra AI Assistant. I can help with:
-
-🔹 Account Management
-🔹 Booking Services  
-🔹 Technical Support
-🔹 Billing & Payments
-🔹 Provider Information
-🔹 Safety & Security
-
-What do you need help with today?"""
-
-    def process_netra_query(self, message: str, user_id: str = None) -> Dict:
-        """Main method to process Netra-related queries - follows same pattern as chemistry_engine"""
-        netra_content = {
-            'response': '',
-            'suggestions': [],
-            'confidence': 0,
-            'intent': 'unknown',
-            'resources': []
-        }
-        
-        try:
-            # Analyze the query intent
-            intent_analysis = self.analyze_query_intent(message)
-            
-            # Generate response based on intent
-            response_templates = {
-                'account_issue': self._handle_account_queries,
-                'booking_help': self._handle_booking_queries,
-                'technical_support': self._handle_technical_queries,
-                'billing_query': self._handle_billing_queries,
-                'provider_info': self._handle_provider_queries,
-                'safety_concern': self._handle_safety_queries,
-                'general_info': self._handle_general_queries
-            }
-            
-            handler = response_templates.get(intent_analysis['primary_intent'], self._handle_general_queries)
-            response_text = handler(message.lower())
-            
-            # Log interaction
-            self._log_interaction(message, intent_analysis, user_id)
-            
-            # Build response
-            netra_content.update({
-                'response': response_text,
-                'confidence': intent_analysis['confidence'],
-                'intent': intent_analysis['primary_intent'],
-                'suggestions': self._generate_suggestions(intent_analysis),
-                'resources': self._get_resources(intent_analysis)
+        # Make predictions
+        if any(word in message_lower for word in ['predict', 'substitution', 'directing']):
+            prediction = self.predict_substitution_pattern('-NO2', '-CH3')
+            chemistry_content['predictions'].append({
+                'prediction': prediction,
+                'explanation': 'Based on substituent effects and directing properties'
             })
-            
-        except Exception as e:
-            netra_content['response'] = f"I apologize, but I encountered an error: {str(e)}. Please contact support@myaidnest.com for assistance."
-            netra_content['suggestions'] = ['Try rephrasing your question', 'Contact our support team directly']
         
-        return netra_content
-
-    def _generate_suggestions(self, intent_analysis: Dict) -> List[str]:
-        """Generate proactive suggestions"""
-        suggestions_map = {
-            'account_issue': [
-                "Enable two-factor authentication",
-                "Review your privacy settings",
-                "Keep your profile updated"
-            ],
-            'booking_help': [
-                "Save favorite providers",
-                "Set booking reminders",
-                "Review cancellation policies"
-            ],
-            'technical_support': [
-                "Keep app updated",
-                "Clear cache regularly",
-                "Save support contacts"
-            ],
-            'billing_query': [
-                "Check transaction history",
-                "Verify payment methods",
-                "Review billing FAQs"
-            ]
-        }
+        # Add explanations
+        if 'aromatic' in message_lower and 'synthesis' in message_lower:
+            chemistry_content['explanations'].append(
+                "In aromatic synthesis, install ortho/para directors FIRST, then meta directors. "
+                "This controls the position of subsequent substitutions."
+            )
         
-        return suggestions_map.get(intent_analysis['primary_intent'], [
-            "Explore our service categories",
-            "Check provider ratings and reviews",
-            "Contact support for specific questions"
-        ])
+        return chemistry_content
 
-    def _get_resources(self, intent_analysis: Dict) -> List[str]:
-        """Get relevant resources"""
-        resources_map = {
-            'account_issue': ['support@myaidnest.com', 'Account Settings Guide'],
-            'booking_help': ['Booking Tutorial', 'Provider Directory'],
-            'technical_support': ['tech@myaidnest.com', 'Troubleshooting Guide'],
-            'billing_query': ['accounts@myaidnest.com', 'Billing Policy']
-        }
-        
-        return resources_map.get(intent_analysis['primary_intent'], ['support@myaidnest.com', 'Help Center'])
-
-    def _log_interaction(self, query: str, intent_analysis: Dict, user_id: str = None):
-        """Log interaction to in-memory storage"""
-        log_entry = {
-            'timestamp': datetime.now().isoformat(),
-            'query': query,
-            'intent': intent_analysis['primary_intent'],
-            'confidence': intent_analysis['confidence'],
-            'user_id': user_id
-        }
-        
-        self.interaction_history.append(log_entry)
-        
-        # Keep only last 100 interactions
-        if len(self.interaction_history) > 100:
-            self.interaction_history.pop(0)
-
-    def get_service_recommendations(self, user_preferences: Dict) -> List[str]:
-        """Get personalized service recommendations"""
-        recommendations = []
-        for category, prefs in user_preferences.items():
-            if category in self.service_categories:
-                recommendations.extend(self.service_categories[category]['subcategories'][:2])
-        return recommendations[:5]
-
-# Create global instance - FOLLOWS SAME PATTERN AS CHEMISTRY_ENGINE
-netra_engine = NetraEngine()
+# Create global instance
+chemistry_engine = ChemistryEngine()
