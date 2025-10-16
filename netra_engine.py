@@ -1,5 +1,5 @@
 import random
-import requests # type: ignore
+import requests
 from datetime import datetime
 from bs4 import BeautifulSoup
 import re
@@ -17,99 +17,86 @@ class NetraEngine:
             }
         }
         
-        # Enhanced knowledge base with conversational responses
+        # Natural conversation responses
         self.knowledge_base = {
             'delete_account': {
-                'response': "I can help you delete your Netra account. This is a straightforward process but please note it's permanent. Would you like me to walk you through the steps?",
-                'steps': [
-                    "Open the Netra app and go to Settings",
-                    "Scroll down to 'Account Management'", 
-                    "Tap 'Delete Account' and follow the prompts",
-                    "You'll need to confirm your password for security"
-                ],
-                'notes': "⚠️ Account deletion is permanent and cannot be undone. All your data, bookings, and history will be lost."
+                'response': "To delete your Netra account, go to Settings → Account Management → Delete Account. Just be aware this permanently removes all your data and cannot be undone.",
+                'quick_tip': "Make sure to download any important booking history first!"
             },
             
             'edit_profile': {
-                'response': "Updating your profile is easy! Let me guide you through the process to ensure all your information is current.",
-                'steps': [
-                    "Tap your profile picture in the top right",
-                    "Select 'Edit Profile' from the menu",
-                    "Update your name, email, phone, or bio",
-                    "Don't forget to save your changes!"
-                ],
-                'notes': "📱 Keeping your profile updated helps service providers serve you better."
+                'response': "You can update your profile by tapping your picture in the top right and selecting 'Edit Profile'. You can change your name, contact info, and bio there.",
+                'quick_tip': "Keeping your profile updated helps service providers serve you better."
             },
             
             'booking_new': {
-                'response': "I'd be happy to help you book a service! The booking process is designed to be smooth and efficient.",
-                'steps': [
-                    "Make sure your Autra account is verified first",
-                    "Browse available service providers in your area", 
-                    "Check their ratings and availability",
-                    "Select your preferred time slot and confirm"
-                ],
-                'notes': "⏰ Most bookings are confirmed within 2 hours during business hours."
+                'response': "To book a service, browse available providers in your area, check their ratings and availability, then select your preferred time slot. You'll need a verified Autra account for payments.",
+                'quick_tip': "Most bookings are confirmed within 2 hours during business hours."
             },
             
             'booking_manage': {
-                'response': "Managing your bookings is simple. Are you looking to reschedule or cancel an existing booking?",
-                'reschedule_steps': [
-                    "Go to 'My Bookings' in the app",
-                    "Find the booking you want to change",
-                    "Tap 'Reschedule' and pick a new time",
-                    "Confirm the new appointment slot"
-                ],
-                'cancel_steps': [
-                    "Navigate to 'My Bookings' → 'Upcoming'",
-                    "Select the booking to cancel", 
-                    "Choose 'Cancel Booking' and provide reason",
-                    "Confirm the cancellation"
-                ],
-                'notes': "🔄 You can reschedule up to 2 hours before the appointment."
+                'response': "You can reschedule or cancel bookings in the 'My Bookings' section. Reschedule up to 2 hours before your appointment, or cancel if needed.",
+                'quick_tip': "Late cancellations might have charges depending on the provider's policy."
             },
             
             'autra_integration': {
-                'response': "The Autra integration makes payments and verifications seamless. Let me explain how it works!",
-                'steps': [
-                    "Autra handles all payment processing securely",
-                    "Provider verification happens through Autra",
-                    "Booking confirmations are automated",
-                    "Both apps sync in real-time"
-                ],
-                'notes': "🔗 You need a verified Autra account to book services on Netra."
+                'response': "Autra handles payments and provider verification for Netra. You need a verified Autra account to book services - it makes the process secure and seamless.",
+                'quick_tip': "Both apps sync in real-time once connected."
             },
             
             'technical_issues': {
-                'response': "Technical issues can be frustrating! Let's troubleshoot this step by step.",
-                'common_solutions': [
-                    "Restart the Netra app completely",
-                    "Check your internet connection", 
-                    "Clear the app cache in settings",
-                    "Update to the latest app version"
-                ],
-                'escalation': "If these don't work, our technical team can investigate further."
+                'response': "If the app isn't working, try restarting it, checking your internet connection, or clearing the app cache. Also make sure you're using the latest version.",
+                'quick_tip': "If problems continue, our tech team can help at tech@myaidnest.com"
             },
             
             'billing': {
-                'response': "I can help with billing questions. For detailed invoice issues, our accounts team provides the best support.",
-                'self_help': [
-                    "View billing history in 'Payments' section",
-                    "Download invoices from transaction history", 
-                    "Check payment status in real-time"
-                ],
-                'contact': "For payment disputes or refunds, email accounts@myaidnest.com"
+                'response': "For billing questions, you can view your payment history in the app's billing section. For specific invoice issues or refunds, email accounts@myaidnest.com.",
+                'quick_tip': "The billing team usually responds within 24 hours on business days."
             },
             
             'general_info': {
-                'response': "AidNest Africa connects users with verified service providers across multiple categories through our Netra platform.",
-                'services': [
-                    "Home services (cleaning, repairs)",
-                    "Professional services (consulting, tutoring)", 
-                    "Technical services (IT support, installations)",
-                    "Wellness services (fitness, therapy)"
-                ],
-                'coverage': "Currently serving major cities in East Africa with plans to expand."
+                'response': "AidNest Africa connects users with verified service providers through Netra. We offer home services, professional services, technical support, and wellness services across East Africa.",
+                'quick_tip': "We're constantly expanding to new cities and service categories."
+            },
+            
+            'what_is_netra': {
+                'response': "Netra is our platform that connects you with trusted service providers for everything from home repairs to professional consultations. It's designed to make finding and booking reliable services easy and secure.",
+                'quick_tip': "All providers are verified through our Autra system."
+            },
+            
+            'company_info': {
+                'response': "AidNest Africa is a technology company based in East Africa, focused on connecting people with reliable service providers through our Netra platform. We're committed to making quality services accessible to everyone.",
+                'quick_tip': "Founded to solve the challenge of finding trusted local service providers."
+            },
+            
+            'services_offered': {
+                'response': "Through Netra, you can book: home services (cleaning, repairs), professional services (consulting, tutoring), technical services (IT support), and wellness services (fitness, therapy).",
+                'quick_tip': "We're always adding new service categories based on user demand."
+            },
+            
+            'how_to_start': {
+                'response': "To get started with Netra, download the app, create your account, verify your Autra account for payments, and start browsing available service providers in your area.",
+                'quick_tip': "Take a moment to complete your profile - it helps providers understand your needs better."
+            },
+            
+            'provider_verification': {
+                'response': "All service providers on Netra go through a thorough verification process including background checks, skill assessments, and customer reviews to ensure quality and reliability.",
+                'quick_tip': "You can see provider ratings and reviews before booking."
+            },
+            
+            'payment_methods': {
+                'response': "Payments are processed securely through Autra integration. We support mobile money, bank transfers, and card payments depending on your region.",
+                'quick_tip': "All payments are held securely until service completion."
+            },
+            
+            'safety_measures': {
+                'response': "Your safety is our priority. We verify all providers, offer secure payments, provide service tracking, and have a 24/7 support team for any concerns during bookings.",
+                'quick_tip': "Always communicate through the app for your safety and record-keeping."
+            },
+            
+            'contact_support': {
+                'response': "You can reach our support team at support@myaidnest.com for general questions, or tech@myaidnest.com for technical issues. We're here to help!",
+                'quick_tip': "Include your account email for faster assistance."
             }
         }
         
@@ -129,14 +116,14 @@ class NetraEngine:
             response = requests.get(self.company_info['website'], timeout=10)
             soup = BeautifulSoup(response.content, 'html.parser')
             
-            # Extract key information (adjust selectors based on actual website structure)
+            # Extract key information
             scraped_data = {
                 'services': [],
                 'contact_info': {},
                 'latest_updates': []
             }
             
-            # Try to extract services (example selectors - adjust as needed)
+            # Try to extract services
             service_elements = soup.find_all(['h2', 'h3'], string=re.compile(r'service|feature|offer', re.I))
             for element in service_elements[:5]:
                 scraped_data['services'].append(element.get_text().strip())
@@ -155,209 +142,82 @@ class NetraEngine:
             print(f"Web scraping error: {e}")
             return None
 
-    def generate_conversational_response(self, query):
-        """Generate OpenAI-style conversational responses using our knowledge base"""
-        query_lower = query.lower()
+    def get_natural_response(self, message):
+        """Get a natural, direct response without robotic formatting"""
+        message_lower = message.lower()
         
-        # Determine query type and select appropriate response strategy
-        if any(word in query_lower for word in ['delete', 'remove', 'close account']):
-            return self._handle_account_deletion(query)
-        elif any(word in query_lower for word in ['edit', 'update', 'change profile']):
-            return self._handle_profile_edits(query)
-        elif any(word in query_lower for word in ['book', 'schedule', 'appointment']):
-            return self._handle_booking_queries(query)
-        elif any(word in query_lower for word in ['reschedule', 'cancel', 'change booking']):
-            return self._handle_booking_management(query)
-        elif any(word in query_lower for word in ['autra', 'integration', 'connect']):
-            return self._handle_autra_integration(query)
-        elif any(word in query_lower for word in ['technical', 'not working', 'bug', 'error']):
-            return self._handle_technical_issues(query)
-        elif any(word in query_lower for word in ['billing', 'payment', 'invoice', 'refund']):
-            return self._handle_billing_queries(query)
-        elif any(word in query_lower for word in ['what is', 'how does', 'tell me about']):
-            return self._handle_general_info(query)
+        # Direct company-related queries
+        if any(word in message_lower for word in ['what is netra', 'tell me about netra']):
+            return self.knowledge_base['what_is_netra']['response']
+        
+        elif any(word in message_lower for word in ['what is aidnest africa', 'about aidnest', 'your company']):
+            return self.knowledge_base['company_info']['response']
+        
+        # Service queries
+        elif any(word in message_lower for word in ['what services', 'what do you offer', 'what can i book']):
+            return self.knowledge_base['services_offered']['response']
+        
+        elif any(word in message_lower for word in ['how to start', 'get started', 'begin using']):
+            return self.knowledge_base['how_to_start']['response']
+        
+        # Account management
+        elif any(word in message_lower for word in ['delete account', 'remove account']):
+            return f"{self.knowledge_base['delete_account']['response']} {self.knowledge_base['delete_account']['quick_tip']}"
+        
+        elif any(word in message_lower for word in ['edit profile', 'update profile', 'change profile']):
+            return f"{self.knowledge_base['edit_profile']['response']} {self.knowledge_base['edit_profile']['quick_tip']}"
+        
+        # Booking queries
+        elif any(word in message_lower for word in ['book', 'schedule', 'make appointment', 'how to book']):
+            return f"{self.knowledge_base['booking_new']['response']} {self.knowledge_base['booking_new']['quick_tip']}"
+        
+        elif any(word in message_lower for word in ['reschedule', 'cancel booking', 'change booking']):
+            return f"{self.knowledge_base['booking_manage']['response']} {self.knowledge_base['booking_manage']['quick_tip']}"
+        
+        # Technical queries
+        elif any(word in message_lower for word in ['autra', 'integration', 'connect account']):
+            return f"{self.knowledge_base['autra_integration']['response']} {self.knowledge_base['autra_integration']['quick_tip']}"
+        
+        elif any(word in message_lower for word in ['technical', 'not working', 'bug', 'error', 'app crash']):
+            return f"{self.knowledge_base['technical_issues']['response']} {self.knowledge_base['technical_issues']['quick_tip']}"
+        
+        elif any(word in message_lower for word in ['billing', 'payment', 'invoice', 'refund']):
+            return f"{self.knowledge_base['billing']['response']} {self.knowledge_base['billing']['quick_tip']}"
+        
+        # Provider and safety queries
+        elif any(word in message_lower for word in ['provider', 'verified', 'background check']):
+            return f"{self.knowledge_base['provider_verification']['response']} {self.knowledge_base['provider_verification']['quick_tip']}"
+        
+        elif any(word in message_lower for word in ['payment method', 'how to pay', 'payment options']):
+            return f"{self.knowledge_base['payment_methods']['response']} {self.knowledge_base['payment_methods']['quick_tip']}"
+        
+        elif any(word in message_lower for word in ['safety', 'secure', 'trust', 'reliable']):
+            return f"{self.knowledge_base['safety_measures']['response']} {self.knowledge_base['safety_measures']['quick_tip']}"
+        
+        # Contact queries
+        elif any(word in message_lower for word in ['contact', 'support', 'help', 'email', 'phone']):
+            return f"{self.knowledge_base['contact_support']['response']} {self.knowledge_base['contact_support']['quick_tip']}"
+        
+        # Fallback for general Netra/AidNest questions
+        elif any(word in message_lower for word in ['netra', 'aidnest', 'your app', 'your service']):
+            website_data = self.scrape_website_data()
+            if website_data and website_data['services']:
+                services_text = ", ".join(website_data['services'][:3])
+                return f"I can help you with Netra! We currently offer services like {services_text}. What specific help do you need - booking, account issues, or something else?"
+            else:
+                return "I can help you with Netra account questions, booking services, technical issues, or general information about AidNest Africa. What specific help do you need?"
+        
         else:
-            return self._handle_unknown_query(query)
-
-    def _handle_account_deletion(self, query):
-        """Handle account deletion queries conversationally"""
-        kb = self.knowledge_base['delete_account']
-        response = f"{kb['response']}\n\n"
-        
-        if 'step' in query.lower() or 'how' in query.lower():
-            response += "Here are the detailed steps:\n"
-            for i, step in enumerate(kb['steps'], 1):
-                response += f"{i}. {step}\n"
-            response += f"\n{kb['notes']}"
-        else:
-            response += kb['notes']
-            
-        return response
-
-    def _handle_profile_edits(self, query):
-        """Handle profile editing queries"""
-        kb = self.knowledge_base['edit_profile']
-        response = f"{kb['response']}\n\n"
-        
-        response += "The main steps are:\n"
-        for i, step in enumerate(kb['steps'], 1):
-            response += f"{i}. {step}\n"
-        response += f"\n{kb['notes']}"
-        
-        return response
-
-    def _handle_booking_queries(self, query):
-        """Handle new booking queries"""
-        kb = self.knowledge_base['booking_new']
-        response = f"{kb['response']}\n\n"
-        
-        # Add scraped website info if available
-        website_data = self.scrape_website_data()
-        if website_data and website_data['services']:
-            response += "Based on our current offerings, we provide:\n"
-            for service in website_data['services'][:3]:
-                response += f"• {service}\n"
-            response += "\n"
-        
-        response += "To book a service:\n"
-        for i, step in enumerate(kb['steps'], 1):
-            response += f"{i}. {step}\n"
-        response += f"\n{kb['notes']}"
-        
-        return response
-
-    def _handle_booking_management(self, query):
-        """Handle booking modifications"""
-        kb = self.knowledge_base['booking_manage']
-        response = f"{kb['response']}\n\n"
-        
-        if 'reschedule' in query.lower():
-            response += "To reschedule:\n"
-            for i, step in enumerate(kb['reschedule_steps'], 1):
-                response += f"{i}. {step}\n"
-        else:
-            response += "To cancel:\n"
-            for i, step in enumerate(kb['cancel_steps'], 1):
-                response += f"{i}. {step}\n"
-                
-        response += f"\n{kb['notes']}"
-        return response
-
-    def _handle_autra_integration(self, query):
-        """Handle Autra integration questions"""
-        kb = self.knowledge_base['autra_integration']
-        response = f"{kb['response']}\n\n"
-        
-        response += "Key integration points:\n"
-        for i, step in enumerate(kb['steps'], 1):
-            response += f"{i}. {step}\n"
-        response += f"\n{kb['notes']}"
-        
-        return response
-
-    def _handle_technical_issues(self, query):
-        """Handle technical support queries"""
-        kb = self.knowledge_base['technical_issues']
-        response = f"{kb['response']}\n\n"
-        
-        response += "Let's try these solutions first:\n"
-        for i, solution in enumerate(kb['common_solutions'], 1):
-            response += f"{i}. {solution}\n"
-            
-        response += f"\n{kb['escalation']}"
-        
-        # Add technical contact for complex issues
-        if any(word in query.lower() for word in ['urgent', 'critical', 'not working at all']):
-            response += f"\n\nFor immediate assistance, contact: {self.company_info['contact']['technical_email']}"
-            
-        return response
-
-    def _handle_billing_queries(self, query):
-        """Handle billing and payment questions"""
-        kb = self.knowledge_base['billing']
-        response = f"{kb['response']}\n\n"
-        
-        response += "You can:\n"
-        for i, option in enumerate(kb['self_help'], 1):
-            response += f"{i}. {option}\n"
-            
-        response += f"\n{kb['contact']}"
-        return response
-
-    def _handle_general_info(self, query):
-        """Handle general information queries"""
-        kb = self.knowledge_base['general_info']
-        response = f"{kb['response']}\n\n"
-        
-        # Add scraped website info
-        website_data = self.scrape_website_data()
-        if website_data:
-            response += "Our current services include:\n"
-            for service in website_data['services'][:4] if website_data['services'] else kb['services'][:4]:
-                response += f"• {service}\n"
-        else:
-            response += "Our services include:\n"
-            for service in kb['services'][:4]:
-                response += f"• {service}\n"
-                
-        response += f"\n{kb['coverage']}"
-        return response
-
-    def _handle_unknown_query(self, query):
-        """Handle queries not in our knowledge base"""
-        response = "I understand you're looking for information about Netra or AidNest Africa. "
-        response += "While I specialize in account management, bookings, and technical support, "
-        response += "I might need more context to provide the best assistance.\n\n"
-        
-        response += "Could you tell me more specifically about:\n"
-        response += "• Account or profile issues\n"
-        response += "• Booking services or managing appointments\n" 
-        response += "• Technical problems with the app\n"
-        response += "• Billing or payment questions\n"
-        response += "• General information about our services"
-        
-        return response
+            return "I specialize in helping with Netra and AidNest Africa services. You can ask me about booking services, account management, technical support, payment questions, or general information about our platform."
 
     def process_customer_query(self, message):
-        """Main method to process customer queries - behaves like OpenAI but uses our data"""
-        # Generate conversational response
-        conversational_response = self.generate_conversational_response(message)
+        """Simple, clean response without ticket numbers or robotic structure"""
+        natural_response = self.get_natural_response(message)
         
-        # Add professional formatting and metadata
-        ticket_number = f"ANA-{datetime.now().strftime('%Y%m%d%H%M')}-{random.randint(100, 999)}"
-        
-        response_data = {
-            'ticket_number': ticket_number,
-            'timestamp': datetime.now().isoformat(),
-            'response': conversational_response,
-            'sources_used': ['knowledge_base', 'website_scraping'],
-            'suggested_next': self._get_suggested_next_steps(message)
+        return {
+            'response': natural_response,
+            'engine_used': 'Netra Customer Service'
         }
-        
-        return response_data
-
-    def _get_suggested_next_steps(self, query):
-        """Provide intelligent next step suggestions"""
-        query_lower = query.lower()
-        
-        if any(word in query_lower for word in ['technical', 'not working', 'error']):
-            return [
-                "Try the troubleshooting steps above",
-                "Contact technical support if issues persist",
-                "Provide your device model for better assistance"
-            ]
-        elif any(word in query_lower for word in ['billing', 'payment']):
-            return [
-                "Check your payment history in the app",
-                "Email accounts team with invoice numbers",
-                "Allow 24 hours for billing responses"
-            ]
-        else:
-            return [
-                "Let me know if you need more detailed steps",
-                "Contact support for immediate assistance",
-                "Check our website for latest updates"
-            ]
 
 # Create global instance
 netra_engine = NetraEngine()
