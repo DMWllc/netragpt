@@ -2,7 +2,7 @@ import random
 import requests
 import json
 import re
-import sqlite3
+import sqlite3  # Use built-in sqlite3 - it works fine on Windows
 from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 from typing import Dict, List, Optional, Tuple
@@ -203,6 +203,15 @@ class NetraEngine:
             
         except Exception as e:
             print(f"Database initialization error: {e}")
+            print("Running in limited mode without database functionality")
+            self.conn = None
+            self.cursor = None
+            # Initialize in-memory storage as fallback
+            self.in_memory_storage = {
+                'user_interactions': [],
+                'common_issues': [],
+                'provider_analytics': []
+            }
 
     def _build_knowledge_graph(self):
         """Build a comprehensive knowledge graph for intelligent responses"""
@@ -489,6 +498,48 @@ class NetraEngine:
 
 ⚠️ Important: This action is permanent and cannot be undone. All your data, booking history, and preferences will be permanently deleted. Active bookings will be automatically cancelled."""
 
+    def _get_account_creation_guide(self) -> str:
+        return """Creating a Netra account is easy:
+
+1. **Download the App**: Get Netra from App Store (iOS) or Google Play (Android)
+2. **Sign Up**: Tap "Create Account" and enter your email
+3. **Verify Email**: Check your inbox for verification link
+4. **Complete Profile**: Add your name, phone number, and preferences
+5. **Set Location**: Enable location services for better provider matches
+
+✅ Your account will be ready in under 5 minutes!"""
+
+    def _get_login_troubleshooting(self) -> str:
+        return """Having trouble logging in? Try these steps:
+
+🔧 **Quick Fixes:**
+- Check your internet connection
+- Ensure you're using the correct email/password
+- Try "Forgot Password" to reset your credentials
+- Restart the Netra app
+
+🔄 **If still not working:**
+1. Clear app cache in device settings
+2. Update Netra app to latest version
+3. Try logging in on a different device
+4. Contact support@myaidnest.com for assistance
+
+We'll help you regain access quickly!"""
+
+    def _get_profile_management_guide(self) -> str:
+        return """To update your Netra profile:
+
+1. Go to Profile tab in the app
+2. Tap "Edit Profile" 
+3. Update your information:
+   - Personal details
+   - Service preferences
+   - Notification settings
+   - Payment methods
+4. Save changes
+
+💡 **Pro Tip**: Complete profiles get better provider matches and personalized recommendations!"""
+
     def _get_booking_guide(self) -> str:
         return """Booking a service on Netra is simple:
 
@@ -499,6 +550,35 @@ class NetraEngine:
 5. **Confirm Booking**: Review details and confirm with secure payment
 
 📱 Most bookings are confirmed within 2 hours during business hours. You'll receive notifications for provider acceptance and appointment reminders."""
+
+    def _get_rescheduling_guide(self) -> str:
+        return """To reschedule a booking:
+
+1. Go to "My Bookings" in the app
+2. Select the booking you want to change
+3. Tap "Reschedule" 
+4. Choose new date and time from available slots
+5. Confirm changes
+
+🔄 **Rescheduling Policy:**
+- Free rescheduling up to 2 hours before appointment
+- Subject to provider availability
+- No penalty for first reschedule per month"""
+
+    def _get_cancellation_guide(self) -> str:
+        return """Cancellation process:
+
+1. Open "My Bookings" in Netra app
+2. Select the booking to cancel
+3. Tap "Cancel Booking"
+4. Select cancellation reason
+5. Confirm cancellation
+
+🚫 **Cancellation Policy:**
+- Free cancellation up to 24 hours before
+- 50% charge for cancellations within 24 hours
+- Full charge for no-shows
+- Emergency cancellations reviewed case-by-case"""
 
     def _get_technical_troubleshooting_guide(self, message: str) -> str:
         return """Let's troubleshoot this step by step:
@@ -516,6 +596,114 @@ class NetraEngine:
 4. Contact tech@myaidnest.com with details
 
 We're here to help resolve any technical issues quickly!"""
+
+    def _get_refund_policy(self) -> str:
+        return """Netra Refund Policy:
+
+🔄 **Eligible for Refund:**
+- Services not provided as described
+- Provider no-show without notice
+- Technical issues preventing service delivery
+- Double charges or billing errors
+
+❌ **Not Eligible:**
+- Change of mind after service completion
+- Issues not reported within 24 hours
+- Services partially completed as agreed
+
+📞 To request a refund: Contact accounts@myaidnest.com with booking details and reason for refund request."""
+
+    def _get_invoice_help(self) -> str:
+        return """Accessing your invoices:
+
+1. Go to "Billing & Payments" in app
+2. Select "Transaction History"
+3. Tap any completed booking to view invoice
+4. Download or email invoice as PDF
+
+📧 **Need duplicate invoices?** Email accounts@myaidnest.com with your account email and booking dates."""
+
+    def _get_payment_troubleshooting(self) -> str:
+        return """Payment issue solutions:
+
+💳 **Common Fixes:**
+- Check payment method has sufficient funds
+- Verify card details are correct
+- Ensure your mobile money account is active
+- Try a different payment method
+
+🔒 **Security Checks:**
+- Payment might be held for security verification
+- Contact your bank if card is declined
+- Check for payment limits on your account
+
+🆘 Still having issues? Contact accounts@myaidnest.com with error message details."""
+
+    def _get_general_billing_info(self) -> str:
+        return """Netra Billing Information:
+
+💰 **Payment Methods:**
+- M-Pesa Mobile Money
+- Airtel Money  
+- Visa/Mastercard
+- Bank Transfer
+- PayPal (International)
+
+🌍 **Supported Currencies:** KES, UGX, TZS, USD
+
+🔐 **Security:** All payments are encrypted and PCI DSS compliant. We never store your full payment details."""
+
+    def _get_netra_overview(self) -> str:
+        return """Welcome to Netra by AidNest Africa! 
+
+**What is Netra?**
+Netra is a trusted service marketplace connecting African communities with verified service providers. We make it easy to find, book, and manage home services, professional services, technical support, and wellness services.
+
+**Our Mission:** Empowering African communities through accessible technology services
+
+**Founded:** 2023 | **Headquarters:** Kampala, Uganda
+
+We're committed to quality, safety, and convenience for all our users!"""
+
+    def _get_services_overview(self) -> str:
+        return """Netra Service Categories:
+
+🏠 **Home Services**
+- Cleaning, plumbing, electrical, painting, pest control, gardening
+
+💼 **Professional Services** 
+- Legal, accounting, business consulting, IT support, marketing
+
+🔧 **Technical Services**
+- Computer/phone repair, network setup, data recovery, electronics
+
+💪 **Wellness Services**
+- Massage, fitness training, nutrition, mental health, beauty
+
+All providers are verified and rated by our community. Book with confidence!"""
+
+    def _get_how_it_works(self) -> str:
+        return """How Netra Works:
+
+1. **Browse & Compare** - Search services by category or location
+2. **Book Instantly** - Select provider, time, and confirm booking
+3. **Secure Payment** - Pay safely through integrated payment system
+4. **Service Delivery** - Provider arrives and completes service
+5. **Rate & Review** - Share your experience to help others
+
+⭐ All providers are verified with background checks and customer reviews!"""
+
+    def _get_general_introduction(self) -> str:
+        return """Hello! I'm Netra AI Assistant, here to help you with:
+
+🔹 **Account Management** - Login, profile, security
+🔹 **Booking Services** - Finding, booking, managing appointments  
+🔹 **Technical Support** - App issues, errors, troubleshooting
+🔹 **Billing & Payments** - Invoices, refunds, payment issues
+🔹 **Provider Information** - Verification, ratings, services
+🔹 **Safety & Security** - Trust, data protection, emergency
+
+How can I assist you today?"""
 
     # Context enhancement methods
     def _enhance_with_context(self, base_response: str, intent_analysis: Dict, user_context: Dict) -> str:
@@ -552,6 +740,13 @@ We're here to help resolve any technical issues quickly!"""
                 "Set up favorite providers for quicker bookings",
                 "Enable booking reminders in notification settings",
                 "Review provider cancellation policies before booking"
+            ])
+        
+        elif intent_analysis['primary_intent'] == 'technical_support':
+            suggestions.extend([
+                "Keep the app updated to latest version",
+                "Clear cache regularly for optimal performance",
+                "Save our support email for quick access"
             ])
         
         return suggestions[:3]  # Return top 3 suggestions
@@ -594,14 +789,25 @@ We're here to help resolve any technical issues quickly!"""
 
     def _log_interaction(self, query: str, intent_analysis: Dict):
         """Log user interaction for analytics"""
-        try:
-            self.cursor.execute('''
-                INSERT INTO user_interactions (query, response, satisfaction_score)
-                VALUES (?, ?, ?)
-            ''', (query, json.dumps(intent_analysis), intent_analysis['confidence']))
-            self.conn.commit()
-        except Exception as e:
-            print(f"Interaction logging error: {e}")
+        if self.cursor is not None:
+            try:
+                self.cursor.execute('''
+                    INSERT INTO user_interactions (query, response, satisfaction_score)
+                    VALUES (?, ?, ?)
+                ''', (query, json.dumps(intent_analysis), intent_analysis['confidence']))
+                self.conn.commit()
+            except Exception as e:
+                print(f"Database logging error: {e}")
+        else:
+            # Fallback to in-memory storage
+            if hasattr(self, 'in_memory_storage'):
+                self.in_memory_storage['user_interactions'].append({
+                    'query': query,
+                    'response': intent_analysis,
+                    'timestamp': datetime.now().isoformat(),
+                    'satisfaction_score': intent_analysis['confidence']
+                })
+                print("Logged interaction to memory (database unavailable)")
 
     # Public interface method
     def process_customer_query(self, message: str, user_id: str = None) -> Dict:
@@ -622,6 +828,9 @@ We're here to help resolve any technical issues quickly!"""
 
     def _get_user_context(self, user_id: str) -> Dict:
         """Get user context from database"""
+        if self.cursor is None:
+            return {}  # Return empty context if database unavailable
+            
         try:
             self.cursor.execute('''
                 SELECT query, response, timestamp, satisfaction_score 
@@ -645,17 +854,50 @@ We're here to help resolve any technical issues quickly!"""
     def get_service_recommendations(self, user_preferences: Dict) -> List[str]:
         """Get personalized service recommendations"""
         # Implementation for service recommendations
-        pass
+        recommendations = []
+        for category, prefs in user_preferences.items():
+            if category in self.service_categories:
+                recommendations.extend(self.service_categories[category]['subcategories'][:2])
+        return recommendations[:5]
 
     def calculate_booking_success_probability(self, provider_id: str, time_slot: str) -> float:
         """Calculate probability of booking success"""
-        # Implementation for booking success prediction
-        pass
+        # Simplified implementation - in real scenario, this would use ML models
+        base_probability = 0.85  # 85% base success rate
+        # Add some random variation for demo purposes
+        return min(0.95, base_probability + random.uniform(-0.1, 0.1))
 
     def generate_analytics_report(self, period: str = 'weekly') -> Dict:
         """Generate analytics report"""
-        # Implementation for analytics reporting
-        pass
+        if self.cursor is None:
+            return {"error": "Database unavailable for analytics"}
+            
+        try:
+            self.cursor.execute('''
+                SELECT COUNT(*) as total_interactions,
+                       AVG(satisfaction_score) as avg_satisfaction,
+                       COUNT(DISTINCT user_id) as unique_users
+                FROM user_interactions 
+                WHERE timestamp >= datetime('now', '-7 days')
+            ''')
+            
+            stats = self.cursor.fetchone()
+            
+            return {
+                'period': period,
+                'total_interactions': stats[0] if stats else 0,
+                'average_satisfaction': round(stats[1], 2) if stats and stats[1] else 0,
+                'unique_users': stats[2] if stats else 0,
+                'report_generated': datetime.now().isoformat()
+            }
+        except Exception as e:
+            return {"error": f"Analytics generation failed: {e}"}
+
+    def close_connection(self):
+        """Close database connection"""
+        if self.conn:
+            self.conn.close()
+            print("Database connection closed")
 
 # Create global instance
 netra_engine = NetraEngine()
@@ -680,3 +922,6 @@ if __name__ == "__main__":
         print(f"Intent: {response['intent_analysis']['primary_intent']}")
         print(f"Confidence: {response['confidence_score']}%")
         print(f"Suggestions: {response['suggestions']}")
+    
+    # Close connection when done
+    netra_engine.close_connection()
