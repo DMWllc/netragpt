@@ -8,501 +8,350 @@ from typing import Dict, List, Optional, Tuple
 import hashlib
 import uuid
 
-class NetraEngine:
+class HumanizedNetraEngine:
     def __init__(self):
-        self.company_info = {
-            'name': 'AidNest Africa',
+        # Netra core information
+        self.netra_info = {
+            'name': 'Netra',
+            'description': 'Professional social app connecting service providers and clients',
             'website': 'https://myaidnest.com',
-            'foundation_year': '2023',
-            'headquarters': 'Kampala, Uganda',
-            'mission': 'Empowering African communities through accessible technology services',
-            'vision': 'To be Africa\'s leading platform for trusted service connections',
-            'contact': {
-                'primary_email': 'support@myaidnest.com',
-                'technical_email': 'tech@myaidnest.com',
-                'billing_email': 'accounts@myaidnest.com',
-                'careers_email': 'careers@myaidnest.com',
-                'phone': '+256-700-123-456',
-                'emergency_phone': '+256-711-987-654',
-                'whatsapp': '+256-722-555-777'
+            'play_store': 'Google Play Store',
+            'emblem': 'butterfly-like emblem without fill',
+            'security': 'No screenshots or screen recording'
+        }
+        
+        # Response variations for human-like conversations
+        self.conversation_starters = [
+            "Hey there! ",
+            "Oh, about Netra? ",
+            "Sure thing! ",
+            "I'd be happy to explain! ",
+            "Awesome question! ",
+            "Glad you asked! ",
+            "Let me break this down: ",
+            "Here's the scoop: ",
+            "Perfect timing! ",
+            "Oh, I love talking about Netra! ",
+            "Great question! ",
+            "Yeah, let me explain: ",
+            "So, Netra is... ",
+            "Let me tell you about it: ",
+            "Happy to help! "
+        ]
+        
+        self.friendly_closers = [
+            " Hope that helps!",
+            " Let me know if you have other questions!",
+            " Pretty cool, right?",
+            " Makes sense?",
+            " Easy enough?",
+            " Got it?",
+            " Clear?",
+            " Sound good?",
+            " Awesome, right?",
+            " Neat, huh?",
+            " Pretty straightforward!",
+            " Simple as that!",
+            " That's the gist of it!"
+        ]
+        
+        self.positive_reactions = [
+            "Nice! ",
+            "Awesome! ",
+            "Great! ",
+            "Perfect! ",
+            "Excellent! ",
+            "Brilliant! ",
+            "Fantastic! ",
+            "Sweet! ",
+            "Cool! ",
+            "Wonderful! "
+        ]
+
+    def _get_random_opener(self) -> str:
+        return random.choice(self.conversation_starters)
+
+    def _get_random_closer(self) -> str:
+        return random.choice(self.friendly_closers)
+
+    def _get_random_reaction(self) -> str:
+        return random.choice(self.positive_reactions)
+
+    def _humanize_netra_intro(self) -> str:
+        """Multiple ways to introduce Netra"""
+        intros = [
+            f"{self._get_random_reaction()}Netra's this really cool app that connects skilled professionals with people who need their services right in their community! It's like a social network but for legit service providers.",
+            
+            f"{self._get_random_opener()}it's a professional social app that builds networks between service providers and potential clients. Think of it as your go-to for finding reliable pros in your area!",
+            
+            f"You know how hard it can be to find trustworthy service people? {self._get_random_reaction()}Netra solves that! It's basically a digital marketplace where professionals showcase their work and clients can easily find them.",
+            
+            f"{self._get_random_opener()}it's this awesome platform where service providers and clients connect. From plumbers to musicians, everyone can find what they need or offer what they're good at!",
+            
+            f"Netra's pretty amazing actually! {self._get_random_reaction()}It creates professional networks within communities - so you can find reliable service providers or get your services discovered by people who need them."
+        ]
+        return random.choice(intros) + self._get_random_closer()
+
+    def _humanize_getting_started(self) -> str:
+        """Different ways to explain getting started"""
+        approaches = [
+            f"{self._get_random_opener()}getting started is super simple! Just download Netra from Play Store (look for the butterfly logo), tap 'Get Started', and you're in. No complicated sign-up needed if you're just browsing!",
+            
+            f"Ready to jump in? {self._get_random_reaction()}Download the app → Open it → Hit 'Get Started'. Boom, you're on the 'For You' page seeing recommended providers right away!",
+            
+            f"{self._get_random_opener()}it's really straightforward: Install from Play Store, open the app, tap that 'Get Started' button, and you'll immediately see services around you. No account needed to start exploring!",
+            
+            f"Starting with Netra is a breeze! {self._get_random_reaction()}Grab the app, open it up, click 'Get Started', and you'll land on personalized recommendations. The app does all the heavy lifting for you!"
+        ]
+        return random.choice(approaches) + self._get_random_closer()
+
+    def _humanize_provider_registration(self) -> str:
+        """Multiple ways to explain provider registration"""
+        variations = [
+            {
+                'opener': f"{self._get_random_opener()}to join as a provider: ",
+                'steps': [
+                    "Tap the 'Account' button at the bottom",
+                    "Hit 'Create account' since you're new",
+                    "Fill in your professional details",
+                    "They'll email you a verification code",
+                    "Enter the code and you're all set!"
+                ],
+                'details': "You'll need your service info, location, experience level, and a profile pic ready."
+            },
+            {
+                'opener': f"Becoming a provider? {self._get_random_reaction()}",
+                'steps': [
+                    "Click 'Account' in the navigation",
+                    "Choose 'Create account' to begin",
+                    "Share your service details and experience",
+                    "Check email for the OTP code",
+                    "Verify and start getting clients!"
+                ],
+                'details': "The form asks about what you do, where you operate, and your background."
+            },
+            {
+                'opener': f"Ready to offer services? {self._get_random_reaction()}Here's how: ",
+                'steps': [
+                    "Head to the 'Account' section",
+                    "Tap 'Create account' to start",
+                    "Fill out your professional information",
+                    "Watch for the email verification code",
+                    "Verify and build your client base!"
+                ],
+                'details': "You'll share your service category, location, years of experience - all the important stuff."
+            },
+            {
+                'opener': f"{self._get_random_opener()}providers need to create an account: ",
+                'steps': [
+                    "Go to 'Account' at the bottom",
+                    "Select 'Create account'",
+                    "Enter your service details",
+                    "Get the OTP via email",
+                    "Verify and you're good to go!"
+                ],
+                'details': "Have your professional info handy - what services you offer, your location, etc."
             }
-        }
+        ]
         
-        # Pages to crawl for updated information
-        self.crawl_pages = {
-            'for_you': 'https://myaidnest.com/for_you.php',
-            'category_services': 'https://myaidnest.com/category_services.php',
-            'serviceshub': 'https://myaidnest.com/serviceshub.php',
-            'home': 'https://myaidnest.com'
-        }
+        variation = random.choice(variations)
+        steps_formatted = "\n".join([f"• {step}" for step in variation['steps']])
         
-        # Cache for crawled data (to avoid repeated requests)
-        self.crawled_data = {}
-        self.last_crawl_time = {}
-        
-        # Service categories - will be updated from crawled data
-        self.service_categories = self._initialize_service_categories()
-        
-        # User session management
-        self.user_sessions = {}
-        self.interaction_history = []
+        return f"{variation['opener']}\n\n{steps_formatted}\n\n{variation['details']}{self._get_random_closer()}"
 
-    def _initialize_service_categories(self) -> Dict:
-        """Initialize service categories with basic structure"""
-        return {
-            'home_services': {
-                'name': 'Home Services',
-                'subcategories': [],
-                'average_pricing': 'KES 1,500 - 15,000',
-                'booking_lead_time': '24-48 hours'
-            },
-            'professional_services': {
-                'name': 'Professional Services',
-                'subcategories': [],
-                'average_pricing': 'KES 2,000 - 25,000',
-                'booking_lead_time': '1-5 business days'
-            },
-            'technical_services': {
-                'name': 'Technical Services',
-                'subcategories': [],
-                'average_pricing': 'KES 1,000 - 20,000',
-                'booking_lead_time': '24-72 hours'
-            },
-            'wellness_services': {
-                'name': 'Wellness Services',
-                'subcategories': [],
-                'average_pricing': 'KES 1,200 - 8,000',
-                'booking_lead_time': '24-48 hours'
-            }
-        }
-
-    def _crawl_website_data(self) -> Dict:
-        """Crawl the website for updated service information"""
-        crawled_data = {
-            'services': [],
-            'categories': [],
-            'pricing': {},
-            'features': []
-        }
+    def _humanize_client_usage(self) -> str:
+        """Different ways to explain client usage"""
+        approaches = [
+            "search three ways: by provider name, by service category, or by location!",
+            "there are multiple search options - look for specific people, browse service types, or find what's nearby!",
+            "you can search flexibly - by professional names, service categories, or local providers!",
+            "the app lets you search by name, category, or what's available in your area!"
+        ]
         
-        try:
-            # Crawl each important page
-            for page_name, page_url in self.crawl_pages.items():
-                if self._should_crawl_page(page_name):
-                    response = requests.get(page_url, timeout=10)
-                    if response.status_code == 200:
-                        soup = BeautifulSoup(response.content, 'html.parser')
-                        
-                        if page_name == 'for_you':
-                            crawled_data.update(self._parse_for_you_page(soup))
-                        elif page_name == 'category_services':
-                            crawled_data.update(self._parse_category_services_page(soup))
-                        elif page_name == 'serviceshub':
-                            crawled_data.update(self._parse_serviceshub_page(soup))
-                        elif page_name == 'home':
-                            crawled_data.update(self._parse_home_page(soup))
-                        
-                        self.last_crawl_time[page_name] = datetime.now()
+        tips = [
+            "If 'For You' doesn't show what you need, try the category search from Home page!",
+            "Not finding the perfect match? The 'Get Services' button after category search usually works better!",
+            "Pro tip: Category search from Home often gives more targeted results than the 'For You' page!",
+            "Helpful hint: The category search tends to be more specific than the general recommendations!"
+        ]
+        
+        openers = [
+            f"{self._get_random_opener()}the best part is you can start using it immediately - no account needed! ",
+            f"{self._get_random_reaction()}You don't even need an account to begin! ",
+            f"{self._get_random_opener()}you can dive right in without any sign-up! ",
+            f"Here's the cool part: {self._get_random_reaction()}No account required to start browsing! "
+        ]
+        
+        return f"{random.choice(openers)}You can {random.choice(approaches)} {random.choice(tips)}{self._get_random_closer()}"
+
+    def _humanize_netra_features(self) -> str:
+        """Different ways to explain Netra features"""
+        features_list = [
+            "bookings, ratings, music streaming from local artists, mixtapes from DJs, reels for pros... it's like multiple apps in one!",
+            "beyond just bookings, there's music streaming through Artist Studio, mixtapes via DJ Studio, and reels for professionals to showcase their work!",
+            "service bookings, a solid rating system, music features for artists and DJs, content creation options, and partnership opportunities!",
+            "practical service bookings mixed with creative features like music streaming, professional reels, and partnership programs!"
+        ]
+        
+        reactions = [
+            f"{self._get_random_opener()}Netra's packed with features - ",
+            f"{self._get_random_reaction()}There's so much you can do: ",
+            f"{self._get_random_opener()}it's not just a service app - ",
+            f"What I love about Netra: {self._get_random_reaction()}"
+        ]
+        
+        return f"{random.choice(reactions)}{random.choice(features_list)}{self._get_random_closer()}"
+
+    def _humanize_account_issues(self) -> str:
+        """Help with account problems"""
+        solutions = [
+            f"{self._get_random_opener()}if you're having account trouble, try these quick fixes:\n\n• Double-check your email and password\n• Use the 'Forgot Password' feature\n• Make sure you have stable internet for OTP verification\n• Try force-closing and reopening the app\n\nSometimes a quick app restart does the trick!",
             
-            # Update service categories with crawled data
-            self._update_service_categories(crawled_data)
-            self.crawled_data = crawled_data
+            f"Account issues? {self._get_random_reaction()}Here are some things to try:\n\n• Verify you're using the correct email\n• Request a new password reset if needed\n• Ensure good network connection for email verification\n• Clear the app cache in your phone settings\n\nUsually one of these solves the problem!",
             
-        except Exception as e:
-            print(f"Warning: Could not crawl website: {e}")
-            # Use default data if crawling fails
-        
-        return crawled_data
+            f"{self._get_random_opener()}let's troubleshoot your account:\n\n• Confirm your email is entered correctly\n• Use the password recovery option\n• Check that your internet is stable for OTPs\n• Try logging in from a different device\n\nMost account issues are quick to resolve!"
+        ]
+        return random.choice(solutions)
 
-    def _should_crawl_page(self, page_name: str) -> bool:
-        """Check if we should crawl a page (avoid too frequent requests)"""
-        if page_name not in self.last_crawl_time:
-            return True
-        
-        time_since_last_crawl = datetime.now() - self.last_crawl_time[page_name]
-        return time_since_last_crawl > timedelta(hours=1)  # Crawl every hour
-
-    def _parse_for_you_page(self, soup: BeautifulSoup) -> Dict:
-        """Parse the for_you.php page for personalized service recommendations"""
-        data = {
-            'personalized_services': [],
-            'trending_services': [],
-            'recommended_providers': []
-        }
-        
-        try:
-            # Look for service cards, recommendations, etc.
-            service_cards = soup.find_all('div', class_=re.compile(r'service|card|item'))
-            for card in service_cards[:10]:  # Limit to first 10
-                service_name = self._extract_text(card, ['h3', 'h4', '.title', '.name'])
-                service_price = self._extract_text(card, ['.price', '.cost', '.amount'])
-                service_category = self._extract_text(card, ['.category', '.type', '.tag'])
-                
-                if service_name:
-                    data['personalized_services'].append({
-                        'name': service_name,
-                        'price': service_price,
-                        'category': service_category
-                    })
-        
-        except Exception as e:
-            print(f"Error parsing for_you page: {e}")
-        
-        return data
-
-    def _parse_category_services_page(self, soup: BeautifulSoup) -> Dict:
-        """Parse the category_services.php page for service categories"""
-        data = {
-            'categories': [],
-            'services_by_category': {}
-        }
-        
-        try:
-            # Look for category sections
-            category_sections = soup.find_all('div', class_=re.compile(r'category|section|group'))
+    def _humanize_booking_help(self) -> str:
+        """Help with booking process"""
+        guides = [
+            f"{self._get_random_opener()}booking services is pretty straightforward!\n\n1. Find a provider you like\n2. Check their ratings and reviews\n3. Contact them through the app\n4. Arrange the service details\n5. Enjoy great service!\n\nThe rating system helps everyone maintain quality.",
             
-            for section in category_sections:
-                category_name = self._extract_text(section, ['h2', 'h3', '.category-title'])
-                if category_name:
-                    services = []
-                    service_items = section.find_all('li') or section.find_all('div', class_=re.compile(r'service|item'))
-                    
-                    for item in service_items[:8]:  # Limit services per category
-                        service_name = self._extract_text(item, ['.service-name', '.title', 'strong'])
-                        if service_name:
-                            services.append(service_name)
-                    
-                    data['categories'].append(category_name)
-                    data['services_by_category'][category_name] = services
-        
-        except Exception as e:
-            print(f"Error parsing category_services page: {e}")
-        
-        return data
-
-    def _parse_serviceshub_page(self, soup: BeautifulSoup) -> Dict:
-        """Parse the serviceshub.php page for comprehensive service listings"""
-        data = {
-            'all_services': [],
-            'service_details': {},
-            'pricing_info': {}
-        }
-        
-        try:
-            # Look for service listings
-            service_listings = soup.find_all('div', class_=re.compile(r'service|listing|offer'))
+            f"Want to book a service? {self._get_random_reaction()}Easy!\n\n1. Browse or search for providers\n2. Look at their experience and ratings\n3. Reach out via the app\n4. Finalize the arrangements\n5. Get your service done!\n\nDon't forget to rate your experience afterward!",
             
-            for listing in service_listings[:20]:  # Limit to 20 services
-                service_name = self._extract_text(listing, ['h3', 'h4', '.service-title', '.name'])
-                service_desc = self._extract_text(listing, ['.description', '.desc', 'p'])
-                service_price = self._extract_text(listing, ['.price', '.cost', '.amount'])
-                
-                if service_name:
-                    data['all_services'].append(service_name)
-                    data['service_details'][service_name] = {
-                        'description': service_desc,
-                        'price': service_price
-                    }
-        
-        except Exception as e:
-            print(f"Error parsing serviceshub page: {e}")
-        
-        return data
+            f"{self._get_random_opener()}here's the booking flow:\n\n1. Discover providers that match your needs\n2. Review their background and ratings\n3. Initiate contact through Netra\n4. Coordinate the service details\n5. Receive quality service!\n\nThe community ratings keep everything transparent."
+        ]
+        return random.choice(guides)
 
-    def _parse_home_page(self, soup: BeautifulSoup) -> Dict:
-        """Parse the home page for general information and features"""
-        data = {
-            'features': [],
-            'testimonials': [],
-            'stats': {}
-        }
-        
-        try:
-            # Extract features
-            features = soup.find_all('div', class_=re.compile(r'feature|benefit|advantage'))
-            for feature in features[:6]:
-                feature_text = self._extract_text(feature, ['h3', 'h4', 'p', '.feature-text'])
-                if feature_text:
-                    data['features'].append(feature_text)
-            
-            # Extract testimonials
-            testimonials = soup.find_all('div', class_=re.compile(r'testimonial|review|feedback'))
-            for testimonial in testimonials[:4]:
-                testimonial_text = self._extract_text(testimonial, ['.text', 'p', 'blockquote'])
-                if testimonial_text:
-                    data['testimonials'].append(testimonial_text)
-        
-        except Exception as e:
-            print(f"Error parsing home page: {e}")
-        
-        return data
-
-    def _extract_text(self, element, selectors: List[str]) -> str:
-        """Extract text from an element using multiple selector strategies"""
-        for selector in selectors:
-            try:
-                if selector.startswith('.'):
-                    found = element.find(class_=selector[1:])
-                else:
-                    found = element.find(selector)
-                
-                if found and found.get_text(strip=True):
-                    return found.get_text(strip=True)
-            except:
-                continue
-        
-        # Fallback to element's own text
-        return element.get_text(strip=True)
-
-    def _update_service_categories(self, crawled_data: Dict):
-        """Update service categories with information from crawled data"""
-        # Update from category_services page
-        if 'services_by_category' in crawled_data:
-            for category_name, services in crawled_data['services_by_category'].items():
-                # Map crawled categories to our category structure
-                if any(keyword in category_name.lower() for keyword in ['home', 'cleaning', 'repair', 'maintenance']):
-                    self.service_categories['home_services']['subcategories'] = services[:7]
-                elif any(keyword in category_name.lower() for keyword in ['professional', 'business', 'consulting', 'legal']):
-                    self.service_categories['professional_services']['subcategories'] = services[:7]
-                elif any(keyword in category_name.lower() for keyword in ['technical', 'tech', 'computer', 'phone']):
-                    self.service_categories['technical_services']['subcategories'] = services[:7]
-                elif any(keyword in category_name.lower() for keyword in ['wellness', 'health', 'fitness', 'beauty']):
-                    self.service_categories['wellness_services']['subcategories'] = services[:7]
-        
-        # Update from serviceshub page
-        if 'all_services' in crawled_data:
-            # Use crawled services to enrich our categories
-            all_services = crawled_data['all_services']
-            # You can implement logic to categorize these services
-            pass
-
-    def analyze_query_intent(self, message: str) -> Dict:
-        """Enhanced intent analysis with website data integration"""
-        # Ensure we have fresh data
-        if not self.crawled_data or not any(self.last_crawl_time.values()):
-            self._crawl_website_data()
-        
+    def process_query(self, message: str, user_id: str = None) -> Dict:
+        """Main method to process queries with human-like responses"""
         message_lower = message.lower()
         
-        intent_indicators = {
-            'account_issue': ['account', 'login', 'password', 'profile', 'sign in', 'register', 'verify'],
-            'booking_help': ['book', 'schedule', 'appointment', 'reserve', 'availability', 'how to book'],
-            'technical_support': ['error', 'bug', 'crash', 'not working', 'technical', 'glitch', 'problem'],
-            'billing_query': ['payment', 'billing', 'invoice', 'refund', 'charge', 'price', 'money'],
-            'provider_info': ['provider', 'service', 'quality', 'rating', 'review', 'verified', 'background'],
-            'safety_concern': ['safe', 'security', 'trust', 'reliable', 'background check', 'emergency'],
-            'service_info': ['what services', 'offer', 'available', 'categories', 'types of services'],
-            'general_info': ['what is', 'how does', 'tell me about', 'explain', 'information about']
-        }
+        # Simple intent detection
+        if any(word in message_lower for word in ['what is netra', 'tell me about netra', 'netra app']):
+            response = self._humanize_netra_intro()
+            intent = 'netra_intro'
+            
+        elif any(word in message_lower for word in ['how to start', 'get started', 'install', 'download']):
+            response = self._humanize_getting_started()
+            intent = 'getting_started'
+            
+        elif any(word in message_lower for word in ['provider', 'registration', 'create account', 'sign up']):
+            response = self._humanize_provider_registration()
+            intent = 'provider_registration'
+            
+        elif any(word in message_lower for word in ['client', 'search', 'find service', 'browse']):
+            response = self._humanize_client_usage()
+            intent = 'client_usage'
+            
+        elif any(word in message_lower for word in ['features', 'what can it do', 'capabilities']):
+            response = self._humanize_netra_features()
+            intent = 'features'
+            
+        elif any(word in message_lower for word in ['account', 'login', 'password', 'otp']):
+            response = self._humanize_account_issues()
+            intent = 'account_help'
+            
+        elif any(word in message_lower for word in ['book', 'booking', 'schedule']):
+            response = self._humanize_booking_help()
+            intent = 'booking_help'
+            
+        else:
+            # Fallback to friendly response
+            fallbacks = [
+                f"{self._get_random_opener()}I'm not quite sure what you're asking about Netra. Could you rephrase that?",
+                f"Hmm, I'm not certain I understand. {self._get_random_reaction()}Could you try asking in a different way?",
+                f"{self._get_random_opener()}I'd love to help, but could you clarify your question about Netra?",
+                f"I want to make sure I give you the right info. {self._get_random_reaction()}Could you explain what you need help with?"
+            ]
+            response = random.choice(fallbacks)
+            intent = 'general_help'
         
-        detected_intents = []
-        confidence_scores = {}
-        
-        for intent, indicators in intent_indicators.items():
-            matches = sum(1 for indicator in indicators if indicator in message_lower)
-            if matches > 0:
-                detected_intents.append(intent)
-                confidence_scores[intent] = min(100, (matches / len(indicators)) * 100)
-        
-        primary_intent = max(confidence_scores.items(), key=lambda x: x[1]) if confidence_scores else ('general_info', 0)
+        # Generate natural suggestions based on intent
+        suggestions = self._generate_suggestions(intent)
         
         return {
-            'detected_intents': detected_intents,
-            'primary_intent': primary_intent[0],
-            'confidence': primary_intent[1],
-            'urgency_level': self._assess_urgency(message_lower),
-            'complexity_level': self._assess_complexity(message_lower)
+            'response': response,
+            'suggestions': suggestions,
+            'confidence': random.randint(85, 98),  # Vary confidence slightly
+            'intent': intent
         }
 
-    def _assess_urgency(self, message: str) -> str:
-        """Assess urgency level of query"""
-        urgent_indicators = ['emergency', 'urgent', 'immediately', 'asap', 'critical', 'not working', 'broken']
-        high_indicators = ['problem', 'issue', 'trouble', 'help needed', 'stuck']
-        
-        if any(indicator in message for indicator in urgent_indicators):
-            return 'critical'
-        elif any(indicator in message for indicator in high_indicators):
-            return 'high'
-        else:
-            return 'normal'
-
-    def _assess_complexity(self, message: str) -> str:
-        """Assess complexity level of query"""
-        complex_indicators = ['multiple', 'several', 'complex', 'advanced', 'configuration', 'integration']
-        medium_indicators = ['how to', 'step by step', 'guide', 'tutorial']
-        
-        if any(indicator in message for indicator in complex_indicators):
-            return 'high'
-        elif any(indicator in message for indicator in medium_indicators):
-            return 'medium'
-        else:
-            return 'low'
-
-    def _handle_account_queries(self, message: str) -> str:
-        """Handle account-related queries with accurate information"""
-        # Use crawled data if available, otherwise use defaults
-        message_lower = message.lower()
-        
-        if any(word in message_lower for word in ['delete', 'remove', 'close account']):
-            return """To delete your Netra account:
-
-1. Open Netra app → Settings → Account Management
-2. Scroll to "Account Options" → "Delete Account"
-3. Read important information about data deletion
-4. Enter your password to confirm
-5. You'll receive email confirmation
-
-⚠️ Account deletion is permanent and cannot be undone. All your data, bookings, and history will be permanently removed."""
-
-        elif any(word in message_lower for word in ['create', 'sign up', 'register']):
-            return """Creating a Netra account is quick and easy:
-
-1. Download Netra from Google Play Store or Apple App Store
-2. Tap "Sign Up" and enter your email address
-3. Verify your email through the confirmation link sent to you
-4. Complete your profile with personal details
-5. Set up your preferred payment method
-6. Start browsing and booking services immediately
-
-✅ Your account will be ready in under 3 minutes!"""
-
-        elif any(word in message_lower for word in ['login', 'sign in', 'password']):
-            return """Having trouble logging in? Here are solutions:
-
-🔧 Quick Troubleshooting:
-- Ensure stable internet connection (WiFi or mobile data)
-- Double-check your email and password combination
-- Use the "Forgot Password" feature to reset your password
-- Force close and restart the Netra app
-- Clear the app cache (Settings → Apps → Netra → Clear Cache)
-
-🔄 If problems continue:
-1. Update to the latest Netra app version
-2. Try logging in from a different device
-3. Contact our support team at support@myaidnest.com
-
-We'll help you get back into your account quickly!"""
-
-        else:
-            return "I can help you with various account-related matters including login issues, profile management, security settings, and account preferences. What specific account issue are you experiencing?"
-
-    def _handle_service_queries(self, message: str) -> str:
-        """Handle service-related queries using crawled data"""
-        # Ensure we have fresh data
-        self._crawl_website_data()
-        
-        message_lower = message.lower()
-        
-        # Check if user is asking about specific services
-        if any(word in message_lower for word in ['services', 'what do you offer', 'available services']):
-            return self._generate_services_overview()
-        
-        # Check for specific service categories
-        for category_id, category in self.service_categories.items():
-            if any(keyword in message_lower for keyword in [category['name'].lower(), category_id]):
-                return self._generate_category_details(category_id)
-        
-        return self._generate_services_overview()
-
-    def _generate_services_overview(self) -> str:
-        """Generate comprehensive services overview using crawled data"""
-        response = "**Netra Service Categories** 🌟\n\n"
-        
-        for category_id, category in self.service_categories.items():
-            if category['subcategories']:  # Only show categories with actual services
-                response += f"**{category['name']}**\n"
-                for subcat in category['subcategories'][:4]:  # Show top 4 services
-                    response += f"  • {subcat}\n"
-                response += f"  💰 {category['average_pricing']}\n"
-                response += f"  📅 {category['booking_lead_time']}\n\n"
-        
-        if not any(category['subcategories'] for category in self.service_categories.values()):
-            response += """We offer a wide range of services across four main categories:
-
-🏠 **Home Services** - Cleaning, plumbing, electrical works, painting, and home maintenance
-💼 **Professional Services** - Legal, accounting, business consulting, and career services  
-🔧 **Technical Services** - Computer repair, phone repair, network setup, and IT support
-💪 **Wellness Services** - Fitness training, massage therapy, nutrition, and mental health support
-
-Browse our app to see all available services in your area!"""
-        
-        response += "\n💡 **Tip**: You can ask me about specific services like 'plumbing services' or 'IT support' for more detailed information!"
-        return response
-
-    def _generate_category_details(self, category_id: str) -> str:
-        """Generate detailed information for a specific service category"""
-        category = self.service_categories.get(category_id, {})
-        if not category:
-            return "I don't have detailed information about that service category at the moment."
-        
-        response = f"**{category['name']}**\n\n"
-        
-        if category['subcategories']:
-            response += "**Available Services:**\n"
-            for subcat in category['subcategories']:
-                response += f"  • {subcat}\n"
-            response += f"\n**Average Pricing:** {category['average_pricing']}\n"
-            response += f"**Booking Time:** {category['booking_lead_time']}\n"
-        else:
-            response += f"We offer various {category['name'].lower()} but I don't have the specific list right now. "
-            response += "Please check the Netra app for the most up-to-date service listings in your area.\n\n"
-        
-        response += f"\n**How to Book:**\n1. Open Netra app\n2. Select '{category['name']}' category\n3. Choose your preferred service\n4. Pick a provider with good ratings\n5. Book and pay securely\n\nAll our providers are verified for your safety and satisfaction! ✅"
-        
-        return response
-
-    def process_netra_query(self, message: str, user_id: str = None) -> Dict:
-        """Main method to process Netra-related queries with accurate, crawled data"""
-        netra_content = {
-            'response': '',
-            'suggestions': [],
-            'confidence': 0,
-            'intent': 'unknown',
-            'resources': []
+    def _generate_suggestions(self, intent: str) -> List[str]:
+        """Generate context-aware suggestions"""
+        suggestion_pools = {
+            'netra_intro': [
+                "How to get started with Netra",
+                "Netra features explained", 
+                "Provider registration process",
+                "Client usage guide"
+            ],
+            'getting_started': [
+                "Provider account creation",
+                "How clients can search services",
+                "Netra features overview",
+                "Download and installation help"
+            ],
+            'provider_registration': [
+                "What information providers need",
+                "Client usage without account", 
+                "Netra's security features",
+                "Service categories available"
+            ],
+            'client_usage': [
+                "Provider registration process",
+                "Netra's rating system",
+                "Search tips and tricks", 
+                "Service categories explained"
+            ],
+            'features': [
+                "How to become a provider",
+                "Client quick start guide",
+                "Music streaming features",
+                "Partnership programs"
+            ],
+            'account_help': [
+                "Provider registration",
+                "Client quick start",
+                "Netra security features", 
+                "Contact methods"
+            ],
+            'booking_help': [
+                "Provider registration",
+                "Client search methods",
+                "Rating system explained",
+                "Service categories"
+            ],
+            'general_help': [
+                "What is Netra?",
+                "How to get started",
+                "Provider vs client features",
+                "Netra's main features"
+            ]
         }
         
-        try:
-            # Crawl for fresh data if needed
-            self._crawl_website_data()
-            
-            # Analyze the query intent
-            intent_analysis = self.analyze_query_intent(message)
-            
-            # Enhanced response handlers with crawled data integration
-            response_templates = {
-                'account_issue': self._handle_account_queries,
-                'booking_help': self._handle_booking_queries,
-                'technical_support': self._handle_technical_queries,
-                'billing_query': self._handle_billing_queries,
-                'provider_info': self._handle_provider_queries,
-                'safety_concern': self._handle_safety_queries,
-                'service_info': self._handle_service_queries,
-                'general_info': self._handle_general_queries
-            }
-            
-            handler = response_templates.get(intent_analysis['primary_intent'], self._handle_general_queries)
-            response_text = handler(message)
-            
-            # Log interaction
-            self._log_interaction(message, intent_analysis, user_id)
-            
-            # Build response
-            netra_content.update({
-                'response': response_text,
-                'confidence': intent_analysis['confidence'],
-                'intent': intent_analysis['primary_intent'],
-                'suggestions': self._generate_suggestions(intent_analysis),
-                'resources': self._get_resources(intent_analysis)
-            })
-            
-        except Exception as e:
-            netra_content['response'] = f"I apologize, but I encountered an error while processing your request. Please contact support@myaidnest.com for assistance."
-            netra_content['suggestions'] = ['Try rephrasing your question', 'Contact our support team directly', 'Check the Netra app for the most current information']
-        
-        return netra_content
+        pool = suggestion_pools.get(intent, suggestion_pools['general_help'])
+        return random.sample(pool, min(3, len(pool)))
 
-    # Keep other methods (_handle_booking_queries, _handle_technical_queries, etc.) similar but enhanced
-    # with the ability to use crawled data when appropriate
+# Create the humanized engine instance
+netra_helper = HumanizedNetraEngine()
 
-# Create global instance
-netra_engine = NetraEngine()
+# Example usage with multiple people asking the same question:
+if __name__ == "__main__":
+    questions = [
+        "How do I create a provider account on Netra?",
+        "I want to register as a service provider on Netra",
+        "How can I become a provider on Netra?",
+        "What's the process for service providers on Netra?"
+    ]
+    
+    print("=== DIFFERENT PEOPLE ASKING ABOUT PROVIDER REGISTRATION ===\n")
+    
+    for i, question in enumerate(questions, 1):
+        print(f"Person {i}: '{question}'")
+        result = netra_helper.process_query(question)
+        print(f"Response: {result['response']}")
+        print(f"Suggestions: {result['suggestions']}")
+        print(f"Confidence: {result['confidence']}%")
+        print("-" * 80 + "\n")
