@@ -1,12 +1,5 @@
 import random
-import requests
-import json
-import re
-from datetime import datetime, timedelta
-from bs4 import BeautifulSoup
-from typing import Dict, List, Optional, Tuple
-import hashlib
-import uuid
+from typing import Dict, List
 
 class HumanizedNetraEngine:
     def __init__(self):
@@ -140,17 +133,6 @@ class HumanizedNetraEngine:
                     "Verify and build your client base!"
                 ],
                 'details': "You'll share your service category, location, years of experience - all the important stuff."
-            },
-            {
-                'opener': f"{self._get_random_opener()}providers need to create an account: ",
-                'steps': [
-                    "Go to 'Account' at the bottom",
-                    "Select 'Create account'",
-                    "Enter your service details",
-                    "Get the OTP via email",
-                    "Verify and you're good to go!"
-                ],
-                'details': "Have your professional info handy - what services you offer, your location, etc."
             }
         ]
         
@@ -224,59 +206,16 @@ class HumanizedNetraEngine:
         ]
         return random.choice(guides)
 
-    def process_query(self, message: str, user_id: str = None) -> Dict:
-        """Main method to process queries with human-like responses"""
-        message_lower = message.lower()
-        
-        # Simple intent detection
-        if any(word in message_lower for word in ['what is netra', 'tell me about netra', 'netra app']):
-            response = self._humanize_netra_intro()
-            intent = 'netra_intro'
+    def _humanize_general_help(self) -> str:
+        """General help response"""
+        responses = [
+            f"{self._get_random_opener()}I'm here to help with anything Netra-related! What would you like to know about - getting started, provider registration, features, or something else?",
             
-        elif any(word in message_lower for word in ['how to start', 'get started', 'install', 'download']):
-            response = self._humanize_getting_started()
-            intent = 'getting_started'
+            f"{self._get_random_reaction()}I can help you with Netra! Are you wondering about how to use the app, become a provider, or maybe explore its features?",
             
-        elif any(word in message_lower for word in ['provider', 'registration', 'create account', 'sign up']):
-            response = self._humanize_provider_registration()
-            intent = 'provider_registration'
-            
-        elif any(word in message_lower for word in ['client', 'search', 'find service', 'browse']):
-            response = self._humanize_client_usage()
-            intent = 'client_usage'
-            
-        elif any(word in message_lower for word in ['features', 'what can it do', 'capabilities']):
-            response = self._humanize_netra_features()
-            intent = 'features'
-            
-        elif any(word in message_lower for word in ['account', 'login', 'password', 'otp']):
-            response = self._humanize_account_issues()
-            intent = 'account_help'
-            
-        elif any(word in message_lower for word in ['book', 'booking', 'schedule']):
-            response = self._humanize_booking_help()
-            intent = 'booking_help'
-            
-        else:
-            # Fallback to friendly response
-            fallbacks = [
-                f"{self._get_random_opener()}I'm not quite sure what you're asking about Netra. Could you rephrase that?",
-                f"Hmm, I'm not certain I understand. {self._get_random_reaction()}Could you try asking in a different way?",
-                f"{self._get_random_opener()}I'd love to help, but could you clarify your question about Netra?",
-                f"I want to make sure I give you the right info. {self._get_random_reaction()}Could you explain what you need help with?"
-            ]
-            response = random.choice(fallbacks)
-            intent = 'general_help'
-        
-        # Generate natural suggestions based on intent
-        suggestions = self._generate_suggestions(intent)
-        
-        return {
-            'response': response,
-            'suggestions': suggestions,
-            'confidence': random.randint(85, 98),  # Vary confidence slightly
-            'intent': intent
-        }
+            f"{self._get_random_opener()}I'd love to assist you with Netra! What specifically are you curious about - the app itself, creating an account, or finding services?"
+        ]
+        return random.choice(responses)
 
     def _generate_suggestions(self, intent: str) -> List[str]:
         """Generate context-aware suggestions"""
@@ -334,24 +273,52 @@ class HumanizedNetraEngine:
         pool = suggestion_pools.get(intent, suggestion_pools['general_help'])
         return random.sample(pool, min(3, len(pool)))
 
-# Create the humanized engine instance
-netra_helper = HumanizedNetraEngine()
+    def process_query(self, message: str, user_id: str = None) -> Dict:
+        """Main method to process queries with human-like responses"""
+        message_lower = message.lower()
+        
+        # Simple intent detection
+        if any(word in message_lower for word in ['what is netra', 'tell me about netra', 'netra app', 'what is this app']):
+            response = self._humanize_netra_intro()
+            intent = 'netra_intro'
+            
+        elif any(word in message_lower for word in ['how to start', 'get started', 'install', 'download', 'begin']):
+            response = self._humanize_getting_started()
+            intent = 'getting_started'
+            
+        elif any(word in message_lower for word in ['provider', 'registration', 'create account', 'sign up', 'become provider']):
+            response = self._humanize_provider_registration()
+            intent = 'provider_registration'
+            
+        elif any(word in message_lower for word in ['client', 'search', 'find service', 'browse', 'look for']):
+            response = self._humanize_client_usage()
+            intent = 'client_usage'
+            
+        elif any(word in message_lower for word in ['features', 'what can it do', 'capabilities', 'functionality']):
+            response = self._humanize_netra_features()
+            intent = 'features'
+            
+        elif any(word in message_lower for word in ['account', 'login', 'password', 'otp', 'verification']):
+            response = self._humanize_account_issues()
+            intent = 'account_help'
+            
+        elif any(word in message_lower for word in ['book', 'booking', 'schedule', 'hire']):
+            response = self._humanize_booking_help()
+            intent = 'booking_help'
+            
+        else:
+            response = self._humanize_general_help()
+            intent = 'general_help'
+        
+        # Generate natural suggestions based on intent
+        suggestions = self._generate_suggestions(intent)
+        
+        return {
+            'response': response,
+            'suggestions': suggestions,
+            'confidence': random.randint(85, 98),  # Vary confidence slightly
+            'intent': intent
+        }
 
-# Example usage with multiple people asking the same question:
-if __name__ == "__main__":
-    questions = [
-        "How do I create a provider account on Netra?",
-        "I want to register as a service provider on Netra",
-        "How can I become a provider on Netra?",
-        "What's the process for service providers on Netra?"
-    ]
-    
-    print("=== DIFFERENT PEOPLE ASKING ABOUT PROVIDER REGISTRATION ===\n")
-    
-    for i, question in enumerate(questions, 1):
-        print(f"Person {i}: '{question}'")
-        result = netra_helper.process_query(question)
-        print(f"Response: {result['response']}")
-        print(f"Suggestions: {result['suggestions']}")
-        print(f"Confidence: {result['confidence']}%")
-        print("-" * 80 + "\n")
+# Create the instance with the name that matches the import
+netra_engine = HumanizedNetraEngine()
