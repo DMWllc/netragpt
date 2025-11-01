@@ -585,6 +585,73 @@
         background-clip: text;
     }
 
+    /* Session Expiry Overlay */
+    .session-expiry-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 33, 0.95);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        backdrop-filter: blur(10px);
+        padding: 20px;
+        text-align: center;
+    }
+
+    .session-expiry-content {
+        background: var(--surface-dark);
+        border-radius: var(--border-radius);
+        padding: 30px;
+        max-width: 320px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    .session-expiry-icon {
+        font-size: 48px;
+        margin-bottom: 20px;
+        color: var(--primary-color);
+    }
+
+    .session-expiry-title {
+        font-size: 20px;
+        font-weight: 600;
+        margin-bottom: 12px;
+        color: var(--text-primary);
+    }
+
+    .session-expiry-message {
+        color: var(--text-secondary);
+        margin-bottom: 24px;
+        line-height: 1.5;
+    }
+
+    .new-chat-btn {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: var(--border-radius);
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 auto;
+    }
+
+    .new-chat-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4);
+    }
+
     /* Chat Input */
     .chat-input-area {
         border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -778,6 +845,36 @@
         background: rgba(255, 255, 255, 0.2);
     }
 
+    /* Toast Notifications */
+    .toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: var(--surface-dark);
+        color: var(--text-primary);
+        padding: 12px 16px;
+        border-radius: var(--border-radius);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        backdrop-filter: blur(10px);
+        animation: slideInRight 0.3s ease;
+    }
+
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
     /* Mobile Optimizations */
     @media (max-width: 480px) {
         body {
@@ -845,6 +942,24 @@
             </div>
         </div>
 
+        <!-- Session Expiry Overlay -->
+        <div class="session-expiry-overlay" id="sessionExpiryOverlay" style="display: none;">
+            <div class="session-expiry-content">
+                <div class="session-expiry-icon">
+                    <i class="fas fa-hourglass-end"></i>
+                </div>
+                <h2 class="session-expiry-title">Session Expired</h2>
+                <p class="session-expiry-message">
+                    Your chat session has ended due to inactivity. 
+                    Start a new session to continue chatting with Jovira.
+                </p>
+                <button class="new-chat-btn" id="startNewSessionBtn">
+                    <i class="fas fa-plus"></i>
+                    Start New Chat
+                </button>
+            </div>
+        </div>
+
         <div class="chat-header">
             <div class="header-left">
                 <button class="back-btn" id="backBtn">
@@ -862,14 +977,14 @@
                 </div>
             </div>
             <div class="header-right">
-                <button class="header-btn" id="videoCallBtn" title="Video Call">
-                    <i class="fas fa-video"></i>
+                <button class="header-btn" id="clearChatBtn" title="Clear Chat">
+                    <i class="fas fa-trash"></i>
                 </button>
-                <button class="header-btn" id="voiceCallBtn" title="Voice Call">
-                    <i class="fas fa-phone"></i>
+                <button class="header-btn" id="newChatBtn" title="New Chat">
+                    <i class="fas fa-plus"></i>
                 </button>
-                <button class="header-btn" id="menuBtn" title="Menu">
-                    <i class="fas fa-ellipsis-v"></i>
+                <button class="header-btn" id="chatHistoryBtn" title="Chat History">
+                    <i class="fas fa-history"></i>
                 </button>
             </div>
         </div>
@@ -911,10 +1026,9 @@
         const chatBox = document.getElementById('chat');
         const input = document.getElementById('input');
         const sendBtn = document.getElementById('send');
-        const backBtn = document.getElementById('backBtn');
-        const videoCallBtn = document.getElementById('videoCallBtn');
-        const voiceCallBtn = document.getElementById('voiceCallBtn');
-        const menuBtn = document.getElementById('menuBtn');
+        const clearChatBtn = document.getElementById('clearChatBtn');
+        const newChatBtn = document.getElementById('newChatBtn');
+        const chatHistoryBtn = document.getElementById('chatHistoryBtn');
         const imageUpload = document.getElementById('imageUpload');
         const imageBtn = document.getElementById('imageBtn');
         const emojiBtn = document.getElementById('emojiBtn');
@@ -925,6 +1039,8 @@
         const timerProgress = document.getElementById('timerProgress');
         const extendSessionBtn = document.getElementById('extendSession');
         const pauseSessionBtn = document.getElementById('pauseSession');
+        const sessionExpiryOverlay = document.getElementById('sessionExpiryOverlay');
+        const startNewSessionBtn = document.getElementById('startNewSessionBtn');
 
         // Profile images
         const JOVIRA_AVATAR = 'https://myaidnest.com/images/jovira.png';
@@ -998,13 +1114,29 @@
                     sessionTimeRemaining = Math.floor((sessionData.expires - Date.now()) / 1000);
                     isSessionActive = true;
                     startSessionTimer();
+                    hideSessionExpiryOverlay();
                 } else {
                     isSessionActive = false;
                     sessionTimer.style.display = 'none';
+                    showSessionExpiryOverlay();
                 }
             } else {
                 startNewSession();
             }
+        }
+
+        // Show session expiry overlay
+        function showSessionExpiryOverlay() {
+            sessionExpiryOverlay.style.display = 'flex';
+            input.disabled = true;
+            sendBtn.disabled = true;
+        }
+
+        // Hide session expiry overlay
+        function hideSessionExpiryOverlay() {
+            sessionExpiryOverlay.style.display = 'none';
+            input.disabled = false;
+            sendBtn.disabled = false;
         }
 
         // Start new session
@@ -1012,6 +1144,7 @@
             isSessionActive = true;
             sessionTimeRemaining = 20 * 60;
             sessionTimer.style.display = 'flex';
+            hideSessionExpiryOverlay();
             
             const sessionData = {
                 expires: Date.now() + (sessionTimeRemaining * 1000)
@@ -1021,6 +1154,9 @@
             startSessionTimer();
             updateTimerDisplay();
             showToast('New session started! 🎉');
+            
+            // Create new chat when starting new session
+            createNewChat();
         }
 
         // Start session timer
@@ -1065,6 +1201,7 @@
             clearInterval(sessionTimerInterval);
             sessionTimer.style.display = 'none';
             localStorage.removeItem('jovira_session');
+            showSessionExpiryOverlay();
             showToast('Session ended. Start a new session to continue.');
         }
 
@@ -1098,8 +1235,63 @@
             }
         }
 
+        // Clear current chat
+        function clearCurrentChat() {
+            if (!isSessionActive) {
+                showToast('Session expired. Please start a new session.');
+                return;
+            }
+
+            if (confirm('Are you sure you want to clear this chat? This action cannot be undone.')) {
+                localStorage.removeItem(currentChatId);
+                chatBox.innerHTML = '';
+                showWelcomeMessage();
+                showToast('Chat cleared successfully!');
+            }
+        }
+
+        // Create new chat
+        function createNewChat() {
+            if (!isSessionActive) {
+                showToast('Session expired. Please start a new session.');
+                return;
+            }
+
+            currentChatId = generateChatId();
+            updateChatInList(currentChatId, '', true);
+            loadChatHistory(currentChatId);
+            showToast('New chat started!');
+        }
+
+        // Show chat history (simplified - in real app this would show a modal)
+        function showChatHistory() {
+            if (!isSessionActive) {
+                showToast('Session expired. Please start a new session.');
+                return;
+            }
+
+            const chats = getChatsList();
+            if (chats.length === 0) {
+                showToast('No chat history found.');
+                return;
+            }
+
+            // Simple implementation - just show count
+            showToast(`You have ${chats.length} saved chats`);
+            
+            // In a real implementation, you would show a modal with chat list
+            // and allow switching between chats
+        }
+
         // Setup event listeners
         function setupEventListeners() {
+            // Action buttons
+            clearChatBtn.addEventListener('click', clearCurrentChat);
+            newChatBtn.addEventListener('click', createNewChat);
+            chatHistoryBtn.addEventListener('click', showChatHistory);
+            startNewSessionBtn.addEventListener('click', startNewSession);
+
+            // Input controls
             imageBtn.addEventListener('click', () => imageUpload.click());
             imageUpload.addEventListener('change', handleImageUpload);
             
@@ -1122,6 +1314,7 @@
                 }
             });
 
+            // Session controls
             extendSessionBtn.addEventListener('click', extendSession);
             pauseSessionBtn.addEventListener('click', toggleSessionPause);
         }
@@ -1361,19 +1554,22 @@
             return existingChat;
         }
 
-        // Create new chat
-        function createNewChat() {
-            currentChatId = generateChatId();
-            updateChatInList(currentChatId, '', true);
-            loadChatHistory(currentChatId);
-            showToast('New chat started!');
+        // Load chat history
+        function loadChatHistory(chatId) {
+            const chatHistory = JSON.parse(localStorage.getItem(chatId) || '[]');
+            chatBox.innerHTML = '';
+            
+            // Show welcome message only for new chats
+            if (chatHistory.length === 0) {
+                showWelcomeMessage();
+            } else {
+                hasUserSentMessage = true;
+            }
+            
+            chatHistory.forEach(msg => {
+                addMessage(msg.sender, msg.text, msg.imageUrl, msg.audioUrl);
+            });
         }
-
-        // Auto-resize textarea
-        input.addEventListener('input', function() {
-            this.style.height = 'auto';
-            this.style.height = Math.min(this.scrollHeight, 100) + 'px';
-        });
 
         // Process message content for special formatting
         function processMessageContent(text) {
@@ -1604,29 +1800,6 @@
             if (sender === 'User') {
                 updateChatInList(currentChatId, text);
             }
-        }
-
-        // Load chat history
-        function loadChatHistory(chatId) {
-            const chatHistory = JSON.parse(localStorage.getItem(chatId) || '[]');
-            chatBox.innerHTML = '';
-            
-            // Show welcome message only for new chats
-            if (chatHistory.length === 0) {
-                showWelcomeMessage();
-            } else {
-                hasUserSentMessage = true;
-            }
-            
-            chatHistory.forEach(msg => {
-                addMessage(msg.sender, msg.text, msg.imageUrl, msg.audioUrl);
-            });
-        }
-
-        // Ask question from quick action
-        function askQuestion(question) {
-            input.value = question;
-            sendMessage();
         }
 
         // Show toast notification
