@@ -13,16 +13,17 @@
 
     <style>
     :root {
-        --whatsapp-green: #128C7E;
-        --whatsapp-green-dark: #075E54;
-        --whatsapp-green-light: #25D366;
-        --whatsapp-blue: #34B7F1;
-        --whatsapp-gray-light: #ECE5DD;
-        --whatsapp-gray: #DCF8C6;
-        --whatsapp-gray-dark: #B3B3B3;
-        --whatsapp-white: #FFFFFF;
-        --whatsapp-black: #2A2F32;
-        --border-radius: 10px;
+        --primary-color: #25D366;
+        --primary-dark: #128C7E;
+        --primary-darker: #075E54;
+        --accent-color: #34B7F1;
+        --background-dark: #000033;
+        --surface-dark: #0a0a3a;
+        --surface-light: #1a1a4a;
+        --text-primary: #ffffff;
+        --text-secondary: #b8b8d6;
+        --text-accent: #a78bfa;
+        --border-radius: 12px;
         --border-radius-small: 8px;
         --transition: all 0.3s ease;
     }
@@ -36,36 +37,21 @@
 
     body {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-        background: #e5ddd5;
+        background: var(--background-dark);
         display: flex;
         justify-content: center;
         align-items: center;
         min-height: 100vh;
         margin: 0;
-        color: #333;
+        color: var(--text-primary);
         overflow: hidden;
         padding: 0;
         position: relative;
     }
 
-    /* WhatsApp-style background pattern */
-    .chat-background {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-image: url('https://myaidnest.com/images/netrawallpaper.jpg');
-        background-size: cover;
-        background-position: center;
-        background-repeat: no-repeat;
-        opacity: 0.1;
-        z-index: -1;
-    }
-
     /* Main Chat Container */
     .chat-container {
-        background: var(--whatsapp-white);
+        background: var(--surface-dark);
         width: 100%;
         max-width: 450px;
         height: 100vh;
@@ -74,19 +60,37 @@
         flex-direction: column;
         overflow: hidden;
         position: relative;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Chat background with wallpaper */
+    .chat-background {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: url('https://myaidnest.com/images/netrawallpaper.jpg');
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        opacity: 0.15;
+        z-index: 0;
     }
 
     /* Header */
     .chat-header {
-        background: var(--whatsapp-green);
+        background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-darker) 100%);
         color: white;
-        padding: 10px 16px;
+        padding: 12px 16px;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
         z-index: 10;
+        position: relative;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .header-left {
@@ -107,15 +111,16 @@
     .user-info {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 12px;
     }
 
     .user-avatar {
-        width: 40px;
-        height: 40px;
+        width: 42px;
+        height: 42px;
         border-radius: 50%;
         overflow: hidden;
         border: 2px solid rgba(255, 255, 255, 0.3);
+        background: var(--primary-color);
     }
 
     .user-avatar img {
@@ -133,38 +138,40 @@
         font-weight: bold;
         font-size: 16px;
         color: white;
-        background: var(--whatsapp-green-dark);
     }
 
     .user-details h3 {
         font-size: 16px;
-        font-weight: 500;
+        font-weight: 600;
         margin-bottom: 2px;
     }
 
     .user-details p {
         font-size: 12px;
-        opacity: 0.8;
+        opacity: 0.9;
+        color: rgba(255, 255, 255, 0.8);
     }
 
     .header-right {
         display: flex;
-        gap: 10px;
+        gap: 8px;
     }
 
     .header-btn {
-        background: none;
+        background: rgba(255, 255, 255, 0.15);
         border: none;
         color: white;
-        font-size: 18px;
+        font-size: 16px;
         cursor: pointer;
         padding: 8px;
         border-radius: 50%;
         transition: var(--transition);
+        backdrop-filter: blur(10px);
     }
 
     .header-btn:hover {
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.25);
+        transform: scale(1.1);
     }
 
     /* Chat Content */
@@ -173,7 +180,6 @@
         display: flex;
         flex-direction: column;
         overflow: hidden;
-        background: transparent;
         position: relative;
     }
 
@@ -183,8 +189,10 @@
         overflow-y: auto;
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 12px;
         scroll-behavior: smooth;
+        position: relative;
+        z-index: 1;
     }
 
     #chat::-webkit-scrollbar {
@@ -192,11 +200,12 @@
     }
 
     #chat::-webkit-scrollbar-track {
-        background: rgba(0, 0, 0, 0.05);
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 3px;
     }
 
     #chat::-webkit-scrollbar-thumb {
-        background: rgba(0, 0, 0, 0.2);
+        background: var(--primary-color);
         border-radius: 3px;
     }
 
@@ -205,7 +214,7 @@
         display: flex;
         margin-bottom: 4px;
         animation: messageSlide 0.3s ease-out;
-        gap: 8px;
+        gap: 10px;
         align-items: flex-start;
         max-width: 85%;
     }
@@ -220,12 +229,13 @@
     }
 
     .message-avatar {
-        width: 32px;
-        height: 32px;
+        width: 34px;
+        height: 34px;
         border-radius: 50%;
         flex-shrink: 0;
         overflow: hidden;
         margin-top: 2px;
+        border: 2px solid rgba(255, 255, 255, 0.2);
     }
 
     .message-avatar img {
@@ -234,89 +244,69 @@
         object-fit: cover;
     }
 
-    .avatar-fallback {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        font-size: 14px;
-        color: white;
-        background: var(--whatsapp-green);
-    }
-
     .message.user .message-avatar {
-        background: var(--whatsapp-green);
+        background: var(--primary-color);
     }
 
     .message.bot .message-avatar {
-        background: var(--whatsapp-blue);
+        background: var(--accent-color);
     }
 
     .message-content {
-        padding: 8px 12px;
+        padding: 12px 16px;
         border-radius: var(--border-radius);
         font-size: 14px;
-        line-height: 1.4;
+        line-height: 1.5;
         position: relative;
         transition: var(--transition);
         word-wrap: break-word;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         max-width: 100%;
+        backdrop-filter: blur(10px);
     }
 
     .message.user .message-content {
-        background: var(--whatsapp-gray);
-        color: var(--whatsapp-black);
-        border-top-right-radius: 0;
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+        color: white;
+        border-bottom-right-radius: 4px;
     }
 
     .message.bot .message-content {
-        background: white;
-        color: var(--whatsapp-black);
-        border-top-left-radius: 0;
-        border: 1px solid rgba(0,0,0,0.05);
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-primary);
+        border-bottom-left-radius: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
         
-        /* Scrollable properties for Jovira's messages */
+        /* Scrollable properties */
         overflow-x: auto;
         overflow-y: auto;
         max-height: 500px;
         max-width: 100%;
         word-wrap: break-word;
         white-space: pre-wrap;
-        
-        /* Always show scrollbars */
-        scrollbar-width: thin;
-        scrollbar-color: var(--whatsapp-green) rgba(255, 255, 255, 0.05);
     }
 
-    /* Custom scrollbar for Jovira's messages */
+    /* Custom scrollbar for messages */
     .message.bot .message-content::-webkit-scrollbar {
         width: 6px;
         height: 6px;
     }
 
     .message.bot .message-content::-webkit-scrollbar-track {
-        background: rgba(0, 0, 0, 0.05);
+        background: rgba(255, 255, 255, 0.05);
         border-radius: 3px;
     }
 
     .message.bot .message-content::-webkit-scrollbar-thumb {
-        background: var(--whatsapp-green);
+        background: var(--primary-color);
         border-radius: 3px;
-        opacity: 0.7;
-    }
-
-    .message.bot .message-content::-webkit-scrollbar-thumb:hover {
-        opacity: 1;
     }
 
     .message-time {
         font-size: 11px;
-        color: rgba(0,0,0,0.45);
+        color: rgba(255, 255, 255, 0.6);
         text-align: right;
-        margin-top: 4px;
+        margin-top: 6px;
         display: block;
     }
 
@@ -336,28 +326,31 @@
         margin-top: 8px;
         cursor: pointer;
         transition: var(--transition);
+        border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .uploaded-image:hover {
-        opacity: 0.9;
+        transform: scale(1.02);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
     }
 
     /* Voice Recording */
     .voice-recording {
         display: flex;
         align-items: center;
-        gap: 10px;
-        padding: 12px 16px;
-        background: var(--whatsapp-green);
+        gap: 12px;
+        padding: 14px 18px;
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
         border-radius: var(--border-radius);
         margin: 8px 0;
         animation: pulse 1.5s infinite;
         color: white;
+        box-shadow: 0 4px 16px rgba(37, 211, 102, 0.3);
     }
 
     @keyframes pulse {
         0%, 100% { opacity: 1; }
-        50% { opacity: 0.7; }
+        50% { opacity: 0.8; }
     }
 
     .voice-visualizer {
@@ -387,24 +380,24 @@
 
     /* Links Styling */
     .message-link {
-        color: var(--whatsapp-green);
+        color: var(--text-accent);
         text-decoration: none;
-        border-bottom: 1px solid var(--whatsapp-green);
+        border-bottom: 1px solid var(--text-accent);
         transition: var(--transition);
         padding: 2px 4px;
         border-radius: 4px;
     }
 
     .message-link:hover {
-        background: var(--whatsapp-green);
-        color: white;
+        background: var(--text-accent);
+        color: var(--background-dark);
     }
 
     /* Enhanced Code Blocks */
     .code-block {
-        background: #f5f5f5;
-        border: 1px solid #e0e0e0;
-        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: var(--border-radius-small);
         padding: 0;
         margin: 12px 0;
         position: relative;
@@ -412,19 +405,20 @@
         font-size: 13px;
         line-height: 1.4;
         overflow: hidden;
+        backdrop-filter: blur(10px);
     }
 
     .code-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 8px 12px;
-        background: rgba(0, 0, 0, 0.05);
-        border-bottom: 1px solid #e0e0e0;
+        padding: 10px 14px;
+        background: rgba(0, 0, 0, 0.3);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .code-language {
-        color: var(--whatsapp-green);
+        color: var(--primary-color);
         font-size: 12px;
         font-weight: 600;
         display: flex;
@@ -438,11 +432,11 @@
     }
 
     .code-btn {
-        background: rgba(0, 0, 0, 0.1);
-        border: 1px solid rgba(0, 0, 0, 0.2);
-        color: #555;
-        padding: 4px 8px;
-        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: var(--text-secondary);
+        padding: 6px 10px;
+        border-radius: 6px;
         font-size: 11px;
         cursor: pointer;
         transition: var(--transition);
@@ -452,23 +446,24 @@
     }
 
     .code-btn:hover {
-        background: var(--whatsapp-green);
+        background: var(--primary-color);
         color: white;
+        transform: translateY(-1px);
     }
 
     .code-btn.run-btn {
-        background: var(--whatsapp-green-light);
+        background: var(--primary-color);
         color: white;
     }
 
     .code-btn.copy-btn {
-        background: var(--whatsapp-blue);
+        background: var(--accent-color);
         color: white;
     }
 
     .code-content {
-        padding: 12px;
-        color: #333;
+        padding: 14px;
+        color: var(--text-primary);
         overflow-x: auto;
         max-height: 400px;
         overflow-y: auto;
@@ -483,32 +478,32 @@
         word-wrap: break-word;
     }
 
-    .code-keyword { color: #d73a49; }
-    .code-string { color: #032f62; }
-    .code-number { color: #005cc5; }
-    .code-comment { color: #6a737d; font-style: italic; }
-    .code-function { color: #6f42c1; }
-    .code-operator { color: #d73a49; }
-    .code-variable { color: #e36209; }
-    .code-class { color: #6f42c1; font-weight: bold; }
+    .code-keyword { color: #ff79c6; }
+    .code-string { color: #f1fa8c; }
+    .code-number { color: #bd93f9; }
+    .code-comment { color: #6272a4; font-style: italic; }
+    .code-function { color: #50fa7b; }
+    .code-operator { color: #ff79c6; }
+    .code-variable { color: #8be9fd; }
+    .code-class { color: #8be9fd; font-weight: bold; }
 
     /* Inline Code */
     .inline-code {
-        background: #f5f5f5;
-        border: 1px solid #e0e0e0;
+        background: rgba(0, 0, 0, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 4px;
-        padding: 2px 4px;
+        padding: 2px 6px;
         font-family: 'Fira Code', monospace;
         font-size: 12px;
-        color: #d73a49;
+        color: var(--primary-color);
     }
 
-    /* Enhanced Math Expression Styling */
+    /* Math Expression Styling */
     .math-expression {
-        background: rgba(0, 0, 0, 0.03);
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        border-radius: 8px;
-        padding: 12px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: var(--border-radius-small);
+        padding: 14px;
         margin: 8px 0;
         text-align: center;
         font-size: 16px;
@@ -516,189 +511,35 @@
     }
 
     .math-result {
-        background: var(--whatsapp-green-light);
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
         color: white;
-        padding: 10px 14px;
-        border-radius: 8px;
+        padding: 12px 16px;
+        border-radius: var(--border-radius-small);
         margin: 8px 0;
         font-weight: 600;
         display: flex;
         align-items: center;
         gap: 8px;
         font-family: 'Fira Code', monospace;
-    }
-
-    .math-result::before {
-        content: '🧮';
-        font-size: 16px;
-    }
-
-    .math-calculation {
-        background: rgba(0, 0, 0, 0.03);
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        border-radius: 8px;
-        padding: 12px;
-        margin: 8px 0;
-        font-family: 'Fira Code', monospace;
-        font-size: 16px;
-    }
-
-    .math-step {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 6px 0;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-    }
-
-    .math-step:last-child {
-        border-bottom: none;
-    }
-
-    .math-expression-symbols {
-        font-size: 16px;
-        font-weight: 600;
-    }
-
-    .math-equals {
-        color: var(--whatsapp-green);
-        margin: 0 10px;
-    }
-
-    /* LaTeX Equation Styling */
-    .latex-equation {
-        background: rgba(0, 0, 0, 0.03);
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        border-radius: 8px;
-        padding: 16px;
-        margin: 12px 0;
-        text-align: center;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .latex-equation img {
-        max-width: 100%;
-        max-height: 180px;
-        border-radius: 6px;
-    }
-
-    .latex-source {
-        font-family: 'Fira Code', monospace;
-        font-size: 12px;
-        color: #666;
-        background: rgba(0, 0, 0, 0.05);
-        padding: 6px 10px;
-        border-radius: 6px;
-        margin-top: 8px;
-        word-break: break-all;
-    }
-
-    /* Mathematical Visualization */
-    .math-visualization {
-        background: rgba(0, 0, 0, 0.03);
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        border-radius: 8px;
-        padding: 12px;
-        margin: 12px 0;
-        text-align: center;
-    }
-
-    .math-visualization img {
-        max-width: 100%;
-        max-height: 250px;
-        border-radius: 8px;
-    }
-
-    .visualization-title {
-        font-size: 14px;
-        color: var(--whatsapp-green);
-        margin-bottom: 8px;
-        font-weight: 600;
-    }
-
-    /* Chat Lock Overlay */
-    .chat-lock {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(255, 255, 255, 0.95);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        z-index: 100;
-        color: var(--whatsapp-black);
-        text-align: center;
-        padding: 30px;
-    }
-
-    .lock-icon {
-        font-size: 48px;
-        margin-bottom: 20px;
-        color: var(--whatsapp-green);
-    }
-
-    .lock-message {
-        font-size: 16px;
-        margin-bottom: 20px;
-        line-height: 1.5;
-    }
-
-    .session-actions {
-        display: flex;
-        gap: 12px;
-        margin-top: 20px;
-    }
-
-    .session-btn {
-        padding: 10px 20px;
-        border: none;
-        border-radius: 25px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: var(--transition);
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .session-btn.primary {
-        background: var(--whatsapp-green);
-        color: white;
-    }
-
-    .session-btn.secondary {
-        background: rgba(0, 0, 0, 0.1);
-        color: var(--whatsapp-black);
-        border: 1px solid rgba(0, 0, 0, 0.2);
-    }
-
-    .session-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 16px rgba(37, 211, 102, 0.3);
     }
 
     /* Typing Indicator */
     .message-typing {
         display: flex;
         align-items: center;
-        gap: 8px;
-        padding: 12px 16px;
-        background: white;
+        gap: 10px;
+        padding: 14px 18px;
+        background: rgba(255, 255, 255, 0.1);
         border-radius: var(--border-radius);
-        border-top-left-radius: 0;
+        border-bottom-left-radius: 4px;
         max-width: 85%;
         align-self: flex-start;
-        color: #666;
+        color: var(--text-secondary);
         font-size: 13px;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-        border: 1px solid rgba(0,0,0,0.05);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
     }
 
     .typing-dots {
@@ -709,7 +550,7 @@
     .typing-dot {
         width: 8px;
         height: 8px;
-        background: var(--whatsapp-green);
+        background: var(--primary-color);
         border-radius: 50%;
         animation: typing 1.4s infinite ease-in-out;
     }
@@ -725,74 +566,51 @@
     /* Welcome Message */
     .welcome-message {
         text-align: center;
-        padding: 20px;
-        color: #666;
-        background: white;
+        padding: 24px;
+        color: var(--text-primary);
+        background: rgba(255, 255, 255, 0.1);
         border-radius: var(--border-radius);
         margin: 10px 0;
-        border: 1px solid rgba(0,0,0,0.05);
-        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(10px);
     }
 
     .welcome-message i {
-        font-size: 32px;
+        font-size: 36px;
         margin-bottom: 12px;
-        color: var(--whatsapp-green);
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
     }
 
-    /* Quick Actions */
-    .quick-actions {
-        display: flex;
-        gap: 8px;
-        margin-bottom: 12px;
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-
-    .quick-action {
-        background: rgba(0, 0, 0, 0.05);
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        color: var(--whatsapp-black);
-        padding: 8px 12px;
-        border-radius: 20px;
-        font-size: 12px;
-        cursor: pointer;
-        transition: var(--transition);
-    }
-
-    .quick-action:hover {
-        background: var(--whatsapp-green);
-        color: white;
-    }
-
-    /* IMPROVED Chat Input - WhatsApp Style */
+    /* Chat Input */
     .chat-input-area {
-        border-top: 1px solid rgba(0,0,0,0.1);
-        background: var(--whatsapp-white);
-        padding: 10px 16px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        background: var(--surface-dark);
+        padding: 12px 16px;
         position: relative;
+        z-index: 10;
+        backdrop-filter: blur(10px);
     }
 
     .chat-input-wrapper {
         display: flex;
         align-items: flex-end;
-        gap: 8px;
-        background: white;
-        border: 1px solid rgba(0,0,0,0.1);
+        gap: 10px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
         border-radius: 24px;
-        padding: 6px 12px;
+        padding: 8px 14px;
         transition: var(--transition);
+        backdrop-filter: blur(10px);
     }
 
-    /* FIXED: Remove inner border when input is focused */
     .chat-input-wrapper:focus-within {
-        border-color: var(--whatsapp-green);
-        box-shadow: 0 0 0 2px rgba(18, 140, 126, 0.2);
-    }
-
-    .chat-input-wrapper.typing {
-        border-color: var(--whatsapp-green);
-        box-shadow: 0 0 0 2px rgba(18, 140, 126, 0.2);
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.2);
+        background: rgba(255, 255, 255, 0.15);
     }
 
     .input-controls {
@@ -815,7 +633,7 @@
     .input-btn {
         background: transparent;
         border: none;
-        color: #666;
+        color: var(--text-secondary);
         padding: 8px;
         border-radius: 50%;
         cursor: pointer;
@@ -823,13 +641,13 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 36px;
-        height: 36px;
+        width: 38px;
+        height: 38px;
     }
 
     .input-btn:hover {
-        background: rgba(0, 0, 0, 0.05);
-        color: var(--whatsapp-black);
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-primary);
     }
 
     .voice-btn.recording {
@@ -838,34 +656,33 @@
         animation: pulse 1.5s infinite;
     }
 
-    /* FIXED: Remove inner border on textarea focus */
     #input {
         flex: 1;
         border: none;
         font-size: 14px;
         background: transparent;
-        color: var(--whatsapp-black);
+        color: var(--text-primary);
         transition: var(--transition);
         resize: none;
-        min-height: 20px;
+        min-height: 22px;
         max-height: 100px;
         font-family: inherit;
         line-height: 1.4;
         padding: 8px 0;
-        outline: none; /* This removes the inner border */
+        outline: none;
     }
 
     #input:focus {
-        outline: none; /* Ensure no outline appears on focus */
+        outline: none;
     }
 
     #input::placeholder {
-        color: #999;
+        color: var(--text-secondary);
     }
 
     #send {
-        padding: 8px;
-        background: var(--whatsapp-green);
+        padding: 10px;
+        background: var(--primary-color);
         border: none;
         color: white;
         cursor: pointer;
@@ -874,18 +691,22 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 36px;
-        height: 36px;
+        width: 40px;
+        height: 40px;
         flex-shrink: 0;
+        box-shadow: 0 4px 12px rgba(37, 211, 102, 0.4);
     }
 
     #send:hover {
-        background: var(--whatsapp-green-dark);
+        background: var(--primary-dark);
+        transform: scale(1.05);
+        box-shadow: 0 6px 16px rgba(37, 211, 102, 0.5);
     }
 
     #send:disabled {
         opacity: 0.6;
         cursor: not-allowed;
+        transform: none;
     }
 
     .send-icon {
@@ -893,259 +714,48 @@
         height: 16px;
     }
 
-    /* Image Display */
-    .message-image {
-        max-width: 100%;
-        max-height: 250px;
-        border-radius: var(--border-radius-small);
-        margin-top: 8px;
-        cursor: pointer;
-        transition: var(--transition);
-    }
-
-    .message-image:hover {
-        opacity: 0.9;
-    }
-
-    /* Image Modal */
-    .image-modal {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.9);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 2000;
-        opacity: 0;
-        visibility: hidden;
-        transition: var(--transition);
-    }
-
-    .image-modal.active {
-        opacity: 1;
-        visibility: visible;
-    }
-
-    .modal-content {
-        max-width: 90%;
-        max-height: 90%;
-        border-radius: var(--border-radius);
-    }
-
-    .modal-close {
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        background: rgba(255, 255, 255, 0.2);
-        border: none;
-        color: white;
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        font-size: 18px;
-        transition: var(--transition);
-    }
-
-    .modal-close:hover {
-        background: rgba(255, 255, 255, 0.3);
-    }
-
-    /* Chats Sidebar */
-    .chats-sidebar {
-        position: fixed;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: white;
-        z-index: 1000;
-        transition: var(--transition);
-        display: flex;
-        flex-direction: column;
-        box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-
-    .chats-sidebar.active {
-        left: 0;
-    }
-
-    .sidebar-header {
-        background: var(--whatsapp-green);
-        padding: 20px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .sidebar-title {
-        color: white;
-        font-weight: 600;
-        font-size: 18px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .close-sidebar {
-        background: none;
-        border: none;
-        color: white;
-        font-size: 20px;
-        cursor: pointer;
-        padding: 8px;
-        border-radius: 50%;
-        transition: var(--transition);
-    }
-
-    .close-sidebar:hover {
-        background: rgba(255, 255, 255, 0.2);
-    }
-
-    .chats-list {
-        flex: 1;
-        overflow-y: auto;
-        padding: 16px;
-    }
-
-    .chat-item {
-        background: white;
-        border-radius: var(--border-radius-small);
-        padding: 12px;
-        margin-bottom: 8px;
-        cursor: pointer;
-        transition: var(--transition);
-        border: 1px solid rgba(0,0,0,0.05);
-    }
-
-    .chat-item:hover {
-        background: #f5f5f5;
-    }
-
-    .chat-item.active {
-        background: var(--whatsapp-gray);
-        border-color: rgba(18, 140, 126, 0.2);
-    }
-
-    .chat-item-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 6px;
-    }
-
-    .chat-title {
-        font-weight: 600;
-        font-size: 14px;
-        color: var(--whatsapp-black);
-    }
-
-    .chat-date {
-        font-size: 11px;
-        color: #999;
-    }
-
-    .chat-preview {
-        font-size: 12px;
-        color: #666;
-        line-height: 1.4;
-        overflow: hidden;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        line-clamp: 2;
-        -webkit-box-orient: vertical;
-    }
-
-    .no-chats {
-        text-align: center;
-        color: #999;
-        padding: 60px 20px;
-        font-style: italic;
-    }
-
-    .no-chats i {
-        font-size: 48px;
-        margin-bottom: 15px;
-        opacity: 0.5;
-    }
-
-    /* Toast Notifications */
-    .toast {
-        position: fixed;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: var(--whatsapp-green);
-        color: white;
-        padding: 12px 20px;
-        border-radius: var(--border-radius-small);
-        z-index: 1000;
-        font-size: 14px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        animation: toastSlide 0.3s ease-out;
-    }
-
-    @keyframes toastSlide {
-        from {
-            opacity: 0;
-            transform: translateX(-50%) translateY(20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-        }
-    }
-
     /* Session Timer */
     .session-timer {
         position: absolute;
-        top: -35px;
+        top: -40px;
         left: 50%;
         transform: translateX(-50%);
-        background: white;
-        color: var(--whatsapp-black);
-        padding: 6px 12px;
+        background: var(--surface-dark);
+        color: var(--text-primary);
+        padding: 8px 16px;
         font-size: 12px;
         display: flex;
         align-items: center;
         justify-content: space-between;
         border-radius: 20px;
-        border: 1px solid rgba(0,0,0,0.1);
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        min-width: 180px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+        min-width: 200px;
         z-index: 10;
         transition: var(--transition);
+        backdrop-filter: blur(10px);
     }
 
     .timer-info {
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 8px;
     }
 
     .timer-progress {
         flex: 1;
         height: 4px;
-        background: rgba(0, 0, 0, 0.1);
+        background: rgba(255, 255, 255, 0.1);
         border-radius: 2px;
         overflow: hidden;
-        margin: 0 8px;
+        margin: 0 10px;
     }
 
     .timer-progress-bar {
         height: 100%;
         border-radius: 2px;
         transition: width 0.5s ease;
+        background: var(--primary-color);
     }
 
     .timer-actions {
@@ -1154,10 +764,10 @@
     }
 
     .timer-btn {
-        background: rgba(0, 0, 0, 0.05);
+        background: rgba(255, 255, 255, 0.1);
         border: none;
-        color: var(--whatsapp-black);
-        padding: 4px 6px;
+        color: var(--text-primary);
+        padding: 4px 8px;
         border-radius: 4px;
         font-size: 10px;
         cursor: pointer;
@@ -1165,7 +775,7 @@
     }
 
     .timer-btn:hover {
-        background: rgba(0, 0, 0, 0.1);
+        background: rgba(255, 255, 255, 0.2);
     }
 
     /* Mobile Optimizations */
@@ -1177,10 +787,11 @@
         .chat-container {
             height: 100vh;
             max-width: none;
+            border-radius: 0;
         }
 
         .chat-header {
-            padding: 8px 12px;
+            padding: 10px 12px;
         }
 
         #chat {
@@ -1189,87 +800,12 @@
 
         .message-content {
             max-width: 80%;
-            padding: 8px 12px;
+            padding: 10px 14px;
         }
 
         .chat-input-area {
-            padding: 8px 12px;
+            padding: 10px 12px;
         }
-
-        .chats-sidebar {
-            width: 100%;
-        }
-
-        .input-controls {
-            gap: 6px;
-        }
-
-        .input-btn {
-            width: 32px;
-            height: 32px;
-            padding: 6px;
-        }
-
-        #send {
-            width: 32px;
-            height: 32px;
-            padding: 6px;
-        }
-
-        .session-timer {
-            top: -30px;
-            min-width: 160px;
-            font-size: 11px;
-        }
-
-        .latex-equation {
-            padding: 10px;
-        }
-
-        .math-visualization {
-            padding: 10px;
-        }
-    }
-
-    @media (min-width: 768px) {
-        .chat-container {
-            max-width: 450px;
-            height: 800px;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-
-        .chats-sidebar {
-            width: 400px;
-            left: -400px;
-        }
-    }
-
-    @media screen and (max-width: 768px) {
-        input, textarea {
-            font-size: 16px !important;
-        }
-    }
-
-    /* Enhanced selection */
-    .message-content::selection {
-        background: var(--whatsapp-green);
-        color: white;
-    }
-
-    /* Focus states for accessibility */
-    button:focus-visible {
-        outline: 2px solid var(--whatsapp-green);
-        outline-offset: 2px;
-    }
-
-    /* MathJax styling */
-    .mjx-chtml {
-        outline: none;
-    }
-
-    mjx-container {
-        text-align: center !important;
     }
 
     @keyframes messageSlide {
@@ -1285,34 +821,11 @@
 </style>
 </head>
 <body>
-    <!-- WhatsApp-style background -->
-    <div class="chat-background"></div>
-
-    <!-- Image Modal -->
-    <div class="image-modal" id="imageModal">
-        <button class="modal-close" id="modalClose">
-            <i class="fas fa-times"></i>
-        </button>
-        <img class="modal-content" id="modalImage" src="" alt="Enlarged view">
-    </div>
-
-    <!-- Chats Sidebar -->
-    <div class="chats-sidebar" id="chatsSidebar">
-        <div class="sidebar-header">
-            <div class="sidebar-title">
-                <i class="fas fa-comments"></i> Your Conversations
-            </div>
-            <button class="close-sidebar" id="closeSidebar">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        <div class="chats-list" id="chatsList">
-            <!-- Chats will be dynamically loaded here -->
-        </div>
-    </div>
-
     <!-- Main Chat Container -->
     <div class="chat-container">
+        <!-- Chat background with wallpaper -->
+        <div class="chat-background"></div>
+
         <!-- Session Timer Bar -->
         <div class="session-timer" id="sessionTimer">
             <div class="timer-info">
@@ -1320,7 +833,7 @@
                 <span id="timerText">20:00</span>
             </div>
             <div class="timer-progress">
-                <div class="timer-progress-bar" id="timerProgress" style="width: 100%; background: var(--whatsapp-green);"></div>
+                <div class="timer-progress-bar" id="timerProgress" style="width: 100%;"></div>
             </div>
             <div class="timer-actions">
                 <button class="timer-btn" id="extendSession" title="Extend Session">
@@ -1328,23 +841,6 @@
                 </button>
                 <button class="timer-btn" id="pauseSession" title="Pause Session">
                     <i class="fas fa-pause"></i>
-                </button>
-            </div>
-        </div>
-
-        <!-- Chat Lock Overlay -->
-        <div class="chat-lock" id="chatLock" style="display: none;">
-            <div class="lock-icon">
-                <i class="fas fa-hourglass-end"></i>
-            </div>
-            <h3>Session Expired</h3>
-            <p class="lock-message">Your 20-minute chat session has ended. Start a new session to continue chatting with Jovira.</p>
-            <div class="session-actions">
-                <button class="session-btn primary" onclick="startNewSession()">
-                    <i class="fas fa-plus"></i> Start New Session
-                </button>
-                <button class="session-btn secondary" onclick="viewChatHistory()">
-                    <i class="fas fa-history"></i> View History
                 </button>
             </div>
         </div>
@@ -1380,33 +876,7 @@
         
         <div class="chat-content">
             <div id="chat">
-                <div class="welcome-message">
-                    <i class="fas fa-robot"></i>
-                    <h3 style="margin-bottom: 8px; color: var(--whatsapp-black);">Hello! I'm Jovira</h3>
-                    <p style="margin-bottom: 15px; line-height: 1.5;">Your intelligent assistant from Aidnest Africa! I can help you with:</p>
-                    
-                    <div class="quick-actions">
-                        <div class="quick-action" onclick="askQuestion('Calculate 25 × 4 + 15')">
-                            <i class="fas fa-calculator"></i> Math
-                        </div>
-                        <div class="quick-action" onclick="askQuestion('Show me Python code for a calculator')">
-                            <i class="fas fa-code"></i> Code
-                        </div>
-                        <div class="quick-action" onclick="askQuestion('Tell me about Netra services')">
-                            <i class="fas fa-mobile-alt"></i> Netra
-                        </div>
-                        <div class="quick-action" onclick="askQuestion('What is 15% of 200?')">
-                            <i class="fas fa-percentage"></i> Percentage
-                        </div>
-                    </div>
-                    
-                    <p style="font-size: 12px; opacity: 0.8; margin-top: 10px;">
-                        💡 <strong>New Features:</strong> Session management, code execution, math calculations!
-                    </p>
-                    <p style="font-size: 12px; opacity: 0.8; margin-top: 10px;">
-                        Ask me anything about technology, coding, or our services! 💫
-                    </p>
-                </div>
+                <!-- Welcome message will be dynamically added for new chats -->
             </div>
         </div>
 
@@ -1445,23 +915,16 @@
         const videoCallBtn = document.getElementById('videoCallBtn');
         const voiceCallBtn = document.getElementById('voiceCallBtn');
         const menuBtn = document.getElementById('menuBtn');
-        const closeSidebarBtn = document.getElementById('closeSidebar');
-        const chatsSidebar = document.getElementById('chatsSidebar');
-        const chatsList = document.getElementById('chatsList');
         const imageUpload = document.getElementById('imageUpload');
         const imageBtn = document.getElementById('imageBtn');
         const emojiBtn = document.getElementById('emojiBtn');
         const voiceBtn = document.getElementById('voiceBtn');
-        const imageModal = document.getElementById('imageModal');
-        const modalImage = document.getElementById('modalImage');
-        const modalClose = document.getElementById('modalClose');
         const inputWrapper = document.getElementById('inputWrapper');
         const sessionTimer = document.getElementById('sessionTimer');
         const timerText = document.getElementById('timerText');
         const timerProgress = document.getElementById('timerProgress');
         const extendSessionBtn = document.getElementById('extendSession');
         const pauseSessionBtn = document.getElementById('pauseSession');
-        const chatLock = document.getElementById('chatLock');
 
         // Profile images
         const JOVIRA_AVATAR = 'https://myaidnest.com/images/jovira.png';
@@ -1477,6 +940,7 @@
         let sessionTimeRemaining = 20 * 60; // 20 minutes in seconds
         let sessionTimerInterval = null;
         let isSessionPaused = false;
+        let hasUserSentMessage = false;
 
         // Initialize chat system
         function initializeChatSystem() {
@@ -1487,14 +951,46 @@
                 currentChatId = savedChats[0].id;
                 loadChatHistory(currentChatId);
             }
-            updateChatsList();
             setupEventListeners();
             initializeSessionManagement();
         }
 
+        // Show welcome message for new chats
+        function showWelcomeMessage() {
+            const chatHistory = JSON.parse(localStorage.getItem(currentChatId) || '[]');
+            
+            // Only show welcome message if this is a new chat (no messages)
+            if (chatHistory.length === 0 && !hasUserSentMessage) {
+                const welcomeMsg = document.createElement('div');
+                welcomeMsg.classList.add('welcome-message');
+                welcomeMsg.innerHTML = `
+                    <i class="fas fa-robot"></i>
+                    <h3 style="margin-bottom: 12px;">Hello! I'm Jovira 👋</h3>
+                    <p style="margin-bottom: 16px; line-height: 1.5; color: var(--text-secondary);">
+                        Your intelligent assistant from Aidnest Africa! I'm here to help you with anything you need.
+                    </p>
+                    <p style="font-size: 12px; color: var(--text-secondary); margin-top: 16px;">
+                        Built by <strong>Nowamaani Donath</strong>
+                    </p>
+                    <p style="font-size: 12px; color: var(--text-secondary); margin-top: 8px;">
+                        Ask me anything about technology, coding, or our services! 💫
+                    </p>
+                `;
+                chatBox.appendChild(welcomeMsg);
+            }
+        }
+
+        // Remove welcome message when user sends first message
+        function removeWelcomeMessage() {
+            const welcomeMessage = document.querySelector('.welcome-message');
+            if (welcomeMessage) {
+                welcomeMessage.remove();
+            }
+            hasUserSentMessage = true;
+        }
+
         // Initialize session management
         function initializeSessionManagement() {
-            // Check if there's a saved session
             const savedSession = localStorage.getItem('jovira_session');
             if (savedSession) {
                 const sessionData = JSON.parse(savedSession);
@@ -1504,11 +1000,9 @@
                     startSessionTimer();
                 } else {
                     isSessionActive = false;
-                    chatLock.style.display = 'flex';
                     sessionTimer.style.display = 'none';
                 }
             } else {
-                // Start a new session
                 startNewSession();
             }
         }
@@ -1516,11 +1010,9 @@
         // Start new session
         function startNewSession() {
             isSessionActive = true;
-            sessionTimeRemaining = 20 * 60; // 20 minutes
-            chatLock.style.display = 'none';
+            sessionTimeRemaining = 20 * 60;
             sessionTimer.style.display = 'flex';
             
-            // Save session to localStorage
             const sessionData = {
                 expires: Date.now() + (sessionTimeRemaining * 1000)
             };
@@ -1555,17 +1047,15 @@
             const seconds = sessionTimeRemaining % 60;
             timerText.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
             
-            // Update progress bar
             const progressPercentage = (sessionTimeRemaining / (20 * 60)) * 100;
             timerProgress.style.width = `${progressPercentage}%`;
             
-            // Update color based on time remaining
             if (progressPercentage <= 25) {
                 timerProgress.style.background = '#ff4757';
             } else if (progressPercentage <= 50) {
                 timerProgress.style.background = '#ffa502';
             } else {
-                timerProgress.style.background = 'var(--whatsapp-green)';
+                timerProgress.style.background = 'var(--primary-color)';
             }
         }
 
@@ -1573,7 +1063,6 @@
         function endSession() {
             isSessionActive = false;
             clearInterval(sessionTimerInterval);
-            chatLock.style.display = 'flex';
             sessionTimer.style.display = 'none';
             localStorage.removeItem('jovira_session');
             showToast('Session ended. Start a new session to continue.');
@@ -1582,10 +1071,9 @@
         // Extend session
         function extendSession() {
             if (isSessionActive) {
-                sessionTimeRemaining += 10 * 60; // Add 10 minutes
+                sessionTimeRemaining += 10 * 60;
                 updateTimerDisplay();
                 
-                // Update session in localStorage
                 const sessionData = {
                     expires: Date.now() + (sessionTimeRemaining * 1000)
                 };
@@ -1612,20 +1100,11 @@
 
         // Setup event listeners
         function setupEventListeners() {
-            // Image upload handling
             imageBtn.addEventListener('click', () => imageUpload.click());
             imageUpload.addEventListener('change', handleImageUpload);
             
-            // Voice recording
             voiceBtn.addEventListener('click', toggleVoiceRecording);
             
-            // Image modal
-            modalClose.addEventListener('click', closeImageModal);
-            imageModal.addEventListener('click', (e) => {
-                if (e.target === imageModal) closeImageModal();
-            });
-            
-            // Input typing state
             input.addEventListener('input', handleInputTyping);
             input.addEventListener('focus', () => {
                 inputWrapper.classList.add('typing');
@@ -1636,7 +1115,6 @@
                 }
             });
             
-            // Keyboard shortcuts
             document.addEventListener('keydown', (e) => {
                 if (e.ctrlKey && e.key === 'k') {
                     e.preventDefault();
@@ -1644,10 +1122,6 @@
                 }
             });
 
-            // Menu button
-            menuBtn.addEventListener('click', showSidebar);
-            
-            // Timer controls
             extendSessionBtn.addEventListener('click', extendSession);
             pauseSessionBtn.addEventListener('click', toggleSessionPause);
         }
@@ -1666,13 +1140,11 @@
             const file = event.target.files[0];
             if (!file) return;
 
-            // Check if file is an image
             if (!file.type.startsWith('image/')) {
                 showToast('Please upload an image file!');
                 return;
             }
 
-            // Check file size (max 5MB)
             if (file.size > 5 * 1024 * 1024) {
                 showToast('Image size should be less than 5MB!');
                 return;
@@ -1682,13 +1154,9 @@
             reader.onload = function(e) {
                 const imageData = e.target.result;
                 addMessage("User", "I uploaded an image for analysis:", imageData);
-                
-                // Analyze the image
                 analyzeImage(file);
             };
             reader.readAsDataURL(file);
-
-            // Reset file input
             event.target.value = '';
         }
 
@@ -1742,8 +1210,6 @@
                 mediaRecorder.onstop = async () => {
                     const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
                     await processAudioRecording(audioBlob);
-                    
-                    // Stop all tracks
                     stream.getTracks().forEach(track => track.stop());
                 };
 
@@ -1751,8 +1217,6 @@
                 isRecording = true;
                 voiceBtn.classList.add('recording');
                 voiceBtn.innerHTML = '<i class="fas fa-stop"></i>';
-                
-                // Add recording indicator to chat
                 addVoiceRecordingIndicator();
                 
             } catch (error) {
@@ -1768,8 +1232,6 @@
                 isRecording = false;
                 voiceBtn.classList.remove('recording');
                 voiceBtn.innerHTML = '<i class="fas fa-microphone"></i>';
-                
-                // Remove recording indicator
                 removeVoiceRecordingIndicator();
             }
         }
@@ -1820,7 +1282,6 @@
                 
                 if (data.transcript) {
                     addMessage("Bot", `${data.message}\n\n"${data.transcript}"`);
-                    // Use the transcript as input
                     input.value = data.transcript;
                     handleInputTyping();
                 } else if (data.error) {
@@ -1830,22 +1291,6 @@
                 hideTypingIndicator();
                 addMessage("Bot", "Sorry, I couldn't process the voice message. Please try again or type your message.");
             }
-        }
-
-        // Open image in modal
-        function openImageModal(imageSrc) {
-            modalImage.src = imageSrc;
-            imageModal.classList.add('active');
-            document.body.style.overflow = 'hidden';
-        }
-
-        // Close image modal
-        function closeImageModal() {
-            imageModal.classList.remove('active');
-            document.body.style.overflow = 'auto';
-            setTimeout(() => {
-                modalImage.src = '';
-            }, 300);
         }
 
         // Create avatar element
@@ -1913,65 +1358,7 @@
             }
             
             saveChatsList(chats);
-            updateChatsList();
             return existingChat;
-        }
-
-        // Update chats list display
-        function updateChatsList() {
-            const chats = getChatsList();
-            chatsList.innerHTML = '';
-
-            if (chats.length === 0) {
-                chatsList.innerHTML = `
-                    <div class="no-chats">
-                        <i class="fas fa-comment-slash"></i>
-                        <div>No conversations yet</div>
-                        <div style="font-size: 12px; margin-top: 8px;">Start a new chat to begin!</div>
-                    </div>
-                `;
-                return;
-            }
-
-            chats.forEach(chat => {
-                const chatItem = document.createElement('div');
-                chatItem.className = `chat-item ${chat.id === currentChatId ? 'active' : ''}`;
-                chatItem.innerHTML = `
-                    <div class="chat-item-header">
-                        <div class="chat-title">${chat.title}</div>
-                        <div class="chat-date">${formatDate(chat.lastActivity)}</div>
-                    </div>
-                    <div class="chat-preview">${chat.lastMessage || 'No messages yet'}</div>
-                `;
-                chatItem.onclick = () => switchToChat(chat.id);
-                chatsList.appendChild(chatItem);
-            });
-        }
-
-        // Format date for display
-        function formatDate(dateString) {
-            const date = new Date(dateString);
-            const now = new Date();
-            const diffTime = Math.abs(now - date);
-            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-            
-            if (diffDays === 0) {
-                return 'Today';
-            } else if (diffDays === 1) {
-                return 'Yesterday';
-            } else if (diffDays < 7) {
-                return `${diffDays} days ago`;
-            } else {
-                return date.toLocaleDateString();
-            }
-        }
-
-        // Switch to different chat
-        function switchToChat(chatId) {
-            currentChatId = chatId;
-            loadChatHistory(chatId);
-            closeSidebar();
-            showToast('Chat loaded!');
         }
 
         // Create new chat
@@ -1982,17 +1369,6 @@
             showToast('New chat started!');
         }
 
-        // Show sidebar
-        function showSidebar() {
-            chatsSidebar.classList.add('active');
-            updateChatsList();
-        }
-
-        // Close sidebar
-        function closeSidebar() {
-            chatsSidebar.classList.remove('active');
-        }
-
         // Auto-resize textarea
         input.addEventListener('input', function() {
             this.style.height = 'auto';
@@ -2001,17 +1377,14 @@
 
         // Process message content for special formatting
         function processMessageContent(text) {
-            // Convert URLs to clickable links
             text = text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="message-link">$1</a>');
             
-            // Process LaTeX equations
             text = text.replace(/!\[Equation\]\((data:image\/png;base64,[^)]+)\)/g, function(match, imageData) {
                 return `<div class="latex-equation">
                     <img src="${imageData}" alt="LaTeX Equation">
                 </div>`;
             });
             
-            // Process mathematical visualizations
             text = text.replace(/!\[(.*?)\]\((data:image\/png;base64,[^)]+)\)/g, function(match, altText, imageData) {
                 return `<div class="math-visualization">
                     <div class="visualization-title">${altText}</div>
@@ -2019,12 +1392,10 @@
                 </div>`;
             });
             
-            // Process math results
             text = text.replace(/\*\*🧮 CALCULATIONS:\*\*\s*```\s*([^`]+)\s*```/g, function(match, calculation) {
                 return `<div class="math-result">${calculation}</div>`;
             });
             
-            // Convert code blocks with enhanced features
             text = text.replace(/```(\w+)?\n([\s\S]*?)```/g, function(match, language, code) {
                 const lang = language || 'text';
                 const codeId = 'code_' + Date.now();
@@ -2048,29 +1419,11 @@
                 </div>`;
             });
             
-            // Convert inline code
             text = text.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
-            
-            // Convert line breaks
             text = text.replace(/\n/g, '<br>');
-            
-            // Process bold text
             text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
             
             return text;
-        }
-
-        // Format math expressions with proper symbols
-        function formatMathExpression(expression) {
-            // Replace operators with proper symbols
-            expression = expression.replace(/\*/g, '×');
-            expression = expression.replace(/\//g, '÷');
-            expression = expression.replace(/sqrt\(/g, '√(');
-            
-            // Handle percentage calculations
-            expression = expression.replace(/(\d+)%/g, '$1%');
-            
-            return expression;
         }
 
         // Escape HTML for code blocks
@@ -2086,11 +1439,10 @@
             if (!codeElement) return;
             
             const code = codeElement.textContent;
-            const language = 'python'; // Default for demo
+            const language = 'python';
             
             showToast(`Running ${language.toUpperCase()} code...`);
             
-            // Simulate code execution
             setTimeout(() => {
                 const output = simulateCodeExecution(code, language);
                 addMessage('Bot', `**Code Execution Result**\n\n**Language**: ${language}\n**Output**:\n\`\`\`\n${output}\n\`\`\``);
@@ -2130,36 +1482,35 @@
                 return;
             }
 
+            // Remove welcome message when user sends first message
+            if (sender === 'User' && !hasUserSentMessage) {
+                removeWelcomeMessage();
+            }
+
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message', sender.toLowerCase());
             
-            // Create avatar
             const avatar = createAvatar(sender, sender === 'User' ? USER_AVATAR : JOVIRA_AVATAR);
             
             const contentDiv = document.createElement('div');
             contentDiv.classList.add('message-content');
             
-            // Process content for special formatting
             const processedContent = processMessageContent(text);
             contentDiv.innerHTML = processedContent;
             
-            // Add image if available
             if (imageUrl) {
                 const img = document.createElement('img');
                 img.src = imageUrl;
                 if (sender === 'User') {
                     img.classList.add('uploaded-image');
                     img.alt = 'Uploaded image';
-                    img.onclick = () => openImageModal(imageUrl);
                 } else {
                     img.classList.add('message-image');
                     img.alt = 'Generated image';
-                    img.onclick = () => openImageModal(imageUrl);
                 }
                 contentDiv.appendChild(img);
             }
             
-            // Add audio if available
             if (audioUrl) {
                 const audio = document.createElement('audio');
                 audio.controls = true;
@@ -2169,7 +1520,6 @@
                 contentDiv.appendChild(audio);
             }
             
-            // Add timestamp
             const now = new Date();
             const timeString = now.getHours().toString().padStart(2, '0') + ':' + 
                               now.getMinutes().toString().padStart(2, '0');
@@ -2178,7 +1528,6 @@
             timeSpan.textContent = timeString;
             contentDiv.appendChild(timeSpan);
             
-            // Add elements to message
             if (sender === 'User') {
                 messageDiv.appendChild(contentDiv);
                 messageDiv.appendChild(avatar);
@@ -2189,16 +1538,13 @@
             
             chatBox.appendChild(messageDiv);
             
-            // Smooth scroll to bottom
             chatBox.scrollTo({
                 top: chatBox.scrollHeight,
                 behavior: 'smooth'
             });
             
-            // Save to localStorage
             saveMessageToHistory(sender, text, imageUrl, audioUrl);
             
-            // Process MathJax for LaTeX rendering
             if (window.MathJax) {
                 MathJax.typesetPromise([contentDiv]).catch((err) => {
                     console.log('MathJax typeset error:', err);
@@ -2255,7 +1601,6 @@
             });
             localStorage.setItem(currentChatId, JSON.stringify(chatHistory));
             
-            // Update chat list
             if (sender === 'User') {
                 updateChatInList(currentChatId, text);
             }
@@ -2266,51 +1611,16 @@
             const chatHistory = JSON.parse(localStorage.getItem(chatId) || '[]');
             chatBox.innerHTML = '';
             
-            // Add welcome message if no history
+            // Show welcome message only for new chats
             if (chatHistory.length === 0) {
-                const welcomeMsg = document.createElement('div');
-                welcomeMsg.classList.add('welcome-message');
-                welcomeMsg.innerHTML = `
-                    <i class="fas fa-robot"></i>
-                    <h3 style="margin-bottom: 8px; color: var(--whatsapp-black);">Hello! I'm Jovira</h3>
-                    <p style="margin-bottom: 15px; line-height: 1.5;">Your intelligent assistant from Aidnest Africa! What would you like to know?</p>
-                    
-                    <div class="quick-actions">
-                        <div class="quick-action" onclick="askQuestion('Calculate 25 × 4 + 15')">
-                            <i class="fas fa-calculator"></i> Math
-                        </div>
-                        <div class="quick-action" onclick="askQuestion('Show me Python code for a calculator')">
-                            <i class="fas fa-code"></i> Code
-                        </div>
-                        <div class="quick-action" onclick="askQuestion('Tell me about Netra services')">
-                            <i class="fas fa-mobile-alt"></i> Netra
-                        </div>
-                        <div class="quick-action" onclick="askQuestion('What is 15% of 200?')">
-                            <i class="fas fa-percentage"></i> Percentage
-                        </div>
-                    </div>
-                `;
-                chatBox.appendChild(welcomeMsg);
+                showWelcomeMessage();
+            } else {
+                hasUserSentMessage = true;
             }
             
-            // Load messages
             chatHistory.forEach(msg => {
                 addMessage(msg.sender, msg.text, msg.imageUrl, msg.audioUrl);
             });
-        }
-
-        // Clear current chat
-        function clearCurrentChat() {
-            if (confirm('Are you sure you want to clear this chat? This action cannot be undone.')) {
-                chatBox.innerHTML = '';
-                loadWelcomeMessage();
-                showToast('Chat cleared! 🗑️');
-            }
-        }
-
-        // Load welcome message
-        function loadWelcomeMessage() {
-            // Welcome message is already in HTML
         }
 
         // Ask question from quick action
@@ -2347,7 +1657,6 @@
             sendBtn.disabled = true;
             inputWrapper.classList.remove('typing');
 
-            // Show typing indicator
             showTypingIndicator();
 
             try {
@@ -2366,12 +1675,10 @@
                 } else {
                     addMessage("Bot", data.reply);
                     
-                    // Update session status if provided
                     if (data.time_remaining !== undefined) {
                         updateTimerDisplay();
                     }
                     
-                    // Show session warning if provided
                     if (data.session_warning) {
                         showToast(data.session_warning);
                     }
@@ -2382,53 +1689,6 @@
             } finally {
                 sendBtn.disabled = false;
                 input.focus();
-            }
-        }
-
-        // Handle math calculations
-        function handleMathCalculation(question) {
-            try {
-                // Extract numbers and operators
-                const numbers = question.match(/\d+(\.\d+)?/g);
-                const operators = question.match(/[\+\-\*\/\×\÷\%]/g);
-                
-                if (!numbers || numbers.length < 2) {
-                    return "I need at least two numbers to perform a calculation. Please provide a valid mathematical expression.";
-                }
-                
-                // Convert to numbers
-                const num1 = parseFloat(numbers[0]);
-                const num2 = parseFloat(numbers[1]);
-                
-                let result, expression;
-                
-                // Determine operation based on question
-                if (question.includes('+') || question.toLowerCase().includes('add')) {
-                    result = num1 + num2;
-                    expression = `${num1} + ${num2}`;
-                } else if (question.includes('-') || question.toLowerCase().includes('subtract') || question.toLowerCase().includes('minus')) {
-                    result = num1 - num2;
-                    expression = `${num1} - ${num2}`;
-                } else if (question.includes('*') || question.includes('×') || question.toLowerCase().includes('multiply') || question.toLowerCase().includes('times')) {
-                    result = num1 * num2;
-                    expression = `${num1} × ${num2}`;
-                } else if (question.includes('/') || question.includes('÷') || question.toLowerCase().includes('divide') || question.toLowerCase().includes('over')) {
-                    if (num2 === 0) {
-                        return "Division by zero is not allowed. Please provide a valid divisor.";
-                    }
-                    result = num1 / num2;
-                    expression = `${num1} ÷ ${num2}`;
-                } else if (question.includes('%') || question.toLowerCase().includes('percent') || question.toLowerCase().includes('percentage')) {
-                    result = (num1 * num2) / 100;
-                    expression = `${num2}% of ${num1}`;
-                } else {
-                    return "I can perform addition (+), subtraction (-), multiplication (×), division (÷), and percentage calculations. Please specify the operation.";
-                }
-                
-                return `**Calculation:**\n\`\`\`\n${expression}\n\`\`\`\n\n**Result:**\n\`\`\`\n${result}\n\`\`\``;
-                
-            } catch (error) {
-                return "I couldn't process that mathematical expression. Please try a different format, like 'Calculate 25 × 4 + 15' or 'What is 15% of 200?'";
             }
         }
 
@@ -2444,15 +1704,6 @@
             if (event.key === "Enter" && !event.shiftKey) {
                 event.preventDefault();
                 sendMessage();
-            }
-        });
-
-        closeSidebarBtn.addEventListener('click', closeSidebar);
-
-        // Close sidebar when clicking outside on mobile
-        chatsSidebar.addEventListener('click', (e) => {
-            if (e.target === chatsSidebar) {
-                closeSidebar();
             }
         });
 
@@ -2477,11 +1728,6 @@
                 this.style.display = 'none';
                 this.nextElementSibling.style.display = 'flex';
             };
-        }
-
-        // View chat history function
-        function viewChatHistory() {
-            showSidebar();
         }
     </script>
 </body>
