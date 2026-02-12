@@ -1,11 +1,11 @@
 import re
-import sympy as sp
-import matplotlib.pyplot as plt
-import numpy as np
+import sympy as sp # type: ignore
+import matplotlib.pyplot as plt # type: ignore
+import numpy as np # type: ignore
 from io import BytesIO
 import base64
 import math
-from matplotlib.patches import Circle, Rectangle
+from matplotlib.patches import Circle, Rectangle # type: ignore
 
 def render_latex_equation(latex_code):
     """Render LaTeX equation to base64 image"""
