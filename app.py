@@ -87,6 +87,15 @@ def route_to_engine(message):
     if any(keyword in message_lower for keyword in biology_keywords):
         return 'biology'
     
+    # Strobid-specific queries
+    strobid_keywords = [
+        'strobid', 'strobid.com', 'strobid domain', 'strobid website',
+        'about strobid', 'strobid services', 'strobid company'
+    ]
+    
+    if any(keyword in message_lower for keyword in strobid_keywords):
+        return 'strobid'
+    
     # Default to general AI (your existing OpenAI flow)
     return 'general'
 
@@ -214,6 +223,10 @@ def chat():
             engine_response = biology_engine.process_biology_query(message)
             ai_response = format_engine_response(engine_response, 'biology')
             
+        elif engine_type == 'strobid':
+            # Handle Strobid-specific queries
+            ai_response = get_strobid_response(message)
+            
         else:
             # Use existing OpenAI flow for general queries
             ai_response = get_ai_response(message, user_session['conversation_context'], user_session)
@@ -246,7 +259,7 @@ def chat():
         # Fallback response
         fallback_responses = [
             "I've searched my knowledge but couldn't find specific information for your query. Could you try asking in a different way?",
-            "Let me check my knowledge base... In the meantime, for Netra-specific questions you can visit https://ai.strobid.com",
+            "Let me check my knowledge base... In the meantime, you can visit https://ai.strobid.com for more information!",
             "I'm having trouble finding that specific information. Would you like me to help you with something else?"
         ]
         
@@ -271,9 +284,101 @@ def chat():
         print(f"Chat error: {e}")
         error_responses = [
             "I'm experiencing some technical difficulties right now. Please try again in a moment! 🔄",
-            "My services seem to be temporarily unavailable. You can visit https://ai.strobid.com directly for Netra information! 🌐",
+            "My services seem to be temporarily unavailable. You can visit https://ai.strobid.com directly for more information! 🌐",
         ]
         return jsonify({"reply": random.choice(error_responses)})
+
+def get_strobid_response(message):
+    """Handle Strobid-specific queries"""
+    message_lower = message.lower()
+    
+    # Strobid knowledge base
+    if "what is strobid" in message_lower or "about strobid" in message_lower:
+        return """
+🌟 **About Strobid**
+
+Strobid is an innovative technology company dedicated to creating intelligent AI solutions and digital experiences. Our flagship product is **Jovira**, your intelligent AI assistant that you're chatting with right now!
+
+**What We Do:**
+- 🤖 AI-powered chat assistants
+- 💡 Intelligent automation solutions
+- 🎨 Digital experience design
+- 🌐 Web application development
+- 📊 Data analysis and visualization
+
+**Our Mission:**
+To make artificial intelligence accessible, useful, and delightful for everyone through intuitive and powerful applications.
+
+Visit us at **https://strobid.com** to learn more!
+"""
+    
+    elif "strobid services" in message_lower or "strobid products" in message_lower:
+        return """
+🛠️ **Strobid Services & Products**
+
+**Our Main Products:**
+1. **Jovira AI Assistant** - You're using it now! Intelligent chat, image analysis, voice processing, and more
+2. **AI Consulting** - Helping businesses integrate AI solutions
+3. **Custom Chatbots** - Tailored AI assistants for specific business needs
+4. **Data Visualization Tools** - Turn complex data into beautiful insights
+5. **Educational AI** - Learning platforms powered by artificial intelligence
+
+**Coming Soon:**
+- Advanced analytics dashboard
+- Multi-language support expansion
+- Enterprise AI solutions
+
+Contact us through our website for custom solutions!
+"""
+    
+    elif "strobid team" in message_lower or "who made strobid" in message_lower:
+        return """
+👥 **The Strobid Team**
+
+Strobid is led by **Nowamaani Donath**, a visionary tech entrepreneur from Kampala, Uganda, East Africa.
+
+**Our Team Values:**
+- Innovation at the core
+- User-first design philosophy
+- African tech leadership
+- Global AI accessibility
+- Continuous learning and improvement
+
+We're a passionate team of developers, designers, and AI specialists working to bring cutting-edge technology to users worldwide.
+"""
+    
+    elif "strobid contact" in message_lower or "contact strobid" in message_lower:
+        return """
+📬 **Contact Strobid**
+
+We'd love to hear from you!
+
+**Website:** https://strobid.com
+**Email:** info@strobid.com
+**Location:** Kampala, Uganda, East Africa
+**Timezone:** East Africa Time (EAT, UTC+3)
+
+**Social Media:**
+- Twitter: @StrobidAI
+- LinkedIn: /company/strobid
+
+For support inquiries, just ask me right here!
+"""
+    
+    else:
+        return """
+I'd be happy to tell you about Strobid! 
+
+**Strobid** is the company behind Jovira, your AI assistant. We specialize in creating intelligent AI solutions and digital experiences.
+
+What would you like to know about Strobid?
+- About us
+- Our services
+- Our team
+- Contact information
+
+Just ask! 😊
+"""
 
 def get_ai_response(message, conversation_context, user_session=None):
     """Enhanced AI response with memory, calculations, and proper formatting"""
@@ -323,21 +428,32 @@ def get_ai_response(message, conversation_context, user_session=None):
         
         # Build comprehensive system message with enhanced memory
         system_message = f"""
-        You are Jovira, an AI assistant created by Kakore Labs (Aidnest Africa's programming hub). 
-        You serve as a team member for Netra but have diverse knowledge across multiple domains.
+        You are Jovira, an intelligent AI assistant created by **Strobid** (formerly Kakore Labs). 
+        You serve as the primary AI interface for Strobid's products and services.
 
         COMPANY INFORMATION:
-        - CEO: Nowamaani Donath
-        - Companies: Aidnest Africa, Netra App, Kakore Labs
-        - Location: Kampala, Uganda, East Africa
-        - Timezone: East Africa Time (EAT, UTC+3)
-        - Website: https://ai.strobid.com
+        - **CEO & Founder**: Nowamaani Donath
+        - **Company**: Strobid (https://strobid.com)
+        - **Location**: Kampala, Uganda, East Africa
+        - **Timezone**: East Africa Time (EAT, UTC+3)
+        - **Main Website**: https://strobid.com
+        - **AI Platform**: https://ai.strobid.com
+
+        ABOUT STROBID:
+        Strobid is an innovative technology company specializing in AI-powered solutions. 
+        Our mission is to make artificial intelligence accessible, useful, and delightful for everyone.
+        
+        **Key Products:**
+        - **Jovira AI Assistant** (that's me!) - Intelligent chat, image analysis, voice processing, code generation
+        - **Strobid AI Platform** - Enterprise AI solutions
+        - **Custom Chatbots** - Tailored AI assistants for specific business needs
+        - **Data Visualization Tools** - Transform data into insights
 
         YOUR CAPABILITIES:
-        - Primary role: Netra customer service and support
-        - Secondary: General AI assistant with diverse knowledge
+        - Primary role: Strobid's AI ambassador and customer support
+        - General AI assistant with diverse knowledge across all domains
         - Mathematical calculations and problem solving
-        - Code generation and explanation
+        - Code generation and explanation (Python, JavaScript, HTML/CSS, etc.)
         - External research via Wikipedia and Google
         - Memory retention across conversations
         - LaTeX equation rendering and mathematical visualizations
@@ -345,29 +461,34 @@ def get_ai_response(message, conversation_context, user_session=None):
         - Biology illustrations and systems
         - Chemical reaction mechanisms
         - Scientific visualizations across all domains
+        - Image analysis and description
+        - Voice transcription and processing
+        - DALL-E image generation
 
         CURRENT CONTEXT:
         {diverse_context}
 
         RESPONSE GUIDELINES:
-        - For Netra/service queries: Provide specific, accurate information using current website data at https://ai.strobid.com
+        - Be friendly, helpful, and enthusiastic about Strobid's mission
+        - For Strobid-specific questions: Provide accurate information about the company, products, team
         - For calculations: Show step-by-step working and final result in code blocks
         - For code: Format code properly using markdown code blocks with language specification
         - For mathematical expressions: Use LaTeX formatting for complex equations
         - For scientific queries: Create appropriate diagrams and explanations
         - For factual queries: Use external research when available, cite sources when helpful
-        - For person searches: Use the search results to provide information about the person
         - Maintain conversation continuity using memory context
-        - Use emojis to make conversations engaging
-        - Speak as a knowledgeable team member, not just a service bot
+        - Use emojis to make conversations engaging and friendly
+        - Speak as a knowledgeable team member, proud of Strobid's work
         - For time: Always specify timezone (EAT/UTC/Zulu etc.)
         - Format mathematical expressions and code clearly
         - Mention session time remaining when appropriate
+        - When appropriate, invite users to explore Strobid's products
 
         MEMORY & CONTINUITY:
         - Remember user preferences and previous topics
         - Maintain context across multiple messages
         - Reference previous calculations or discussions when relevant
+        - Remember user's name if shared
 
         SESSION INFORMATION:
         - This chat session lasts for 20 minutes
@@ -408,7 +529,7 @@ def get_ai_response(message, conversation_context, user_session=None):
         
     except Exception as e:
         print(f"AI response error: {e}")
-        return "I'm having trouble accessing information right now. For Netra-specific questions, please visit https://ai.strobid.com directly."
+        return "I'm having trouble accessing information right now. Please try again in a moment! You can also visit https://strobid.com for more information about our products."
 
 @app.route("/session_status", methods=["GET"])
 def session_status():
@@ -442,9 +563,9 @@ def start_new_session():
     user_session = initialize_user_session()
     
     welcome_messages = [
-        "🔄 **New Session Started**! Welcome back! You now have 20 minutes to chat with Jovira. How can I help you today?",
-        "🌟 **Fresh Session Activated**! Hello again! Your 20-minute chat timer has started. What would you like to discuss?",
-        "🆕 **New Chat Session**! Great to see you! You have 20 minutes for this conversation. How may I assist you?"
+        "🔄 **New Session Started**! Welcome back to Jovira, your AI assistant from Strobid! You now have 20 minutes to chat. How can I help you today?",
+        "🌟 **Fresh Session Activated**! Hello again! Your 20-minute chat timer has started. What would you like to discuss with your Strobid AI assistant?",
+        "🆕 **New Chat Session**! Great to see you! You have 20 minutes for this conversation. How may I assist you today?"
     ]
     
     user_session['conversation_context'].append({
