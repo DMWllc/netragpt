@@ -10,4 +10,4 @@ matplotlib==3.9.4
 numpy==2.2.3
 Pillow==11.1.0
 networkx==3.4.2
-pysqlite3-binary==0.5.4
+pysqlite3-binary==0.5.4.post2
