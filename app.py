@@ -8,6 +8,7 @@ import time
 import secrets
 from datetime import timedelta
 import base64 # type: ignore
+import traceback
 
 # Import from our new modules
 from session_manager import (
@@ -37,7 +38,11 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=20)
 CORS(app)
 
 # Initialize OpenAI client
-client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+api_key = os.environ.get("OPENAI_API_KEY")
+print(f"OpenAI API Key loaded: {'Yes' if api_key else 'No'}")
+if api_key:
+    print(f"API Key starts with: {api_key[:10]}...")
+client = OpenAI(api_key=api_key)
 
 def route_to_engine(message):
     """Determine which engine to use based on message content"""
@@ -259,7 +264,7 @@ def chat():
         # Fallback response
         fallback_responses = [
             "I've searched my knowledge but couldn't find specific information for your query. Could you try asking in a different way?",
-            "Let me check my knowledge base... In the meantime, you can visit https://ai.strobid.com for more information!",
+            "Let me check my knowledge base... In the meantime, you can visit https://strobid.com for more information!",
             "I'm having trouble finding that specific information. Would you like me to help you with something else?"
         ]
         
@@ -282,9 +287,10 @@ def chat():
 
     except Exception as e:
         print(f"Chat error: {e}")
+        traceback.print_exc()
         error_responses = [
             "I'm experiencing some technical difficulties right now. Please try again in a moment! 🔄",
-            "My services seem to be temporarily unavailable. You can visit https://ai.strobid.com directly for more information! 🌐",
+            "My services seem to be temporarily unavailable. You can visit https://strobid.com directly for more information! 🌐",
         ]
         return jsonify({"reply": random.choice(error_responses)})
 
@@ -428,7 +434,7 @@ def get_ai_response(message, conversation_context, user_session=None):
         
         # Build comprehensive system message with enhanced memory
         system_message = f"""
-        You are Jovira, an intelligent AI assistant created by **Strobid** (formerly Kakore Labs). 
+        You are Jovira, an intelligent AI assistant created by **Strobid**. 
         You serve as the primary AI interface for Strobid's products and services.
 
         COMPANY INFORMATION:
@@ -513,6 +519,9 @@ def get_ai_response(message, conversation_context, user_session=None):
         # Add current message
         context_messages.append({"role": "user", "content": message})
         
+        # Debug: Print that we're calling OpenAI
+        print(f"Sending request to OpenAI for message: {message[:50]}...")
+        
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=context_messages,
@@ -521,6 +530,7 @@ def get_ai_response(message, conversation_context, user_session=None):
         )
         
         ai_response = response.choices[0].message.content.strip()
+        print(f"Received response from OpenAI: {ai_response[:50]}...")
         
         # Enhance memory with this interaction
         enhance_memory_retention(user_session, message, ai_response)
@@ -529,7 +539,8 @@ def get_ai_response(message, conversation_context, user_session=None):
         
     except Exception as e:
         print(f"AI response error: {e}")
-        return "I'm having trouble accessing information right now. Please try again in a moment! You can also visit https://strobid.com for more information about our products."
+        traceback.print_exc()
+        return "I'm here and ready to help! What would you like to know about Strobid or our AI services?"
 
 @app.route("/session_status", methods=["GET"])
 def session_status():
@@ -626,6 +637,7 @@ def analyze_image_endpoint():
             
     except Exception as e:
         print(f"Image analysis endpoint error: {e}")
+        traceback.print_exc()
         return jsonify({"error": "Error analyzing image"}), 500
 
 @app.route("/transcribe_audio", methods=["POST"])
@@ -662,6 +674,7 @@ def transcribe_audio_endpoint():
             
     except Exception as e:
         print(f"Audio transcription endpoint error: {e}")
+        traceback.print_exc()
         return jsonify({"error": "Error transcribing audio"}), 500
 
 @app.route("/generate_image", methods=["POST"])
@@ -692,6 +705,7 @@ def generate_image_endpoint():
             
     except Exception as e:
         print(f"Image generation endpoint error: {e}")
+        traceback.print_exc()
         return jsonify({"error": "Error generating image"}), 500
 
 @app.route("/clear_history", methods=["POST"])
@@ -746,6 +760,7 @@ def generate_scientific_diagram():
             
     except Exception as e:
         print(f"Scientific diagram generation error: {e}")
+        traceback.print_exc()
         return jsonify({"error": "Error generating scientific diagram"}), 500
 
 if __name__ == "__main__":
