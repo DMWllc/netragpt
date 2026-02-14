@@ -246,7 +246,7 @@ def chat():
         # Fallback response
         fallback_responses = [
             "I've searched my knowledge but couldn't find specific information for your query. Could you try asking in a different way?",
-            "Let me check my knowledge base... In the meantime, for Netra-specific questions you can visit https://myaidnest.com",
+            "Let me check my knowledge base... In the meantime, for Netra-specific questions you can visit https://ai.strobid.com",
             "I'm having trouble finding that specific information. Would you like me to help you with something else?"
         ]
         
@@ -271,7 +271,7 @@ def chat():
         print(f"Chat error: {e}")
         error_responses = [
             "I'm experiencing some technical difficulties right now. Please try again in a moment! 🔄",
-            "My services seem to be temporarily unavailable. You can visit https://myaidnest.com directly for Netra information! 🌐",
+            "My services seem to be temporarily unavailable. You can visit https://ai.strobid.com directly for Netra information! 🌐",
         ]
         return jsonify({"reply": random.choice(error_responses)})
 
@@ -331,6 +331,7 @@ def get_ai_response(message, conversation_context, user_session=None):
         - Companies: Aidnest Africa, Netra App, Kakore Labs
         - Location: Kampala, Uganda, East Africa
         - Timezone: East Africa Time (EAT, UTC+3)
+        - Website: https://ai.strobid.com
 
         YOUR CAPABILITIES:
         - Primary role: Netra customer service and support
@@ -349,7 +350,7 @@ def get_ai_response(message, conversation_context, user_session=None):
         {diverse_context}
 
         RESPONSE GUIDELINES:
-        - For Netra/service queries: Provide specific, accurate information using current website data
+        - For Netra/service queries: Provide specific, accurate information using current website data at https://ai.strobid.com
         - For calculations: Show step-by-step working and final result in code blocks
         - For code: Format code properly using markdown code blocks with language specification
         - For mathematical expressions: Use LaTeX formatting for complex equations
@@ -407,7 +408,7 @@ def get_ai_response(message, conversation_context, user_session=None):
         
     except Exception as e:
         print(f"AI response error: {e}")
-        return "I'm having trouble accessing information right now. For Netra-specific questions, please visit https://myaidnest.com directly."
+        return "I'm having trouble accessing information right now. For Netra-specific questions, please visit https://ai.strobid.com directly."
 
 @app.route("/session_status", methods=["GET"])
 def session_status():
@@ -627,4 +628,6 @@ def generate_scientific_diagram():
         return jsonify({"error": "Error generating scientific diagram"}), 500
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    # Get port from environment variable or default to 8080 for Railway
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port)
