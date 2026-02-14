@@ -1,13 +1,15 @@
-﻿openai>=1.0.0
+﻿cat > requirements.txt << 'EOF'
+openai>=1.0.0
 Flask==3.1.2
 flask-cors==6.0.1
 gunicorn==23.0.0
 beautifulsoup4==4.12.3
 requests==2.31.0
 python-dotenv==1.0.0
-sympy==1.12
-matplotlib==3.7.2
-numpy==1.24.3
-Pillow==10.0.1
-networkx==3.1
-pysqlite3-binary
+sympy==1.13.3
+matplotlib==3.9.4
+numpy==2.2.3
+Pillow==11.1.0
+networkx==3.4.2
+pysqlite3-binary==0.5.4
+EOF
