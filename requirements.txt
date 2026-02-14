@@ -1,5 +1,4 @@
-﻿cat > requirements.txt << 'EOF'
-openai>=1.0.0
+﻿openai>=1.0.0
 Flask==3.1.2
 flask-cors==6.0.1
 gunicorn==23.0.0
@@ -12,4 +11,3 @@ numpy==2.2.3
 Pillow==11.1.0
 networkx==3.4.2
 pysqlite3-binary==0.5.4
-EOF
