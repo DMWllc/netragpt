@@ -43,10 +43,10 @@ def route_to_engine(message):
     """Determine which engine to use based on message content"""
     message_lower = message.lower()
     
-    # Customer service queries (AidNest Africa) - HIGHEST PRIORITY
+    # Customer service queries (Netra) - HIGHEST PRIORITY
     customer_keywords = [
         'support', 'help', 'service', 'issue', 'problem', 'ticket',
-        'aidnest', 'africa', 'technical', 'billing', 'invoice',
+        'netra', 'strobid', 'technical', 'billing', 'invoice',
         'not working', 'broken', 'error', 'urgent', 'netra',
         'customer', 'complaint', 'request', 'assistance'
     ]
@@ -246,7 +246,7 @@ def chat():
         # Fallback response
         fallback_responses = [
             "I've searched my knowledge but couldn't find specific information for your query. Could you try asking in a different way?",
-            "Let me check my knowledge base... In the meantime, for Netra-specific questions you can visit https://ai.strobid.com",
+            "Let me check my knowledge base... In the meantime, for Netra-specific questions you can visit https://strobid.com",
             "I'm having trouble finding that specific information. Would you like me to help you with something else?"
         ]
         
@@ -271,7 +271,7 @@ def chat():
         print(f"Chat error: {e}")
         error_responses = [
             "I'm experiencing some technical difficulties right now. Please try again in a moment! 🔄",
-            "My services seem to be temporarily unavailable. You can visit https://ai.strobid.com directly for Netra information! 🌐",
+            "My services seem to be temporarily unavailable. You can visit https://strobid.com directly for Netra information! 🌐",
         ]
         return jsonify({"reply": random.choice(error_responses)})
 
@@ -323,15 +323,15 @@ def get_ai_response(message, conversation_context, user_session=None):
         
         # Build comprehensive system message with enhanced memory
         system_message = f"""
-        You are Jovira, an AI assistant created by Kakore Labs (Aidnest Africa's programming hub). 
+        You are Jovira, an AI assistant created by Strobid (Strobid's programming hub). 
         You serve as a team member for Netra but have diverse knowledge across multiple domains.
 
         COMPANY INFORMATION:
         - CEO: Nowamaani Donath
-        - Companies: Aidnest Africa, Netra App, Kakore Labs
+        - Companies: Strobid, Netra App
         - Location: Kampala, Uganda, East Africa
         - Timezone: East Africa Time (EAT, UTC+3)
-        - Website: https://ai.strobid.com
+        - Website: https://strobid.com
 
         YOUR CAPABILITIES:
         - Primary role: Netra customer service and support
@@ -350,7 +350,7 @@ def get_ai_response(message, conversation_context, user_session=None):
         {diverse_context}
 
         RESPONSE GUIDELINES:
-        - For Netra/service queries: Provide specific, accurate information using current website data at https://ai.strobid.com
+        - For Netra/service queries: Provide specific, accurate information using current website data at https://strobid.com
         - For calculations: Show step-by-step working and final result in code blocks
         - For code: Format code properly using markdown code blocks with language specification
         - For mathematical expressions: Use LaTeX formatting for complex equations
@@ -408,7 +408,7 @@ def get_ai_response(message, conversation_context, user_session=None):
         
     except Exception as e:
         print(f"AI response error: {e}")
-        return "I'm having trouble accessing information right now. For Netra-specific questions, please visit https://ai.strobid.com directly."
+        return "I'm having trouble accessing information right now. For Netra-specific questions, please visit https://strobid.com directly."
 
 @app.route("/session_status", methods=["GET"])
 def session_status():

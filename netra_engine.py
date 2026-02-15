@@ -7,7 +7,7 @@ class HumanizedNetraEngine:
         self.netra_info = {
             'name': 'Netra',
             'description': 'Professional social app connecting service providers and clients',
-            'website': 'https://myaidnest.com',
+            'website': 'https://netra.strobid.com',
             'play_store': 'Google Play Store',
             'emblem': 'butterfly-like emblem without fill',
             'security': 'No screenshots or screen recording'
