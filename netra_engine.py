@@ -1,5 +1,5 @@
 """
-Netra Engine - With natural conversational responses
+Netra Engine - With context awareness and better keyword matching
 """
 
 import random
@@ -9,7 +9,7 @@ from datetime import datetime
 
 class HumanizedNetraEngine:
     """
-    Netra AI Assistant with natural conversational responses
+    Netra AI Assistant with context awareness
     """
     
     def __init__(self):
@@ -27,14 +27,13 @@ class HumanizedNetraEngine:
                     'The app features service bookings, ratings, music streaming, and professional reels.',
                     'Built by Strobid and based in Kampala, Uganda, serving East Africa.'
                 ],
-                'keywords': ['what is netra', 'about netra', 'netra app', 'netra do', 'what does netra do', 'netra explained', 'tell me about netra', 'netra'],
+                'keywords': [
+                    'what is netra', 'about netra', 'netra app', 'netra do', 
+                    'what does netra do', 'netra explained', 'tell me about netra', 
+                    'netra', 'explain netra', 'tell me about the app'
+                ],
                 'topic': 'general',
-                'url': 'https://netra.strobid.com/about',
-                'question_patterns': [
-                    r'what.*netra',
-                    r'tell.*about.*netra',
-                    r'explain.*netra'
-                ]
+                'url': 'https://netra.strobid.com/about'
             },
             'what_is_strobid': {
                 'title': 'What is Strobid?',
@@ -44,14 +43,13 @@ class HumanizedNetraEngine:
                     'The company focuses on building innovative digital solutions for the East African market.',
                     'Netra is Strobid\'s flagship product - a professional service marketplace app.'
                 ],
-                'keywords': ['what is strobid', 'strobid', 'strobid ltd', 'strobid company', 'about strobid', 'who made netra', 'who created netra'],
+                'keywords': [
+                    'what is strobid', 'strobid', 'strobid ltd', 'strobid company', 
+                    'about strobid', 'who made netra', 'who created netra', 'who built netra',
+                    'company behind netra', 'parent company', 'founder of netra'
+                ],
                 'topic': 'company',
-                'url': 'https://strobid.com/about',
-                'question_patterns': [
-                    r'what.*strobid',
-                    r'who.*(made|created|built).*netra',
-                    r'about.*strobid'
-                ]
+                'url': 'https://strobid.com/about'
             },
             'create_account': {
                 'title': 'How to create a Netra account',
@@ -64,15 +62,14 @@ class HumanizedNetraEngine:
                     'Check your email for a verification code',
                     'Enter the code to verify your account'
                 ],
-                'keywords': ['create account', 'sign up', 'register', 'new account', 'join netra', 'how to create', 'make account', 'create netra account', 'can i create', 'can I create'],
+                'keywords': [
+                    'create account', 'sign up', 'register', 'new account', 'join netra', 
+                    'how to create', 'make account', 'create netra account', 'can i create',
+                    'can I create', 'how do i create', 'how to sign up', 'become a member',
+                    'registration', 'signing up'
+                ],
                 'topic': 'account',
-                'url': 'https://netra.strobid.com/help/create-account.html',
-                'question_patterns': [
-                    r'can (i|one) create (an|a) account',
-                    r'how (do|can) (i|one) (create|make|sign up)',
-                    r'is it possible to create',
-                    r'create (a|an) netra account'
-                ]
+                'url': 'https://netra.strobid.com/help/create-account.html'
             },
             'verify_account': {
                 'title': 'How to verify your account',
@@ -85,15 +82,14 @@ class HumanizedNetraEngine:
                     'Enter the code sent to your phone',
                     'Your account is now verified!'
                 ],
-                'keywords': ['verify account', 'verification', 'confirm account', 'verify email', 'verify phone', 'get verified', 'do i need to verify'],
+                'keywords': [
+                    'verify account', 'verification', 'confirm account', 'verify email', 
+                    'verify phone', 'get verified', 'do i need to verify', 'how to verify',
+                    'account verification', 'email verification', 'phone verification',
+                    'verify my account', 'confirm my account'
+                ],
                 'topic': 'account',
-                'url': 'https://netra.strobid.com/help/verify-account.html',
-                'question_patterns': [
-                    r'(do|must) (i|one) verify',
-                    r'how to verify',
-                    r'verification (process|steps)',
-                    r'is verification required'
-                ]
+                'url': 'https://netra.strobid.com/help/verify-account.html'
             },
             'reset_password': {
                 'title': 'How to reset your password',
@@ -106,15 +102,14 @@ class HumanizedNetraEngine:
                     'Click the link (valid for 1 hour)',
                     'Create a new strong password'
                 ],
-                'keywords': ['reset password', 'forgot password', 'change password', 'new password', 'password reset', 'can i reset', 'lost password'],
+                'keywords': [
+                    'reset password', 'forgot password', 'change password', 'new password', 
+                    'password reset', 'can i reset', 'lost password', 'password recovery',
+                    'forgot my password', 'can\'t login', 'cannot login', 'reset my password',
+                    'change my password'
+                ],
                 'topic': 'account',
-                'url': 'https://netra.strobid.com/help/reset-password.html',
-                'question_patterns': [
-                    r'(can|could) (i|one) reset',
-                    r'(forgot|lost) (my|the) password',
-                    r'how (to|do) (reset|change) password',
-                    r'password (reset|recovery)'
-                ]
+                'url': 'https://netra.strobid.com/help/reset-password.html'
             },
             'delete_account': {
                 'title': 'How to delete your Netra account',
@@ -128,15 +123,15 @@ class HumanizedNetraEngine:
                     'Tap "Permanently Delete"'
                 ],
                 'warnings': ['⚠️ This action is PERMANENT and cannot be undone'],
-                'keywords': ['delete account', 'remove account', 'close account', 'cancel account', 'deactivate', 'delete netra account', 'can i delete'],
+                'keywords': [
+                    'delete account', 'remove account', 'close account', 'cancel account', 
+                    'deactivate', 'delete netra account', 'can i delete', 'how to delete',
+                    'delete my account', 'remove my account', 'close my account',
+                    'account deletion', 'deleting account', 'remove profile',
+                    'what about deleting', 'how about deleting', 'once created delete'
+                ],
                 'topic': 'account',
-                'url': 'https://netra.strobid.com/help/delete-account.html',
-                'question_patterns': [
-                    r'(can|could) (i|one) delete',
-                    r'how (to|do) (delete|remove|close)',
-                    r'is it possible to (delete|remove)',
-                    r'(delete|remove|close) (my|the) account'
-                ]
+                'url': 'https://netra.strobid.com/help/delete-account.html'
             },
             'payments': {
                 'title': 'How payments work on Netra',
@@ -154,15 +149,14 @@ class HumanizedNetraEngine:
                     'No fees for clients - you pay only the service price',
                     'Providers pay a small commission on completed bookings'
                 ],
-                'keywords': ['payment', 'pay', 'how payments work', 'payment methods', 'mobile money', 'credit card', 'debit card', 'can i pay'],
+                'keywords': [
+                    'payment', 'pay', 'how payments work', 'payment methods', 
+                    'mobile money', 'credit card', 'debit card', 'can i pay',
+                    'how do i pay', 'payment process', 'payment system', 'make payment',
+                    'pay for service', 'transaction', 'fees', 'commission'
+                ],
                 'topic': 'payment',
-                'url': 'https://netra.strobid.com/help/payments.html',
-                'question_patterns': [
-                    r'how (do|does) payments? work',
-                    r'what payment methods',
-                    r'can (i|one) pay (with|using)',
-                    r'payment (process|system)'
-                ]
+                'url': 'https://netra.strobid.com/help/payments.html'
             },
             'subscriptions': {
                 'title': 'Manage subscriptions & billing',
@@ -175,15 +169,14 @@ class HumanizedNetraEngine:
                     'Enter payment details',
                     'Confirm subscription'
                 ],
-                'keywords': ['subscription', 'premium', 'plan', 'upgrade', 'downgrade', 'billing', 'subscribe', 'is there a premium'],
+                'keywords': [
+                    'subscription', 'premium', 'plan', 'upgrade', 'downgrade', 
+                    'billing', 'subscribe', 'is there a premium', 'subscription plans',
+                    'monthly plan', 'annual plan', 'pro plan', 'business plan',
+                    'premium features', 'paid plan'
+                ],
                 'topic': 'payment',
-                'url': 'https://netra.strobid.com/help/subscriptions.html',
-                'question_patterns': [
-                    r'(is there|do you have) (a|any) subscription',
-                    r'how (do|can) (i|one) subscribe',
-                    r'premium (plan|features)',
-                    r'what (are the|is the) (plans|pricing)'
-                ]
+                'url': 'https://netra.strobid.com/help/subscriptions.html'
             },
             'notifications': {
                 'title': 'Manage notifications',
@@ -197,15 +190,14 @@ class HumanizedNetraEngine:
                     '• Payment notifications',
                     '• Promotional offers'
                 ],
-                'keywords': ['notification', 'alert', 'notifications', 'turn off notifications', 'manage alerts', 'push notification', 'can i turn off'],
+                'keywords': [
+                    'notification', 'alert', 'notifications', 'turn off notifications', 
+                    'manage alerts', 'push notification', 'can i turn off',
+                    'notification settings', 'stop notifications', 'disable notifications',
+                    'enable notifications', 'get alerts', 'receive notifications'
+                ],
                 'topic': 'settings',
-                'url': 'https://netra.strobid.com/help/notifications.html',
-                'question_patterns': [
-                    r'(can|how to) (turn (off|on)|manage) notifications',
-                    r'notification (settings|preferences)',
-                    r'stop (getting|receiving) alerts',
-                    r'control notifications'
-                ]
+                'url': 'https://netra.strobid.com/help/notifications.html'
             },
             'contact_support': {
                 'title': 'Contact Netra support',
@@ -216,15 +208,14 @@ class HumanizedNetraEngine:
                     'Response time: Within 24 hours',
                     'Support hours: Monday-Friday 8AM-8PM (EAT)'
                 ],
-                'keywords': ['contact support', 'customer service', 'help desk', 'get help', 'support team', 'reach netra', 'how to contact', 'talk to someone'],
+                'keywords': [
+                    'contact support', 'customer service', 'help desk', 'get help', 
+                    'support team', 'reach netra', 'how to contact', 'talk to someone',
+                    'need help', 'assistance', 'customer care', 'support email',
+                    'live chat', 'contact us', 'reach out'
+                ],
                 'topic': 'support',
-                'url': 'https://netra.strobid.com/help/contact-support.html',
-                'question_patterns': [
-                    r'how (do|can) (i|one) (contact|reach)',
-                    r'(is there|do you have) (a|any) (support|customer service)',
-                    r'need (help|assistance)',
-                    r'talk to (a|someone|human)'
-                ]
+                'url': 'https://netra.strobid.com/help/contact-support.html'
             }
         }
         
@@ -280,42 +271,58 @@ class HumanizedNetraEngine:
         return best_match
     
     def _find_best_article(self, query: str, user_id: str = None) -> Optional[Dict]:
-        """Find the best matching article based on keywords and question patterns"""
+        """Find the best matching article based on keywords and context"""
         query_lower = query.lower()
         
         best_match = None
         best_score = 0
         
+        # First, check if this is a follow-up question using context
+        if user_id and user_id in self.context:
+            last_topic = self.context[user_id].get('last_topic')
+            last_article_id = self.context[user_id].get('last_article_id')
+            
+            # Check for follow-up indicators
+            follow_up_indicators = ['what about', 'how about', 'and', 'also', 'what regarding', 'tell me more about']
+            is_follow_up = any(indicator in query_lower for indicator in follow_up_indicators)
+            
+            if is_follow_up and last_article_id:
+                # If it's a follow-up about a different aspect of the same topic
+                if 'delete' in query_lower or 'remove' in query_lower or 'close' in query_lower:
+                    # They're asking about deletion after creating an account
+                    return self.articles.get('delete_account')
+        
+        # Normal keyword matching
         for article_id, article in self.articles.items():
             score = 0
-            
-            # Check question patterns first (highest priority)
-            for pattern in article.get('question_patterns', []):
-                if re.search(pattern, query_lower):
-                    score += 30
             
             # Check keywords
             for keyword in article.get('keywords', []):
                 if keyword in query_lower:
-                    score += 10
+                    # Exact phrase match gets higher score
+                    if len(keyword) > 10:  # Longer keyword phrases
+                        score += 20
+                    else:
+                        score += 10
             
-            # Check for exact matches in title
-            if query_lower in article['title'].lower():
-                score += 15
+            # Special handling for "what about deleting" queries
+            if article_id == 'delete_account':
+                if any(word in query_lower for word in ['delete', 'deleting', 'remove', 'removing', 'close', 'closing', 'cancel']):
+                    score += 25
             
             # Boost score for very specific queries
-            if 'delete' in query_lower and 'delete' in article['title'].lower():
-                score += 20
-            if 'create' in query_lower and 'create' in article['title'].lower():
-                score += 20
-            if 'verify' in query_lower and 'verify' in article['title'].lower():
-                score += 20
-            if 'reset' in query_lower and 'reset' in article['title'].lower():
-                score += 20
-            if 'pay' in query_lower and 'payment' in article['title'].lower():
-                score += 20
-            if 'contact' in query_lower and 'support' in article['title'].lower():
-                score += 20
+            if 'delete' in query_lower and article_id == 'delete_account':
+                score += 30
+            if 'create' in query_lower and article_id == 'create_account':
+                score += 30
+            if 'verify' in query_lower and article_id == 'verify_account':
+                score += 30
+            if 'reset' in query_lower and article_id == 'reset_password':
+                score += 30
+            if 'pay' in query_lower and article_id == 'payments':
+                score += 30
+            if 'contact' in query_lower and article_id == 'contact_support':
+                score += 30
             
             # Use context from previous conversation
             if user_id and user_id in self.context:
@@ -326,6 +333,7 @@ class HumanizedNetraEngine:
             if score > best_score:
                 best_score = score
                 best_match = article
+                best_match_id = article_id
         
         # If no good match, check for general help
         if best_score < 5 and any(word in query_lower for word in ['help', 'support', 'question', 'assist']):
@@ -334,16 +342,17 @@ class HumanizedNetraEngine:
         return best_match
     
     def _format_article_response(self, article: Dict, query: str) -> str:
-        """Format article into natural response - answers the question first, then gives steps"""
+        """Format article into natural response"""
         response_parts = []
         
-        # Check if this is a yes/no question that needs acknowledgment
-        is_yes_no_question = any(word in query.lower() for word in ['can i', 'do i', 'is it', 'are there', 'will i', 'should i'])
+        # Check if this is a yes/no question
+        yes_no_indicators = ['can i', 'do i', 'is it', 'are there', 'will i', 'should i', 'can you', 'is there']
+        is_yes_no = any(indicator in query.lower() for indicator in yes_no_indicators)
         
         # For yes/no questions, start with acknowledgment
-        if is_yes_no_question and article.get('question_response'):
+        if is_yes_no and article.get('question_response'):
             response_parts.append(article['question_response'])
-            response_parts.append('')  # Empty line for spacing
+            response_parts.append('')
         else:
             # For other questions, just show the title
             response_parts.append(f"**{article['title']}**")
@@ -381,27 +390,32 @@ class HumanizedNetraEngine:
             'general': [
                 "What is Netra?",
                 "Can I create an account?",
-                "How do payments work?"
+                "How do payments work?",
+                "How do I contact support?"
             ],
             'account': [
                 "How do I verify my account?",
                 "Can I reset my password?",
-                "How do I delete my account?"
+                "How do I delete my account?",
+                "What about deleting my account?"
             ],
             'payment': [
                 "How do payments work?",
                 "What payment methods are accepted?",
-                "Are there subscription plans?"
+                "Are there subscription plans?",
+                "How do I get a refund?"
             ],
             'settings': [
                 "How do I manage notifications?",
                 "Can I change my profile?",
-                "Privacy settings"
+                "Privacy settings",
+                "How to update my info?"
             ],
             'support': [
                 "How do I contact support?",
                 "What are your support hours?",
-                "Can I talk to someone?"
+                "Can I talk to someone?",
+                "Email support"
             ]
         }
         
@@ -433,7 +447,7 @@ class HumanizedNetraEngine:
         return suggestions
     
     def process_query(self, message: str, user_id: str = None) -> Dict[str, Any]:
-        """Process user query with natural conversational responses"""
+        """Process user query with context awareness"""
         try:
             print(f"\n🤔 Processing: {message}")
             
@@ -455,7 +469,8 @@ class HumanizedNetraEngine:
                     'suggestions': [
                         "What is Netra?",
                         "Can I create an account?",
-                        "How do payments work?"
+                        "How do payments work?",
+                        "How do I contact support?"
                     ],
                     'confidence': 100,
                     'engine_used': 'netra_engine',
@@ -470,7 +485,8 @@ class HumanizedNetraEngine:
                     'suggestions': [
                         "What is Netra?",
                         "Can I create an account?",
-                        "How do payments work?"
+                        "How do payments work?",
+                        "How do I contact support?"
                     ],
                     'confidence': 100,
                     'engine_used': 'netra_engine',
@@ -490,7 +506,8 @@ class HumanizedNetraEngine:
                     suggestions = [
                         f"Tell me about {article['title']}",
                         "What is Netra?",
-                        "How do payments work?"
+                        "How do payments work?",
+                        "How do I contact support?"
                     ]
                     
                     return {
@@ -507,31 +524,40 @@ class HumanizedNetraEngine:
                             "Link for creating account",
                             "Link for payments",
                             "Link for support",
-                            "What is Netra?"
+                            "Link for deleting account"
                         ],
                         'confidence': 85,
                         'engine_used': 'netra_engine',
                         'timestamp': datetime.now().isoformat()
                     }
             
-            # Not a link request - find best article
+            # Not a link request - find best article with context
             article = self._find_best_article(message, user_id)
             
             if article:
                 print(f"✅ Found: {article['title']}")
                 
-                # Format response with natural language
+                # Format response
                 response = self._format_article_response(article, message)
                 
                 # Get suggestions
                 suggestions = self._get_suggestions(article.get('topic', 'general'), article)
                 
-                # Store context
+                # Store context for follow-up questions
                 if user_id:
                     if user_id not in self.context:
                         self.context[user_id] = {}
+                    
+                    # Find which article ID this is
+                    article_id = None
+                    for aid, a in self.articles.items():
+                        if a == article:
+                            article_id = aid
+                            break
+                    
                     self.context[user_id]['last_topic'] = article.get('topic', 'general')
-                    self.context[user_id]['last_article'] = article['title']
+                    self.context[user_id]['last_article_id'] = article_id
+                    self.context[user_id]['last_article_title'] = article['title']
                 
                 return {
                     'response': response,
@@ -552,7 +578,8 @@ class HumanizedNetraEngine:
                     'suggestions': [
                         "What is Netra?",
                         "Can I create an account?",
-                        "How do payments work?"
+                        "How do payments work?",
+                        "How do I contact support?"
                     ],
                     'confidence': 80,
                     'engine_used': 'netra_engine',
@@ -562,11 +589,12 @@ class HumanizedNetraEngine:
         except Exception as e:
             print(f"❌ Error: {e}")
             return {
-                'response': "I'm here to help with Netra! You can ask me about:\n\n• What Netra is\n• Creating an account\n• Making payments\n• Contacting support",
+                'response': "I'm here to help with Netra! You can ask me about:\n\n• What Netra is\n• Creating an account\n• Making payments\n• Contacting support\n• Deleting your account",
                 'suggestions': [
                     "What is Netra?",
                     "Can I create an account?",
-                    "How do payments work?"
+                    "How do payments work?",
+                    "How do I delete my account?"
                 ],
                 'confidence': 70,
                 'engine_used': 'netra_engine',
