@@ -1,6 +1,6 @@
 """
-Netra Engine - Enhanced Dynamic Web Crawler
-Searches netra.strobid.com for relevant pages and extracts meaningful content
+Netra Engine - Intelligent Site Analyzer
+Understands page sections and extracts specific features
 """
 
 import requests
@@ -11,29 +11,25 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
 from collections import Counter
-import heapq
+import json
 
 class HumanizedNetraEngine:
     """
-    Netra AI Assistant that dynamically crawls the website for information
+    Netra AI Assistant that analyzes page sections for specific features
     """
     
     def __init__(self):
         self.base_url = "https://netra.strobid.com"
-        self.all_pages = {}  # Cache of discovered pages
+        self.all_pages = {}
         self.crawled_urls: Set[str] = set()
-        self.url_queue: List[str] = []
-        self.last_crawl = None
-        
-        # Page type patterns
-        self.page_patterns = {
-            'account': ['account', 'profile', 'login', 'signup', 'register', 'create'],
-            'payment': ['payment', 'pay', 'billing', 'subscription', 'invoice'],
-            'booking': ['book', 'booking', 'schedule', 'appointment', 'reserve', 'hire'],
-            'rating': ['rate', 'rating', 'review', 'feedback', 'testimonial'],
-            'service': ['service', 'provider', 'professional', 'category'],
-            'support': ['support', 'help', 'contact', 'faq', 'assist']
+        self.features = {
+            'bookings': [],
+            'ratings': [],
+            'payments': [],
+            'accounts': [],
+            'services': []
         }
+        self.last_crawl = None
         
         # Start crawling
         self._crawl_site()
@@ -52,464 +48,377 @@ class HumanizedNetraEngine:
             print(f"  ❌ Failed: {e}")
             return None
     
-    def _extract_links(self, soup: BeautifulSoup, current_url: str) -> List[str]:
-        """Extract all internal links from a page"""
-        links = []
-        
-        for link in soup.find_all('a', href=True):
-            href = link['href'].strip()
-            
-            # Skip empty, anchors, and external links
-            if not href or href.startswith('#') or href.startswith('javascript:'):
-                continue
-            
-            # Make absolute URL
-            if href.startswith('/'):
-                full_url = urljoin(self.base_url, href)
-            elif href.startswith('http'):
-                # Only include netra.strobid.com links
-                if 'netra.strobid.com' in href:
-                    full_url = href
-                else:
-                    continue
-            else:
-                full_url = urljoin(current_url, href)
-            
-            # Remove fragments
-            full_url = full_url.split('#')[0]
-            
-            # Remove query parameters
-            full_url = full_url.split('?')[0]
-            
-            links.append(full_url)
-        
-        return list(set(links))  # Remove duplicates
-    
-    def _crawl_site(self, max_pages: int = 50):
-        """Crawl the entire site to discover all pages"""
-        print("\n🔍 CRAWLING NETRA.STROBID.COM")
-        print("=" * 60)
-        
-        self.url_queue = [self.base_url]
-        self.crawled_urls = set()
-        self.all_pages = {}
-        
-        pages_crawled = 0
-        
-        while self.url_queue and pages_crawled < max_pages:
-            url = self.url_queue.pop(0)
-            if url in self.crawled_urls:
-                continue
-            
-            print(f"\n📄 Crawling: {url}")
-            soup = self._fetch_page(url)
-            
-            if soup:
-                # Extract page information
-                page_info = self._extract_page_info(soup, url)
-                self.all_pages[url] = page_info
-                
-                # Find new links to crawl
-                new_links = self._extract_links(soup, url)
-                for link in new_links:
-                    if link not in self.crawled_urls and link not in self.url_queue:
-                        self.url_queue.append(link)
-                
-                pages_crawled += 1
-                print(f"  ✅ Title: {page_info['title']}")
-                print(f"  📝 Type: {page_info['page_type']}")
-                print(f"  🔑 Keywords: {', '.join(page_info['keywords'][:5])}")
-            
-            self.crawled_urls.add(url)
-            time.sleep(0.5)  # Be nice to the server
-        
-        self.last_crawl = datetime.now()
-        
-        print(f"\n✅ Crawled {len(self.all_pages)} pages")
-        self._print_crawl_summary()
-    
-    def _extract_page_info(self, soup: BeautifulSoup, url: str) -> Dict:
-        """Extract all relevant information from a page"""
-        # Get title
-        title_tag = soup.find('title')
-        title = title_tag.get_text().strip() if title_tag else url.split('/')[-1]
-        
-        # Get meta description
-        meta_desc = soup.find('meta', attrs={'name': 'description'})
-        description = meta_desc.get('content', '') if meta_desc else ''
+    def _extract_sections(self, soup: BeautifulSoup, url: str) -> List[Dict]:
+        """Extract meaningful sections from a page"""
+        sections = []
         
         # Remove unwanted elements
-        for element in soup.find_all(['script', 'style', 'nav', 'footer', 'header', 'aside']):
+        for element in soup.find_all(['script', 'style', 'nav', 'footer', 'header']):
             element.decompose()
         
         # Find main content
-        main = None
-        for selector in ['main', 'article', '.content', '#content', '.main-content', 'body']:
-            main = soup.select_one(selector)
-            if main:
-                break
+        main = soup.find('main') or soup.find('article') or soup.body
         
-        if not main:
-            main = soup.body
+        if main:
+            # Split into sections based on headings
+            current_section = {'heading': 'Main', 'content': [], 'type': 'general'}
+            for element in main.children:
+                if element.name in ['h1', 'h2', 'h3']:
+                    # Save previous section
+                    if current_section['content']:
+                        sections.append(current_section)
+                    
+                    # Start new section
+                    heading = element.get_text().strip()
+                    section_type = self._classify_section(heading)
+                    current_section = {
+                        'heading': heading,
+                        'content': [],
+                        'type': section_type,
+                        'page_url': url
+                    }
+                elif element.name in ['p', 'ul', 'ol', 'div']:
+                    text = element.get_text().strip()
+                    if text and len(text) > 30:
+                        current_section['content'].append(text)
+            
+            # Add last section
+            if current_section['content']:
+                sections.append(current_section)
         
-        # Extract headers
-        headers = []
-        for h in main.find_all(['h1', 'h2', 'h3']):
-            text = h.get_text().strip()
-            if text:
-                headers.append(text)
-        
-        # Extract paragraphs
-        paragraphs = []
-        for p in main.find_all('p'):
-            text = p.get_text().strip()
-            if text and len(text) > 30:
-                paragraphs.append(text)
-        
-        # Extract lists (often contain steps)
-        lists = []
-        for ul in main.find_all(['ul', 'ol']):
-            items = []
-            for li in ul.find_all('li'):
-                text = li.get_text().strip()
-                if text:
-                    items.append(text)
-            if items:
-                lists.append(items)
-        
-        # Extract buttons/actions
-        buttons = []
-        for btn in main.find_all(['button', 'a'], class_=re.compile(r'btn|button|action')):
-            text = btn.get_text().strip()
-            if text:
-                buttons.append(text)
-        
-        # Combine all text for keyword extraction
-        all_text = title + ' ' + description + ' ' + ' '.join(headers) + ' ' + ' '.join(paragraphs)
-        
-        # Extract keywords
-        keywords = self._extract_keywords(all_text)
-        
-        # Determine page type
-        page_type = self._determine_page_type(url, title, headers, keywords)
-        
-        return {
-            'url': url,
-            'title': title,
-            'description': description,
-            'headers': headers,
-            'paragraphs': paragraphs,
-            'lists': lists,
-            'buttons': buttons,
-            'keywords': keywords,
-            'page_type': page_type,
-            'full_text': all_text
-        }
+        return sections
     
-    def _extract_keywords(self, text: str) -> List[str]:
-        """Extract important keywords from text"""
-        # Clean text
-        text = text.lower()
-        text = re.sub(r'[^\w\s]', ' ', text)
+    def _classify_section(self, heading: str) -> str:
+        """Classify what type of section this is"""
+        heading_lower = heading.lower()
         
-        # Split into words
-        words = text.split()
-        
-        # Filter out common words
-        stop_words = {'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'this', 'that', 'these', 'those', 'from', 'have', 'are', 'was', 'were', 'will', 'can', 'could', 'would', 'should', 'their', 'there', 'about', 'page', 'website', 'click', 'here'}
-        
-        filtered_words = [w for w in words if len(w) > 3 and w not in stop_words]
-        
-        # Count frequencies
-        word_counts = Counter(filtered_words)
-        
-        # Return top keywords
-        return [word for word, count in word_counts.most_common(15)]
-    
-    def _determine_page_type(self, url: str, title: str, headers: List[str], keywords: List[str]) -> str:
-        """Determine the type of page based on its content"""
-        text = (url + ' ' + title + ' ' + ' '.join(headers) + ' ' + ' '.join(keywords)).lower()
-        
-        scores = {}
-        for page_type, patterns in self.page_patterns.items():
-            score = 0
-            for pattern in patterns:
-                if pattern in text:
-                    score += 1
-                # Check URL specifically
-                if pattern in url.lower():
-                    score += 2
-            scores[page_type] = score
-        
-        # Get the page type with highest score
-        if scores:
-            best_type = max(scores, key=scores.get)
-            if scores[best_type] > 0:
-                return best_type
-        
-        return 'general'
-    
-    def _calculate_relevance(self, query: str, page: Dict) -> float:
-        """Calculate how relevant a page is to the query"""
-        query_lower = query.lower()
-        query_words = set(re.findall(r'\b\w+\b', query_lower))
-        score = 0.0
-        
-        # Check URL (highest priority)
-        url_lower = page['url'].lower()
-        for word in query_words:
-            if len(word) > 3 and word in url_lower:
-                score += 15.0
-        
-        # Check page type match
-        if page['page_type'] in query_lower:
-            score += 12.0
-        
-        # Check title
-        title_lower = page['title'].lower()
-        for word in query_words:
-            if word in title_lower:
-                score += 10.0
-        
-        # Check headers
-        for header in page['headers']:
-            header_lower = header.lower()
-            # Exact phrase match in headers
-            if query_lower in header_lower:
-                score += 20.0
-            for word in query_words:
-                if word in header_lower:
-                    score += 5.0
-        
-        # Check description
-        if page['description']:
-            desc_lower = page['description'].lower()
-            if query_lower in desc_lower:
-                score += 15.0
-        
-        # Check keywords
-        for keyword in page['keywords']:
-            if keyword in query_lower:
-                score += 8.0
-        
-        # Check paragraphs (partial matches)
-        for para in page['paragraphs']:
-            para_lower = para.lower()
-            if query_lower in para_lower:
-                score += 25.0
-            else:
-                for word in query_words:
-                    if len(word) > 3 and word in para_lower:
-                        score += 2.0
-        
-        # Check lists (often contain step-by-step instructions)
-        for lst in page['lists']:
-            for item in lst:
-                item_lower = item.lower()
-                if query_lower in item_lower:
-                    score += 30.0
-        
-        return score
-    
-    def _extract_answer(self, page: Dict, query: str) -> str:
-        """Extract the most relevant answer from a page"""
-        query_lower = query.lower()
-        answer_parts = []
-        
-        # Add title
-        answer_parts.append(f"**{page['title']}**")
-        answer_parts.append('')
-        
-        # Look for lists first (often contain steps)
-        best_list = None
-        best_list_score = 0
-        
-        for lst in page['lists']:
-            list_text = ' '.join(lst).lower()
-            score = 0
-            for word in query_lower.split():
-                if word in list_text:
-                    score += 1
-            if score > best_list_score:
-                best_list_score = score
-                best_list = lst
-        
-        if best_list and best_list_score > 2:
-            answer_parts.extend(best_list)
-            answer_parts.append('')
-        
-        # Look for relevant paragraphs
-        relevant_paras = []
-        for para in page['paragraphs']:
-            para_lower = para.lower()
-            if query_lower in para_lower or any(word in para_lower for word in query_lower.split()):
-                relevant_paras.append(para)
-        
-        if relevant_paras:
-            answer_parts.extend(relevant_paras[:2])
-        elif page['description']:
-            answer_parts.append(page['description'])
-        
-        # If still no content, show headers
-        if len(answer_parts) < 3 and page['headers']:
-            answer_parts.append("Here's what I found:")
-            answer_parts.extend(page['headers'][:3])
-        
-        return '\n'.join(answer_parts)
-    
-    def _is_link_request(self, query: str) -> bool:
-        """Check if user is asking for a link"""
-        query_lower = query.lower()
-        link_keywords = ['link', 'url', 'website', 'page', 'take me to', 'direct me to', 'go to']
-        return any(keyword in query_lower for keyword in link_keywords)
-    
-    def _get_follow_up_suggestions(self, page: Dict, query: str) -> List[str]:
-        """Generate relevant follow-up suggestions"""
-        suggestions = []
-        
-        # Suggestions based on page type
-        if page['page_type'] == 'booking':
-            suggestions = [
-                "How do I cancel a booking?",
-                "Can I reschedule a booking?",
-                "How do payments work?",
-                "How do I rate a provider?"
-            ]
-        elif page['page_type'] == 'rating':
-            suggestions = [
-                "How do I leave a review?",
-                "Can I edit my review?",
-                "How do ratings work?",
-                "What if I had a bad experience?"
-            ]
-        elif page['page_type'] == 'account':
-            suggestions = [
-                "How do I verify my account?",
-                "How do I reset my password?",
-                "How do I delete my account?",
-                "How do I update my profile?"
-            ]
-        elif page['page_type'] == 'payment':
-            suggestions = [
-                "What payment methods are accepted?",
-                "How do I get a refund?",
-                "Are there any fees?",
-                "How do subscriptions work?"
-            ]
+        if any(word in heading_lower for word in ['book', 'booking', 'schedule', 'appointment', 'reserve']):
+            return 'bookings'
+        elif any(word in heading_lower for word in ['rate', 'rating', 'review', 'feedback', 'testimonial']):
+            return 'ratings'
+        elif any(word in heading_lower for word in ['pay', 'payment', 'billing', 'subscription', 'invoice']):
+            return 'payments'
+        elif any(word in heading_lower for word in ['account', 'profile', 'login', 'signup', 'register']):
+            return 'accounts'
+        elif any(word in heading_lower for word in ['service', 'provider', 'professional', 'category']):
+            return 'services'
         else:
-            suggestions = [
-                "What is Netra?",
-                "How do I create an account?",
-                "How do bookings work?",
-                "How do I contact support?"
-            ]
-        
-        return suggestions[:4]
+            return 'general'
     
-    def _print_crawl_summary(self):
-        """Print summary of crawled pages"""
-        print("\n📊 PAGE SUMMARY BY TYPE")
-        type_counts = {}
-        for page in self.all_pages.values():
-            page_type = page['page_type']
-            type_counts[page_type] = type_counts.get(page_type, 0) + 1
+    def _extract_features(self, soup: BeautifulSoup, url: str):
+        """Extract specific features from the page"""
+        page_features = {
+            'bookings': [],
+            'ratings': [],
+            'payments': [],
+            'accounts': [],
+            'services': []
+        }
         
-        for page_type, count in type_counts.items():
-            print(f"  • {page_type.capitalize()}: {count} pages")
+        # Look for booking-related elements
+        booking_keywords = ['book', 'booking', 'schedule', 'appointment', 'reserve', 'hire']
+        for element in soup.find_all(['button', 'a', 'div'], class_=re.compile('|'.join(booking_keywords), re.I)):
+            text = element.get_text().strip()
+            if text and len(text) < 100:
+                page_features['bookings'].append({
+                    'text': text,
+                    'type': 'button',
+                    'context': self._get_surrounding_text(element)
+                })
+        
+        # Look for rating-related elements
+        rating_keywords = ['rate', 'rating', 'review', 'feedback', 'star']
+        for element in soup.find_all(['div', 'span', 'form'], class_=re.compile('|'.join(rating_keywords), re.I)):
+            text = element.get_text().strip()
+            if text and len(text) < 200:
+                page_features['ratings'].append({
+                    'text': text,
+                    'type': 'section',
+                    'context': self._get_surrounding_text(element)
+                })
+        
+        # Look for payment-related elements
+        payment_keywords = ['pay', 'payment', 'price', 'cost', 'fee', 'checkout']
+        for element in soup.find_all(['div', 'form', 'section'], class_=re.compile('|'.join(payment_keywords), re.I)):
+            text = element.get_text().strip()
+            if text and len(text) < 300:
+                page_features['payments'].append({
+                    'text': text,
+                    'type': 'section',
+                    'context': self._get_surrounding_text(element)
+                })
+        
+        return page_features
+    
+    def _get_surrounding_text(self, element, words: int = 20):
+        """Get text surrounding an element for context"""
+        parent = element.find_parent(['div', 'section', 'article'])
+        if parent:
+            text = parent.get_text().strip()
+            # Truncate to reasonable length
+            words_list = text.split()
+            if len(words_list) > words:
+                return ' '.join(words_list[:words]) + '...'
+            return text
+        return ''
+    
+    def _crawl_site(self, max_pages: int = 30):
+        """Crawl the site and analyze all pages"""
+        print("\n🔍 ANALYZING NETRA.STROBID.COM")
+        print("=" * 60)
+        
+        to_crawl = [self.base_url]
+        crawled = set()
+        
+        pages_crawled = 0
+        
+        while to_crawl and pages_crawled < max_pages:
+            url = to_crawl.pop(0)
+            if url in crawled:
+                continue
+            
+            print(f"\n📄 Analyzing: {url}")
+            soup = self._fetch_page(url)
+            
+            if soup:
+                # Extract sections
+                sections = self._extract_sections(soup, url)
+                
+                # Extract features
+                features = self._extract_features(soup, url)
+                
+                # Store page data
+                self.all_pages[url] = {
+                    'url': url,
+                    'title': soup.find('title').get_text() if soup.find('title') else url,
+                    'sections': sections,
+                    'features': features
+                }
+                
+                # Add features to global feature list
+                for feature_type, feature_list in features.items():
+                    for feature in feature_list:
+                        feature['page_url'] = url
+                        self.features[feature_type].append(feature)
+                
+                # Find new links
+                for link in soup.find_all('a', href=True):
+                    href = link['href']
+                    if href.startswith('/'):
+                        full_url = urljoin(self.base_url, href)
+                        if full_url not in crawled and full_url not in to_crawl:
+                            to_crawl.append(full_url)
+                
+                pages_crawled += 1
+            
+            crawled.add(url)
+            time.sleep(0.5)
+        
+        self.crawled_urls = crawled
+        self.last_crawl = datetime.now()
+        
+        self._print_analysis()
+    
+    def _print_analysis(self):
+        """Print analysis of found features"""
+        print("\n📊 FEATURES FOUND")
+        print("=" * 60)
+        for feature_type, features in self.features.items():
+            if features:
+                print(f"\n{feature_type.upper()}: {len(features)} items")
+                for f in features[:3]:
+                    print(f"  • {f['text'][:100]}...")
+    
+    def _find_relevant_content(self, query: str) -> Dict:
+        """Find the most relevant content for a query"""
+        query_lower = query.lower()
+        
+        # Determine what the user is asking about
+        intent = 'general'
+        if any(word in query_lower for word in ['book', 'booking', 'schedule', 'appointment', 'reserve', 'hire']):
+            intent = 'bookings'
+        elif any(word in query_lower for word in ['rate', 'rating', 'review', 'feedback', 'star']):
+            intent = 'ratings'
+        elif any(word in query_lower for word in ['pay', 'payment', 'money', 'cost', 'price']):
+            intent = 'payments'
+        elif any(word in query_lower for word in ['account', 'profile', 'login', 'signup']):
+            intent = 'accounts'
+        elif any(word in query_lower for word in ['service', 'provider', 'professional']):
+            intent = 'services'
+        
+        # Look for relevant features first
+        if intent in self.features and self.features[intent]:
+            best_match = self.features[intent][0]
+            
+            # Try to find the page this feature came from
+            page_url = best_match.get('page_url')
+            page = self.all_pages.get(page_url, {})
+            
+            return {
+                'type': 'feature',
+                'intent': intent,
+                'content': best_match['text'],
+                'context': best_match.get('context', ''),
+                'page': page,
+                'confidence': 90
+            }
+        
+        # Look through page sections
+        best_section = None
+        best_score = 0
+        
+        for url, page in self.all_pages.items():
+            for section in page.get('sections', []):
+                if section['type'] == intent or intent == 'general':
+                    section_text = ' '.join(section['content']).lower()
+                    score = 0
+                    
+                    for word in query_lower.split():
+                        if word in section_text:
+                            score += 1
+                    
+                    if score > best_score:
+                        best_score = score
+                        best_section = section
+                        best_section['page_url'] = url
+                        best_section['page_title'] = page['title']
+        
+        if best_section and best_score > 0:
+            return {
+                'type': 'section',
+                'intent': intent,
+                'content': best_section['content'],
+                'heading': best_section['heading'],
+                'page': best_section,
+                'confidence': min(90, 60 + best_score * 5)
+            }
+        
+        return None
+    
+    def _format_response(self, content: Dict, query: str) -> str:
+        """Format the found content into a natural response"""
+        response_parts = []
+        
+        if content['type'] == 'feature':
+            # Format feature-based response
+            if content['intent'] == 'bookings':
+                response_parts.append("**Netra Bookings**")
+                response_parts.append("")
+                response_parts.append("Here's what I found about bookings on Netra:")
+                response_parts.append("")
+                response_parts.append(content['content'])
+                if content.get('context'):
+                    response_parts.append("")
+                    response_parts.append(content['context'])
+            
+            elif content['intent'] == 'ratings':
+                response_parts.append("**Netra Ratings & Reviews**")
+                response_parts.append("")
+                response_parts.append("Information about ratings on Netra:")
+                response_parts.append("")
+                response_parts.append(content['content'])
+            
+            else:
+                response_parts.append(f"**Netra {content['intent'].title()}**")
+                response_parts.append("")
+                response_parts.append(content['content'])
+        
+        elif content['type'] == 'section':
+            # Format section-based response
+            if content.get('heading'):
+                response_parts.append(f"**{content['heading']}**")
+                response_parts.append("")
+            
+            if isinstance(content['content'], list):
+                response_parts.extend(content['content'])
+            else:
+                response_parts.append(content['content'])
+        
+        return '\n'.join(response_parts)
     
     def process_query(self, message: str, user_id: str = None) -> Dict[str, Any]:
-        """Process user query by searching crawled pages"""
+        """Process user query"""
         try:
             print(f"\n🤔 Processing: {message}")
             
             # Handle greetings
-            greetings = ['hi', 'hello', 'hey', 'good morning', 'good afternoon']
+            greetings = ['hi', 'hello', 'hey', 'good morning']
             if any(g in message.lower() for g in greetings):
                 return {
-                    'response': "Hello! I'm your Netra assistant. I can help you with accounts, bookings, payments, ratings, and more. What would you like to know?",
+                    'response': "Hello! I'm your Netra assistant. I can help you with bookings, ratings, payments, accounts, and more. What would you like to know?",
                     'suggestions': [
-                        "Tell me about Netra",
-                        "How do I create an account?",
                         "How do bookings work?",
-                        "How do ratings work?"
+                        "How do ratings work?",
+                        "How do I create an account?",
+                        "Tell me about Netra"
                     ],
                     'confidence': 100,
                     'engine_used': 'netra_engine',
                     'timestamp': datetime.now().isoformat()
                 }
             
-            # Handle thanks
-            thanks = ['thanks', 'thank you', 'appreciate it']
-            if any(t in message.lower() for t in thanks):
-                return {
-                    'response': "You're welcome! 😊 Is there anything else you'd like to know about Netra?",
-                    'suggestions': [
-                        "Tell me about Netra",
-                        "How do I create an account?",
-                        "How do bookings work?",
+            # Find relevant content
+            content = self._find_relevant_content(message)
+            
+            if content:
+                response = self._format_response(content, message)
+                
+                # Generate suggestions based on intent
+                suggestions_map = {
+                    'bookings': [
+                        "How do I cancel a booking?",
+                        "Can I reschedule?",
+                        "How do payments work?",
+                        "How do I rate a provider?"
+                    ],
+                    'ratings': [
+                        "How do I leave a review?",
+                        "Can I edit my rating?",
+                        "How are ratings calculated?",
+                        "What if I had a bad experience?"
+                    ],
+                    'payments': [
+                        "What payment methods?",
+                        "How do refunds work?",
+                        "Are there fees?",
+                        "How do subscriptions work?"
+                    ],
+                    'accounts': [
+                        "How do I verify my account?",
+                        "How do I reset my password?",
+                        "How do I delete my account?",
+                        "How do I update my profile?"
+                    ],
+                    'services': [
+                        "How do I find a provider?",
+                        "What services are available?",
+                        "How do I become a provider?",
                         "How do I contact support?"
-                    ],
-                    'confidence': 100,
-                    'engine_used': 'netra_engine',
-                    'timestamp': datetime.now().isoformat()
+                    ]
                 }
-            
-            # Check if this is a link request
-            if self._is_link_request(message):
-                # Find best matching page
-                best_page = None
-                best_score = 0
                 
-                for page in self.all_pages.values():
-                    score = self._calculate_relevance(message, page)
-                    if score > best_score:
-                        best_score = score
-                        best_page = page
-                
-                if best_page and best_score > 10:
-                    return {
-                        'response': f"Here's the page you're looking for:\n\n🔗 {best_page['url']}",
-                        'suggestions': self._get_follow_up_suggestions(best_page, message),
-                        'confidence': 90,
-                        'engine_used': 'netra_engine',
-                        'timestamp': datetime.now().isoformat()
-                    }
-            
-            # Find relevant pages for the query
-            relevant_pages = []
-            for page in self.all_pages.values():
-                score = self._calculate_relevance(message, page)
-                if score > 5:
-                    relevant_pages.append((score, page))
-            
-            # Sort by score
-            relevant_pages.sort(key=lambda x: x[0], reverse=True)
-            
-            if relevant_pages:
-                best_score, best_page = relevant_pages[0]
-                print(f"✅ Best match: {best_page['title']} (score: {best_score:.1f})")
-                
-                # Extract answer
-                answer = self._extract_answer(best_page, message)
-                
-                # Get suggestions
-                suggestions = self._get_follow_up_suggestions(best_page, message)
+                suggestions = suggestions_map.get(content['intent'], [
+                    "What is Netra?",
+                    "How do I create an account?",
+                    "How do bookings work?",
+                    "How do I contact support?"
+                ])
                 
                 return {
-                    'response': answer,
-                    'suggestions': suggestions,
-                    'confidence': min(95, int(best_score)),
+                    'response': response,
+                    'suggestions': suggestions[:4],
+                    'confidence': content['confidence'],
                     'engine_used': 'netra_engine',
                     'timestamp': datetime.now().isoformat()
                 }
             else:
-                # No relevant pages found
+                # No relevant content found
                 return {
-                    'response': "I couldn't find specific information about that. Here are some topics I can help with:\n\n• What is Netra?\n• Creating an account\n• Making payments\n• Booking services\n• Ratings and reviews\n• Contacting support",
+                    'response': "I couldn't find specific information about that. Here are some topics I can help with:\n\n• How bookings work\n• How ratings work\n• Creating an account\n• Making payments\n• Available services\n• Contacting support",
                     'suggestions': [
-                        "What is Netra?",
-                        "How do I create an account?",
                         "How do bookings work?",
+                        "How do ratings work?",
+                        "How do I create an account?",
                         "How do I contact support?"
                     ],
                     'confidence': 70,
@@ -519,14 +428,12 @@ class HumanizedNetraEngine:
                 
         except Exception as e:
             print(f"❌ Error: {e}")
-            import traceback
-            traceback.print_exc()
             return {
-                'response': "I'm here to help with Netra! You can ask me about accounts, bookings, payments, ratings, and more. What would you like to know?",
+                'response': "I'm here to help with Netra! You can ask me about bookings, ratings, payments, accounts, and more. What would you like to know?",
                 'suggestions': [
-                    "What is Netra?",
-                    "How do I create an account?",
                     "How do bookings work?",
+                    "How do ratings work?",
+                    "How do I create an account?",
                     "How do I contact support?"
                 ],
                 'confidence': 60,
