@@ -1,5 +1,5 @@
 """
-Netra Engine - Final Version with NO LINKS unless explicitly requested
+Netra Engine - Final Version with ABSOLUTELY NO LINKS unless explicitly requested
 """
 
 import random
@@ -9,11 +9,11 @@ from datetime import datetime
 
 class HumanizedNetraEngine:
     """
-    Netra AI Assistant - NO LINKS in responses unless user asks for them
+    Netra AI Assistant - ZERO links in responses unless user asks for them
     """
     
     def __init__(self):
-        self.help_center_url = "https://netra.strobid.com/help"
+        self.help_center_url = "https://netra.strobid.com/help"  # Store but NEVER use
         self.base_url = "https://netra.strobid.com"
         
         # Complete knowledge base with URLs for each article
@@ -248,11 +248,12 @@ class HumanizedNetraEngine:
         return best_match
     
     def _format_article_response(self, article: Dict) -> str:
-        """Format article into natural response - NO LINKS INCLUDED"""
+        """Format article into natural response - ABSOLUTELY NO LINKS"""
         response_parts = []
         
         # Title
         response_parts.append(f"**{article['title']}**")
+        response_parts.append('')  # Empty line for spacing
         
         # Content (either from 'content' field or build from steps/details)
         if 'content' in article:
@@ -261,11 +262,12 @@ class HumanizedNetraEngine:
         else:
             # For 'how to' type articles with steps
             if article.get('steps'):
-                for step in article['steps']:
-                    response_parts.append(step)
+                response_parts.extend(article['steps'])
             
             # Add any additional details
             if article.get('details'):
+                if response_parts:  # Add spacing if we already have content
+                    response_parts.append('')
                 response_parts.extend(article['details'])
             
             # Add warnings at the end
@@ -273,7 +275,7 @@ class HumanizedNetraEngine:
                 response_parts.append('')
                 response_parts.extend(article['warnings'])
         
-        # Join with newlines - NO LINK ADDED
+        # Join with newlines - ABSOLUTELY NO LINK ADDED
         return '\n'.join(response_parts)
     
     def _format_link_response(self, article: Dict) -> str:
@@ -331,13 +333,15 @@ class HumanizedNetraEngine:
                 suggestions.append("Link for notifications")
             elif 'support' in title:
                 suggestions.append("Link for support")
+            elif 'what is' in title or 'about' in title:
+                suggestions.append("Link for Netra info")
             else:
-                suggestions.append(f"Get link for {current_article['title']}")
+                suggestions.append(f"Link for {current_article['title']}")
         
         return suggestions
     
     def process_query(self, message: str, user_id: str = None) -> Dict[str, Any]:
-        """Process user query"""
+        """Process user query - NO LINKS unless requested"""
         try:
             print(f"\n🤔 Processing: {message}")
             
@@ -357,7 +361,7 @@ class HumanizedNetraEngine:
                     self.context[user_id]['last_greeting'] = True
                 
                 return {
-                    'response': greeting_response,
+                    'response': greeting_response,  # NO LINK HERE
                     'suggestions': [
                         "What is Netra?",
                         "How do I create an account?",
@@ -372,7 +376,7 @@ class HumanizedNetraEngine:
             thanks = ['thanks', 'thank you', 'appreciate it', 'thx']
             if any(t in message.lower() for t in thanks):
                 return {
-                    'response': "You're welcome! 😊 If you have any more questions, feel free to ask.",
+                    'response': "You're welcome! 😊 If you have any more questions, feel free to ask.",  # NO LINK HERE
                     'suggestions': [
                         "What is Netra?",
                         "How do I create an account?",
@@ -402,7 +406,7 @@ class HumanizedNetraEngine:
                     ]
                     
                     return {
-                        'response': response,
+                        'response': response,  # ONLY HERE DO LINKS APPEAR
                         'suggestions': suggestions[:4],
                         'confidence': 98,
                         'engine_used': 'netra_engine',
@@ -411,7 +415,7 @@ class HumanizedNetraEngine:
                 else:
                     # If we can't figure out what link they want
                     return {
-                        'response': "I'd be happy to provide a link! Which topic are you interested in? You can ask for links about:\n\n• Creating an account\n• Making payments\n• Contacting support\n• Deleting your account",
+                        'response': "I'd be happy to provide a link! Which topic are you interested in? You can ask for links about:\n\n• Creating an account\n• Making payments\n• Contacting support\n• Deleting your account",  # NO LINK HERE
                         'suggestions': [
                             "Link for creating account",
                             "Link for payments",
@@ -443,7 +447,7 @@ class HumanizedNetraEngine:
                     self.context[user_id]['last_article'] = article['title']
                 
                 return {
-                    'response': response,
+                    'response': response,  # NO LINK HERE
                     'suggestions': suggestions[:4],
                     'confidence': 95,
                     'engine_used': 'netra_engine',
@@ -454,7 +458,7 @@ class HumanizedNetraEngine:
                 response = "I can help you with these topics:\n\n"
                 for topic in self.topics.keys():
                     response += f"• {topic.capitalize()}\n"
-                response += "\nWhat would you like to know about Netra?"
+                response += "\nWhat would you like to know about Netra?"  # NO LINK HERE
                 
                 return {
                     'response': response,
@@ -471,7 +475,7 @@ class HumanizedNetraEngine:
         except Exception as e:
             print(f"❌ Error: {e}")
             return {
-                'response': "I'm here to help with Netra! You can ask me about:\n\n• What Netra is\n• Creating an account\n• Making payments\n• Contacting support",
+                'response': "I'm here to help with Netra! You can ask me about:\n\n• What Netra is\n• Creating an account\n• Making payments\n• Contacting support",  # NO LINK HERE
                 'suggestions': [
                     "What is Netra?",
                     "How do I create an account?",
