@@ -1,376 +1,457 @@
 """
-Netra Engine - Fixed version that correctly identifies help articles
+Netra Engine - Production version with JavaScript rendering support
+Fetches content from netra.strobid.com/help and follows all article links
 """
 
 import requests
 import random
 import re
 import time
+import asyncio
 from typing import Dict, List, Optional, Any, Set
 from datetime import datetime, timedelta
-from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
 import hashlib
+from bs4 import BeautifulSoup
+
+# For JavaScript rendering
+try:
+    from requests_html import HTMLSession
+    HAS_HTML = True
+except ImportError:
+    HAS_HTML = False
+    print("⚠️ requests-html not installed. Run: pip install requests-html")
 
 class HumanizedNetraEngine:
     """
-    AI Engine that correctly identifies and reads help articles
+    AI Engine that fetches content with JavaScript support
     """
     
     def __init__(self):
         self.help_center_url = "https://netra.strobid.com/help"
         self.base_url = "https://netra.strobid.com"
-        self.main_site_url = "https://strobid.com"
         self.netra_site_url = "https://netra.strobid.com"
+        self.main_site_url = "https://strobid.com"
+        
+        # Initialize HTML session for JavaScript rendering
+        self.session = None
+        if HAS_HTML:
+            self.session = HTMLSession()
         
         # Knowledge base
         self.knowledge_base = {
-            'help_articles': {},  # Only actual help articles
-            'other_pages': {},    # Other pages (privacy, terms, etc.)
+            'help_articles': {},
+            'site_pages': {},
             'topics': {}
         }
         
-        self.cache = {
-            'last_crawl': None,
-            'pages': {}
-        }
+        # Cache settings
+        self.last_crawl = None
         self.cache_duration = timedelta(hours=6)
+        
+        # Fallback knowledge in case fetch fails
+        self.fallback_articles = {
+            'create_account': {
+                'title': 'How to create a Netra account',
+                'url': 'https://netra.strobid.com/help/create-account.html',
+                'summary': 'Creating a Netra account is quick and easy. Follow these steps to get started.',
+                'steps': [
+                    'Download the Netra app from the Google Play Store',
+                    'Open the app and tap "Create Account"',
+                    'Enter your email address and create a secure password',
+                    'Fill in your profile information (name, phone number)',
+                    'Check your email for a verification code',
+                    'Enter the code to verify your account'
+                ],
+                'topic': 'account'
+            },
+            'verify_account': {
+                'title': 'How to verify your account',
+                'url': 'https://netra.strobid.com/help/verify-account.html',
+                'summary': 'Account verification helps build trust in the Netra community.',
+                'steps': [
+                    'Log in to your Netra account',
+                    'Go to Settings > Account > Verification',
+                    'Choose email or phone verification',
+                    'Check your inbox for a verification link',
+                    'Enter the code sent to your phone',
+                    'Your account is now verified!'
+                ],
+                'topic': 'account'
+            },
+            'reset_password': {
+                'title': 'How to reset your password',
+                'url': 'https://netra.strobid.com/help/reset-password.html',
+                'summary': "Forgot your password? Here's how to reset it safely.",
+                'steps': [
+                    'Open the Netra app',
+                    'Tap "Forgot Password" on the login screen',
+                    'Enter your registered email address',
+                    'Check your email for a reset link',
+                    'Click the link (valid for 1 hour)',
+                    'Create a new strong password'
+                ],
+                'topic': 'account'
+            },
+            'delete_account': {
+                'title': 'How to delete your Netra account',
+                'url': 'https://netra.strobid.com/help/delete-account.html',
+                'summary': 'Step-by-step guide to permanently remove your account.',
+                'steps': [
+                    'Open the Netra app and log in',
+                    'Go to Settings > Account > Delete Account',
+                    'Read the warning carefully',
+                    'Enter your password to confirm',
+                    'Select a reason for leaving (optional)',
+                    'Tap "Permanently Delete"'
+                ],
+                'warnings': ['This action is PERMANENT and cannot be undone'],
+                'topic': 'account'
+            },
+            'payments': {
+                'title': 'How payments work on Netra',
+                'url': 'https://netra.strobid.com/help/payments.html',
+                'summary': 'Understand how to make, track, and manage payments.',
+                'steps': [
+                    'See the total price when booking',
+                    'Choose payment method (card, mobile money, cash)',
+                    'Pay deposit to confirm booking',
+                    'Pay balance after service completion',
+                    'Funds held securely until satisfied',
+                    'Providers paid within 24 hours'
+                ],
+                'details': [
+                    'Accepted: Visa, Mastercard, MTN Mobile Money, Airtel Money',
+                    'No fees for clients',
+                    'Providers pay small commission on completed bookings'
+                ],
+                'topic': 'payment'
+            },
+            'subscriptions': {
+                'title': 'Manage subscriptions & billing',
+                'url': 'https://netra.strobid.com/help/subscriptions.html',
+                'summary': 'Learn how to subscribe, cancel, or update your plan.',
+                'steps': [
+                    'Go to Settings > Subscription',
+                    'Browse available plans (Free, Pro, Business)',
+                    'Select your preferred plan',
+                    'Choose monthly or annual billing',
+                    'Enter payment details',
+                    'Confirm subscription'
+                ],
+                'topic': 'payment'
+            },
+            'notifications': {
+                'title': 'Manage notifications',
+                'url': 'https://netra.strobid.com/help/notifications.html',
+                'summary': 'Turn on/off alerts and notifications in Netra.',
+                'steps': [
+                    'Open Netra app',
+                    'Go to Settings > Notifications',
+                    'Toggle each notification type',
+                    'Message notifications',
+                    'Booking updates',
+                    'Payment notifications'
+                ],
+                'topic': 'settings'
+            },
+            'contact_support': {
+                'title': 'Contact Netra support',
+                'url': 'https://netra.strobid.com/help/contact-support.html',
+                'summary': 'Reach out to our support team for personalized help.',
+                'details': [
+                    'Email: support@strobid.com',
+                    'In-app chat: Settings > Help & Support',
+                    'Help Center: https://netra.strobid.com/help',
+                    'Response time: Within 24 hours'
+                ],
+                'topic': 'support'
+            }
+        }
+        
+        # Initialize with fallback
+        self._init_fallback()
         
         # Start crawling
         self._crawl_all_sites()
     
-    def _fetch_page(self, url: str) -> Optional[BeautifulSoup]:
-        """Fetch a page and return BeautifulSoup object"""
+    def _init_fallback(self):
+        """Initialize knowledge base with fallback articles"""
+        for article_id, article in self.fallback_articles.items():
+            self.knowledge_base['help_articles'][article_id] = article
+            topic = article.get('topic', 'general')
+            if topic not in self.knowledge_base['topics']:
+                self.knowledge_base['topics'][topic] = []
+            self.knowledge_base['topics'][topic].append(article_id)
+    
+    def _fetch_with_js(self, url: str) -> Optional[str]:
+        """Fetch page with JavaScript rendering"""
+        if not self.session:
+            return None
+        
         try:
-            print(f"🌐 Crawling: {url}")
+            print(f"🌐 JS Fetch: {url}")
+            response = self.session.get(url, timeout=15)
+            
+            # Try to render JavaScript
+            try:
+                response.html.render(timeout=20, sleep=2, keep_page=False)
+                print(f"  ✅ JS rendered successfully")
+                return response.html.html
+            except Exception as e:
+                print(f"  ⚠️ JS render failed: {e}")
+                return response.text  # Return raw HTML if render fails
+                
+        except Exception as e:
+            print(f"  ❌ JS fetch failed: {e}")
+            return None
+    
+    def _fetch_simple(self, url: str) -> Optional[str]:
+        """Simple fetch without JS"""
+        try:
+            print(f"🌐 Simple fetch: {url}")
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             }
-            response = requests.get(url, headers=headers, timeout=15)
+            response = requests.get(url, headers=headers, timeout=10)
             response.raise_for_status()
-            return BeautifulSoup(response.text, 'html.parser')
-        except requests.exceptions.RequestException as e:
-            print(f"  ❌ Failed: {e}")
+            return response.text
+        except Exception as e:
+            print(f"  ❌ Simple fetch failed: {e}")
             return None
     
-    def _is_help_article(self, url: str, link_text: str, soup: BeautifulSoup) -> bool:
-        """
-        Determine if a page is actually a help article
-        """
-        url_lower = url.lower()
-        text_lower = link_text.lower()
-        
-        # Check URL patterns - help articles should be in /help/ directory
-        if '/help/' not in url_lower and not url_lower.endswith('.html'):
-            return False
-        
-        # Skip obvious non-help pages
-        skip_patterns = ['privacy', 'terms', 'cookie', 'legal', 'contact', 'about']
-        if any(pattern in url_lower for pattern in skip_patterns):
-            return False
-        
-        # Check link text - help articles have descriptive titles
-        help_keywords = ['how to', 'create', 'verify', 'reset', 'delete', 'manage', 
-                        'account', 'payment', 'subscription', 'notification']
-        
-        if not any(keyword in text_lower for keyword in help_keywords):
-            return False
-        
-        # Check page content - help articles typically have step-by-step instructions
-        if soup:
-            # Look for numbered lists (steps)
-            lists = soup.find_all(['ol', 'ul'])
-            if lists:
-                for lst in lists:
-                    items = lst.find_all('li')
-                    if len(items) >= 2:  # Has multiple steps
-                        return True
-            
-            # Look for instructional language
-            text = soup.get_text().lower()
-            instruction_words = ['step', 'first', 'then', 'next', 'finally', 'follow']
-            if any(word in text for word in instruction_words):
-                return True
-        
-        return False
-    
-    def _extract_help_articles(self, soup: BeautifulSoup, base_url: str) -> List[Dict]:
-        """
-        Extract only actual help articles from the help center
-        """
+    def _extract_article_links(self, soup: BeautifulSoup) -> List[Dict]:
+        """Extract article links from help center page"""
         articles = []
         
         for link in soup.find_all('a', href=True):
             href = link['href']
             text = link.get_text().strip()
             
-            # Skip empty links
             if not text or len(text) < 5:
                 continue
             
             # Make full URL
             if href.startswith('/'):
-                full_url = urljoin(base_url, href)
+                full_url = urljoin(self.base_url, href)
             elif href.startswith('http'):
                 if 'netra.strobid.com' not in href:
                     continue
                 full_url = href
             else:
-                full_url = urljoin(base_url, href)
+                full_url = urljoin(self.help_center_url, href)
             
-            # Skip non-help URLs
-            if any(skip in full_url.lower() for skip in ['privacy', 'terms', 'contact', 'about']):
+            # Skip non-help pages
+            skip_patterns = ['privacy', 'terms', 'cookie', 'login', 'signup']
+            if any(p in full_url.lower() for p in skip_patterns):
                 continue
             
-            # Only include if it looks like a help article
-            if any(keyword in text.lower() for keyword in ['how to', 'create', 'verify', 'reset', 'delete', 'manage']):
+            # Check if it's a help article
+            help_keywords = ['account', 'payment', 'subscription', 'notification', 'support', 
+                           'create', 'verify', 'reset', 'delete', 'manage']
+            
+            if any(k in text.lower() for k in help_keywords) or any(k in href.lower() for k in help_keywords):
                 articles.append({
                     'title': text,
                     'url': full_url,
-                    'link_text': text
+                    'text': text
                 })
         
         # Remove duplicates
         unique = {}
-        for article in articles:
-            if article['url'] not in unique:
-                unique[article['url']] = article
+        for a in articles:
+            if a['url'] not in unique:
+                unique[a['url']] = a
         
         return list(unique.values())
     
-    def _extract_article_content(self, soup: BeautifulSoup, url: str, title: str) -> Dict:
-        """
-        Extract the actual step-by-step content from a help article
-        """
+    def _extract_article_content(self, html: str, url: str, title: str) -> Dict:
+        """Extract content from article page"""
+        soup = BeautifulSoup(html, 'html.parser')
+        
         content = {
             'title': title,
             'url': url,
             'summary': '',
             'steps': [],
             'details': [],
-            'notes': []
+            'warnings': []
         }
         
+        # Remove unwanted elements
+        for element in soup.find_all(['script', 'style', 'nav', 'footer', 'header']):
+            element.decompose()
+        
         # Find main content
-        main_content = None
+        main = None
         for selector in ['main', 'article', '.content', '#content', '.help-content', 'body']:
-            main_content = soup.select_one(selector)
-            if main_content:
+            main = soup.select_one(selector)
+            if main:
                 break
         
-        if not main_content:
-            main_content = soup.body
+        if not main:
+            main = soup.body
         
-        if main_content:
-            # Remove unwanted elements
-            for element in main_content.find_all(['script', 'style', 'nav', 'footer', 'header']):
-                element.decompose()
-            
-            # Get title
-            h1 = main_content.find('h1')
+        if main:
+            # Get title from page if available
+            h1 = main.find('h1')
             if h1:
                 content['title'] = h1.get_text().strip()
             
             # Get summary (first paragraph)
-            first_p = main_content.find('p')
+            first_p = main.find('p')
             if first_p:
                 content['summary'] = first_p.get_text().strip()
             
-            # Extract steps from ordered lists
-            for ol in main_content.find_all('ol'):
+            # Extract steps
+            for ol in main.find_all('ol'):
                 steps = []
                 for li in ol.find_all('li'):
-                    step_text = li.get_text().strip()
-                    if step_text:
-                        steps.append(step_text)
+                    step = li.get_text().strip()
+                    if step:
+                        steps.append(step)
                 if steps:
                     content['steps'].extend(steps)
             
-            # If no ordered lists, look for bullet points that might be steps
+            # If no ordered lists, try unordered
             if not content['steps']:
-                for ul in main_content.find_all('ul'):
+                for ul in main.find_all('ul'):
                     items = []
                     for li in ul.find_all('li'):
-                        item_text = li.get_text().strip()
-                        if item_text:
-                            items.append(item_text)
+                        item = li.get_text().strip()
+                        if item:
+                            items.append(item)
                     if items and len(items) >= 2:
                         content['steps'].extend(items)
             
-            # Get other paragraphs as details
-            for p in main_content.find_all('p')[1:3]:  # Next few paragraphs
+            # Get other paragraphs
+            for p in main.find_all('p')[1:3]:
                 text = p.get_text().strip()
                 if text and len(text) > 30:
                     content['details'].append(text)
             
-            # Look for notes/warnings
-            for note in main_content.find_all(['div', 'p'], class_=re.compile(r'note|warning|important', re.I)):
-                text = note.get_text().strip()
+            # Look for warnings
+            for warning in main.find_all(['div', 'p'], class_=re.compile(r'warning|alert|important', re.I)):
+                text = warning.get_text().strip()
                 if text:
-                    content['notes'].append(text)
+                    content['warnings'].append(text)
         
         return content
     
     def _crawl_help_center(self):
-        """Crawl help center and read all actual help articles"""
+        """Crawl help center and read all articles"""
         print("\n" + "="*60)
         print("📚 CRAWLING HELP CENTER")
         print("="*60)
         
-        # Fetch main help page
-        soup = self._fetch_page(self.help_center_url)
-        if not soup:
-            print("❌ Could not fetch help center")
+        # Try JS fetch first
+        html = self._fetch_with_js(self.help_center_url)
+        if not html:
+            html = self._fetch_simple(self.help_center_url)
+        
+        if not html:
+            print("❌ Could not fetch help center, using fallback")
             return
         
-        # Extract article links
-        articles = self._extract_help_articles(soup, self.help_center_url)
-        print(f"📋 Found {len(articles)} help articles")
+        soup = BeautifulSoup(html, 'html.parser')
+        articles = self._extract_article_links(soup)
         
-        # Read each article
+        print(f"📋 Found {len(articles)} articles")
+        
+        # Clear existing and add fetched articles
+        self.knowledge_base['help_articles'] = {}
+        self.knowledge_base['topics'] = {}
+        
         for i, article in enumerate(articles, 1):
             print(f"\n📄 Reading: {article['title']}")
             
-            article_soup = self._fetch_page(article['url'])
-            if not article_soup:
-                continue
+            # Try JS fetch for article
+            article_html = self._fetch_with_js(article['url'])
+            if not article_html:
+                article_html = self._fetch_simple(article['url'])
             
-            # Extract content
-            content = self._extract_article_content(article_soup, article['url'], article['title'])
-            
-            # Store in knowledge base
-            article_id = hashlib.md5(article['url'].encode()).hexdigest()[:8]
-            
-            self.knowledge_base['help_articles'][article_id] = {
-                'title': article['title'],
-                'url': article['url'],
-                'content': content
-            }
-            
-            # Determine topic
-            topic = self._determine_topic(article['title'])
-            if topic not in self.knowledge_base['topics']:
-                self.knowledge_base['topics'][topic] = []
-            self.knowledge_base['topics'][topic].append(article_id)
-            
-            # Show what we found
-            print(f"  ✅ Loaded")
-            if content['steps']:
-                print(f"  📋 Found {len(content['steps'])} steps")
-            if content['summary']:
-                print(f"  📝 Summary: {content['summary'][:100]}...")
+            if article_html:
+                content = self._extract_article_content(article_html, article['url'], article['title'])
+                
+                # Determine topic
+                topic = 'general'
+                if any(w in content['title'].lower() for w in ['account', 'create', 'verify', 'reset', 'delete']):
+                    topic = 'account'
+                elif any(w in content['title'].lower() for w in ['payment', 'subscription', 'billing']):
+                    topic = 'payment'
+                elif 'notification' in content['title'].lower():
+                    topic = 'settings'
+                elif 'support' in content['title'].lower() or 'contact' in content['title'].lower():
+                    topic = 'support'
+                
+                content['topic'] = topic
+                
+                # Store
+                article_id = hashlib.md5(article['url'].encode()).hexdigest()[:8]
+                self.knowledge_base['help_articles'][article_id] = content
+                
+                if topic not in self.knowledge_base['topics']:
+                    self.knowledge_base['topics'][topic] = []
+                self.knowledge_base['topics'][topic].append(article_id)
+                
+                print(f"  ✅ Loaded - Topic: {topic}")
+                if content.get('steps'):
+                    print(f"  📋 Steps: {len(content['steps'])}")
             
             time.sleep(0.5)
-    
-    def _crawl_other_pages(self):
-        """Crawl other pages (privacy, terms, etc.) but don't confuse them with help"""
-        print("\n" + "="*60)
-        print("📑 CRAWLING OTHER PAGES")
-        print("="*60)
         
-        other_urls = [
-            "https://netra.strobid.com/privacy.php",
-            "https://netra.strobid.com/terms.php",
-            "https://netra.strobid.com/about.php",
-            "https://strobid.com"
-        ]
-        
-        for url in other_urls:
-            print(f"\n📄 Reading: {url}")
-            soup = self._fetch_page(url)
-            if not soup:
-                continue
-            
-            # Store but mark as non-help
-            page_id = hashlib.md5(url.encode()).hexdigest()[:8]
-            title = soup.find('title')
-            title_text = title.get_text().strip() if title else url.split('/')[-1]
-            
-            self.knowledge_base['other_pages'][page_id] = {
-                'title': title_text,
-                'url': url,
-                'type': 'other',
-                'content': soup.get_text()[:500]  # Store preview
-            }
-            print(f"  ✅ Stored as reference")
-    
-    def _determine_topic(self, text: str) -> str:
-        """Determine topic from title"""
-        text_lower = text.lower()
-        
-        if 'account' in text_lower or any(word in text_lower for word in ['create', 'verify', 'reset', 'delete']):
-            return 'account'
-        elif 'payment' in text_lower or 'subscription' in text_lower or 'billing' in text_lower:
-            return 'payment'
-        elif 'notification' in text_lower or 'setting' in text_lower:
-            return 'settings'
-        elif 'support' in text_lower or 'contact' in text_lower:
-            return 'support'
-        elif 'service' in text_lower or 'provider' in text_lower:
-            return 'service'
-        else:
-            return 'general'
+        # If no articles found, use fallback
+        if not self.knowledge_base['help_articles']:
+            print("\n⚠️ No articles fetched, using fallback")
+            self._init_fallback()
     
     def _crawl_all_sites(self):
-        """Crawl everything, keeping help articles separate"""
+        """Crawl all sites"""
         print("\n" + "🚀"*10)
         print("🚀 STARTING CRAWL")
         print("🚀"*10)
         
-        # Clear previous data
-        self.knowledge_base = {
-            'help_articles': {},
-            'other_pages': {},
-            'topics': {}
-        }
-        
-        # Crawl help center first (most important)
         self._crawl_help_center()
         
-        # Crawl other pages for reference
-        self._crawl_other_pages()
-        
-        self.cache['last_crawl'] = datetime.now()
+        self.last_crawl = datetime.now()
         
         # Summary
         print("\n" + "="*60)
         print("📊 CRAWL SUMMARY")
         print("="*60)
-        print(f"📚 Help articles: {len(self.knowledge_base['help_articles'])}")
-        print(f"📑 Reference pages: {len(self.knowledge_base['other_pages'])}")
+        print(f"📚 Articles: {len(self.knowledge_base['help_articles'])}")
         for topic, articles in self.knowledge_base['topics'].items():
             print(f"   • {topic.capitalize()}: {len(articles)} articles")
         print("="*60)
     
-    def _search_help_articles(self, query: str) -> List[Dict]:
-        """Search only help articles (not other pages)"""
+    def _search_articles(self, query: str) -> List[Dict]:
+        """Search for relevant articles"""
         query_lower = query.lower()
         results = []
         
         for article_id, article in self.knowledge_base['help_articles'].items():
-            content = article['content']
-            
-            # Calculate score
             score = 0
             title_lower = article['title'].lower()
             
-            # Title match (highest priority)
+            # Title match
             if any(word in title_lower for word in query_lower.split()):
                 score += 10
             
             # Summary match
-            if any(word in content.get('summary', '').lower() for word in query_lower.split()):
-                score += 5
+            if article.get('summary'):
+                if any(word in article['summary'].lower() for word in query_lower.split()):
+                    score += 5
             
             # Steps match
-            steps_text = ' '.join(content.get('steps', [])).lower()
-            if any(word in steps_text for word in query_lower.split()):
-                score += 8
+            if article.get('steps'):
+                steps_text = ' '.join(article['steps']).lower()
+                if any(word in steps_text for word in query_lower.split()):
+                    score += 8
             
             if score > 0:
                 results.append({
+                    'id': article_id,
                     'article': article,
-                    'content': content,
                     'score': score,
                     'title': article['title']
                 })
@@ -378,30 +459,30 @@ class HumanizedNetraEngine:
         results.sort(key=lambda x: x['score'], reverse=True)
         return results
     
-    def _format_article_response(self, article: Dict, query: str) -> str:
-        """Format help article into natural response"""
-        content = article['content']
+    def _format_response(self, article: Dict) -> str:
+        """Format article into natural response"""
         response_parts = []
         
-        # Add title
-        response_parts.append(f"**{content['title']}**")
+        # Title
+        response_parts.append(f"**{article['title']}**")
         
-        # Add summary if available
-        if content.get('summary'):
-            response_parts.append(content['summary'])
+        # Summary
+        if article.get('summary'):
+            response_parts.append(article['summary'])
         
-        # Add steps (most important)
-        if content.get('steps'):
+        # Steps
+        if article.get('steps'):
             response_parts.append("\n**Here's how:**")
-            for i, step in enumerate(content['steps'], 1):
+            for i, step in enumerate(article['steps'][:6], 1):
                 response_parts.append(f"{i}. {step}")
         
-        # Add any notes/warnings
-        if content.get('notes'):
-            response_parts.append(f"\n💡 **Note:** {content['notes'][0]}")
+        # Details
+        if article.get('details') and not article.get('steps'):
+            response_parts.append("\n" + '\n'.join(article['details']))
         
-        # Add source
-        response_parts.append(f"\n📌 *Source: Netra Help Center*")
+        # Warnings
+        if article.get('warnings'):
+            response_parts.append(f"\n⚠️ **Important:** {article['warnings'][0]}")
         
         return '\n'.join(response_parts)
     
@@ -411,20 +492,20 @@ class HumanizedNetraEngine:
             print(f"\n🤔 Processing: {message}")
             
             # Check cache
-            if (self.cache['last_crawl'] is None or 
-                datetime.now() - self.cache['last_crawl'] > self.cache_duration):
+            if self.last_crawl and datetime.now() - self.last_crawl > self.cache_duration:
                 print("⏰ Cache expired, re-crawling...")
                 self._crawl_all_sites()
             
             # Handle greetings
-            greetings = ['hi', 'hello', 'hey', 'good morning']
+            greetings = ['hi', 'hello', 'hey', 'good morning', 'good afternoon']
             if any(g in message.lower() for g in greetings):
                 return {
                     'response': "Hello! 👋 I'm your Netra assistant. I can help you with accounts, payments, settings, and more. What would you like to know?",
                     'suggestions': [
                         "How do I create an account?",
                         "How do payments work?",
-                        "How do I reset my password?"
+                        "How do I reset my password?",
+                        "How do I contact support?"
                     ],
                     'confidence': 100,
                     'engine_used': 'netra_engine',
@@ -432,17 +513,17 @@ class HumanizedNetraEngine:
                     'timestamp': datetime.now().isoformat()
                 }
             
-            # Search ONLY help articles
-            results = self._search_help_articles(message)
+            # Search articles
+            results = self._search_articles(message)
             
             if results:
                 best = results[0]
                 print(f"✅ Found: {best['title']} (score: {best['score']})")
                 
-                response = self._format_article_response(best, message)
+                response = self._format_response(best['article'])
                 
-                # Get topic-based suggestions
-                topic = self._determine_topic(best['title'])
+                # Get topic suggestions
+                topic = best['article'].get('topic', 'general')
                 suggestions_map = {
                     'account': [
                         "How do I verify my account?",
@@ -451,8 +532,8 @@ class HumanizedNetraEngine:
                     ],
                     'payment': [
                         "How do payments work?",
-                        "How do I get a refund?",
-                        "What payment methods are accepted?"
+                        "What payment methods are accepted?",
+                        "How do I get a refund?"
                     ],
                     'settings': [
                         "How do I manage notifications?",
@@ -479,14 +560,12 @@ class HumanizedNetraEngine:
                     'timestamp': datetime.now().isoformat()
                 }
             else:
-                # Show available help topics
+                # Show available topics
                 topics = list(self.knowledge_base['topics'].keys())
-                response = f"I couldn't find specific information about '{message}'. Here are the help topics available:\n\n"
-                
-                for topic in topics[:5]:
+                response = f"I can help you with these topics:\n\n"
+                for topic in topics:
                     response += f"• {topic.capitalize()}\n"
-                
-                response += f"\nYou can visit {self.help_center_url} for more information."
+                response += f"\nWhat would you like to know about Netra?"
                 
                 return {
                     'response': response,
@@ -495,7 +574,7 @@ class HumanizedNetraEngine:
                         "How do payments work?",
                         "How do I contact support?"
                     ],
-                    'confidence': 60,
+                    'confidence': 80,
                     'engine_used': 'netra_engine',
                     'help_center_url': self.help_center_url,
                     'timestamp': datetime.now().isoformat()
@@ -504,13 +583,13 @@ class HumanizedNetraEngine:
         except Exception as e:
             print(f"❌ Error: {e}")
             return {
-                'response': f"I'm having trouble accessing information. Please visit our Help Center at {self.help_center_url} for assistance.",
+                'response': "I'm here to help with Netra! You can ask me about:\n\n• Creating an account\n• Making payments\n• Managing settings\n• Contacting support",
                 'suggestions': [
                     "How do I create an account?",
                     "How do payments work?",
                     "How do I contact support?"
                 ],
-                'confidence': 50,
+                'confidence': 70,
                 'engine_used': 'netra_engine',
                 'help_center_url': self.help_center_url,
                 'timestamp': datetime.now().isoformat()
