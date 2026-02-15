@@ -385,66 +385,30 @@
         color: var(--text-primary);
         border-bottom-left-radius: 6px;
         border: 1px solid rgba(255, 255, 255, 0.05);
+        
+        /* Scrollable properties */
+        overflow-x: auto;
+        overflow-y: auto;
+        max-height: 400px;
+        max-width: 100%;
+        word-wrap: break-word;
+        white-space: pre-wrap;
     }
 
-    /* Long message handling with read more/less */
-    .message-text {
-        overflow: hidden;
-        transition: max-height 0.3s ease;
+    /* Custom scrollbar for messages */
+    .message.bot .message-content::-webkit-scrollbar {
+        width: 4px;
+        height: 4px;
     }
 
-    .message-text.collapsed {
-        max-height: 150px;
-        position: relative;
+    .message.bot .message-content::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 2px;
     }
 
-    .message-text.collapsed::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        height: 60px;
-        background: linear-gradient(transparent, rgba(255, 255, 255, 0.08));
-        pointer-events: none;
-        border-bottom-left-radius: 22px;
-        border-bottom-right-radius: 22px;
-    }
-
-    .message.user .message-text.collapsed::after {
-        background: linear-gradient(transparent, var(--primary-dark));
-    }
-
-    .read-more-btn {
-        background: transparent;
-        border: none;
-        color: var(--primary-color);
-        font-size: 12px;
-        font-weight: 600;
-        margin-top: 8px;
-        padding: 4px 0;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        transition: var(--transition);
-    }
-
-    .read-more-btn i {
-        font-size: 10px;
-        transition: transform 0.3s ease;
-    }
-
-    .read-more-btn.expanded i {
-        transform: rotate(180deg);
-    }
-
-    .read-more-btn:active {
-        opacity: 0.7;
-    }
-
-    .message.user .read-more-btn {
-        color: rgba(255, 255, 255, 0.9);
+    .message.bot .message-content::-webkit-scrollbar-thumb {
+        background: var(--primary-color);
+        border-radius: 2px;
     }
 
     .message-time {
@@ -618,6 +582,15 @@
         white-space: pre-wrap;
         word-wrap: break-word;
     }
+
+    .code-keyword { color: #ff79c6; }
+    .code-string { color: #f1fa8c; }
+    .code-number { color: #bd93f9; }
+    .code-comment { color: #6272a4; font-style: italic; }
+    .code-function { color: #50fa7b; }
+    .code-operator { color: #ff79c6; }
+    .code-variable { color: #8be9fd; }
+    .code-class { color: #8be9fd; font-weight: bold; }
 
     /* Inline Code */
     .inline-code {
@@ -1725,54 +1698,28 @@
             });
         }
 
-        // Toggle message expansion
-        function toggleMessageExpansion(btn, messageId) {
-            const messageText = document.getElementById(messageId);
-            const isExpanded = btn.classList.contains('expanded');
-            
-            if (isExpanded) {
-                messageText.classList.remove('expanded');
-                messageText.classList.add('collapsed');
-                btn.classList.remove('expanded');
-                btn.innerHTML = '<i class="fas fa-chevron-down"></i> Read more';
-            } else {
-                messageText.classList.remove('collapsed');
-                messageText.classList.add('expanded');
-                btn.classList.add('expanded');
-                btn.innerHTML = '<i class="fas fa-chevron-up"></i> Read less';
-            }
-        }
-
         // Process message content for special formatting
-        function processMessageContent(text, messageId) {
-            // Store the original text for the message content
-            let processedText = text;
+        function processMessageContent(text) {
+            text = text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="message-link">$1</a>');
             
-            // Replace URLs with links
-            processedText = processedText.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="message-link">$1</a>');
-            
-            // Handle LaTeX equations
-            processedText = processedText.replace(/!\[Equation\]\((data:image\/png;base64,[^)]+)\)/g, function(match, imageData) {
+            text = text.replace(/!\[Equation\]\((data:image\/png;base64,[^)]+)\)/g, function(match, imageData) {
                 return `<div class="latex-equation">
                     <img src="${imageData}" alt="LaTeX Equation">
                 </div>`;
             });
             
-            // Handle math visualizations
-            processedText = processedText.replace(/!\[(.*?)\]\((data:image\/png;base64,[^)]+)\)/g, function(match, altText, imageData) {
+            text = text.replace(/!\[(.*?)\]\((data:image\/png;base64,[^)]+)\)/g, function(match, altText, imageData) {
                 return `<div class="math-visualization">
                     <div class="visualization-title">${altText}</div>
                     <img src="${imageData}" alt="${altText}">
                 </div>`;
             });
             
-            // Handle calculations
-            processedText = processedText.replace(/\*\*🧮 CALCULATIONS:\*\*\s*```\s*([^`]+)\s*```/g, function(match, calculation) {
+            text = text.replace(/\*\*🧮 CALCULATIONS:\*\*\s*```\s*([^`]+)\s*```/g, function(match, calculation) {
                 return `<div class="math-result">${calculation}</div>`;
             });
             
-            // Handle code blocks
-            processedText = processedText.replace(/```(\w+)?\n([\s\S]*?)```/g, function(match, language, code) {
+            text = text.replace(/```(\w+)?\n([\s\S]*?)```/g, function(match, language, code) {
                 const lang = language || 'text';
                 const codeId = 'code_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
                 return `<div class="code-block">
@@ -1795,25 +1742,11 @@
                 </div>`;
             });
             
-            // Handle inline code
-            processedText = processedText.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
+            text = text.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
+            text = text.replace(/\n/g, '<br>');
+            text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
             
-            // Handle bold text
-            processedText = processedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-            
-            // Split into paragraphs and wrap in message text div
-            const paragraphs = processedText.split('\n').filter(p => p.trim());
-            const wrappedContent = paragraphs.map(p => `<div class="message-paragraph">${p}</div>`).join('');
-            
-            // Create the message structure with read more/less functionality
-            return `
-                <div class="message-text collapsed" id="${messageId}">
-                    ${wrappedContent}
-                </div>
-                <button class="read-more-btn" onclick="toggleMessageExpansion(this, '${messageId}')">
-                    <i class="fas fa-chevron-down"></i> Read more
-                </button>
-            `;
+            return text;
         }
 
         // Escape HTML for code blocks
@@ -1872,11 +1805,7 @@
             const contentDiv = document.createElement('div');
             contentDiv.classList.add('message-content');
             
-            // Generate unique ID for this message
-            const messageId = 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-            
-            // Process the message content with read more/less
-            const processedContent = processMessageContent(text, messageId);
+            const processedContent = processMessageContent(text);
             contentDiv.innerHTML = processedContent;
             
             if (imageUrl) {
@@ -2054,9 +1983,6 @@
         // Initialize chat
         function initializeChat() {
             initializeChatSystem();
-            
-            // Make toggle function globally available
-            window.toggleMessageExpansion = toggleMessageExpansion;
         }
 
         // Event listeners
