@@ -7,11 +7,9 @@ import requests
 import random
 import re
 import time
-import hashlib
 from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin, urlparse
 import html2text # type: ignore
 
 class HumanizedNetraEngine:
@@ -29,271 +27,332 @@ class HumanizedNetraEngine:
         
         # Cache for fetched content
         self.cache = {
-            'pages': {},  # URL -> {content, timestamp, etag}
-            'sitemap': None,
-            'last_full_refresh': None
+            'content': {},
+            'last_fetch': None,
+            'fetch_count': 0
         }
         
-        # Cache duration (6 hours)
-        self.cache_duration = timedelta(hours=6)
+        # Cache duration (1 hour)
+        self.cache_duration = timedelta(hours=1)
         
-        # Initialize HTML to text converter
+        # Initialize HTML to text converter with proper settings
         self.converter = html2text.HTML2Text()
-        self.converter.ignore_links = False
-        self.converter.ignore_images = False
+        self.converter.ignore_links = True  # Don't show raw links
+        self.converter.ignore_images = True  # Don't show image markdown
         self.converter.ignore_tables = False
-        self.converter.body_width = 0
+        self.converter.body_width = 0  # Don't wrap text
+        self.converter.protect_links = False
+        self.converter.mark_code = False
         
-        # Conversation starters (keep these for personality)
-        self.conversation_starters = [
-            "Hey there! ",
-            "I just checked our latest info: ",
-            "According to our website: ",
-            "Let me fetch that for you: ",
-            "Great question! Here's what I found: ",
-            "Based on our help center: ",
-            "I looked that up for you: "
-        ]
+        # Natural language templates
+        self.response_templates = {
+            'account': "Here's what you need to know about Netra accounts:\n\n{content}",
+            'payment': "Let me explain how payments work on Netra:\n\n{content}",
+            'subscription': "Here's information about Netra subscriptions:\n\n{content}",
+            'general': "Here's what I found about that:\n\n{content}",
+            'not_found': "I couldn't find specific information about '{query}' in our help center. Would you like to know about:\n\n• Creating an account\n• Making payments\n• Managing subscriptions\n• Contacting support"
+        }
         
-        self.friendly_closers = [
-            "\n\nHope that helps! 😊",
-            "\n\nLet me know if you need anything else!",
-            "\n\nYou can always check our website for more details.",
-            "\n\nIs there anything else you'd like to know?",
-            "\n\nHappy to help with more questions!"
-        ]
+        # Fetch content on startup
+        self._refresh_cache()
+    
+    def _clean_text(self, text: str) -> str:
+        """
+        Clean and format text for natural language response
+        """
+        # Remove markdown links [text](link) -> just keep the text
+        text = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', text)
+        
+        # Remove image markdown ![alt](src)
+        text = re.sub(r'!\[[^\]]*\]\([^\)]+\)', '', text)
+        
+        # Remove HTML tags
+        text = re.sub(r'<[^>]+>', '', text)
+        
+        # Fix weird characters
+        replacements = {
+            'âs': "'s",
+            'â': "'",
+            'â': '"',
+            'â': '"',
+            'â': '-',
+            'â': '-',
+            'â¢': '™',
+            'Â': '',
+            '&nbsp;': ' ',
+            '&amp;': '&',
+            '&lt;': '<',
+            '&gt;': '>',
+            '&quot;': '"',
+            '&#39;': "'",
+            '##': '',  # Remove markdown headers
+            '__': '',  # Remove markdown bold
+            '*': '',   # Remove markdown bullets (will add our own)
+        }
+        
+        for old, new in replacements.items():
+            text = text.replace(old, new)
+        
+        # Remove multiple newlines
+        text = re.sub(r'\n{3,}', '\n\n', text)
+        
+        # Remove multiple spaces
+        text = re.sub(r' {2,}', ' ', text)
+        
+        return text.strip()
+    
+    def _format_as_natural_language(self, text: str, topic: str = 'general') -> str:
+        """
+        Convert raw content into natural language
+        """
+        # Split into lines and clean
+        lines = text.split('\n')
+        cleaned_lines = []
+        
+        for line in lines:
+            line = line.strip()
+            if not line or line.startswith('Skip to content') or line.startswith('Skip to main menu'):
+                continue
+            
+            # Remove navigation elements
+            if any(word in line.lower() for word in ['home', 'menu', 'navigation', 'search', 'toggle']):
+                continue
+            
+            # Remove very short lines (likely navigation)
+            if len(line) < 3:
+                continue
+            
+            cleaned_lines.append(line)
+        
+        # Join and clean
+        clean_text = ' '.join(cleaned_lines)
+        clean_text = self._clean_text(clean_text)
+        
+        # Break into sentences for better readability
+        sentences = re.split(r'(?<=[.!?])\s+', clean_text)
+        
+        # Format into paragraphs
+        paragraphs = []
+        current_para = []
+        
+        for sentence in sentences:
+            current_para.append(sentence)
+            if len(current_para) >= 3:  # 3 sentences per paragraph
+                paragraphs.append(' '.join(current_para))
+                current_para = []
+        
+        if current_para:
+            paragraphs.append(' '.join(current_para))
+        
+        # Join paragraphs
+        formatted_text = '\n\n'.join(paragraphs)
+        
+        return formatted_text
     
     def _fetch_url(self, url: str) -> Optional[str]:
         """
-        Fetch content from URL with caching
+        Fetch content from URL
         """
         try:
-            # Check cache
-            now = datetime.now()
-            if url in self.cache['pages']:
-                cached = self.cache['pages'][url]
-                if now - cached['timestamp'] < self.cache_duration:
-                    print(f"✅ Using cached content for {url}")
-                    return cached['content']
-            
-            # Fetch fresh content
-            print(f"🌐 Fetching fresh content from {url}")
+            print(f"🌐 Fetching: {url}")
             headers = {
-                'User-Agent': 'NetraBot/1.0 (+https://netra.strobid.com)'
+                'User-Agent': 'Mozilla/5.0 (compatible; NetraBot/1.0; +https://netra.strobid.com)'
             }
             response = requests.get(url, headers=headers, timeout=10)
             response.raise_for_status()
             
-            # Parse and clean content
+            # Parse with BeautifulSoup
             soup = BeautifulSoup(response.text, 'html.parser')
             
-            # Remove script and style elements
-            for script in soup(["script", "style", "nav", "footer", "header"]):
-                script.decompose()
+            # Remove unwanted elements
+            for element in soup.find_all(['script', 'style', 'nav', 'footer', 'header', 'aside']):
+                element.decompose()
             
-            # Convert to readable text
-            text = self.converter.handle(str(soup))
+            # Find main content
+            main_content = None
+            for selector in ['main', 'article', '.content', '#content', '.main-content', '.help-content']:
+                main_content = soup.select_one(selector)
+                if main_content:
+                    break
             
-            # Clean up text
-            lines = [line.strip() for line in text.split('\n') if line.strip()]
-            clean_text = '\n'.join(lines)
+            if not main_content:
+                main_content = soup.body
             
-            # Cache it
-            self.cache['pages'][url] = {
-                'content': clean_text,
-                'timestamp': now,
-                'etag': response.headers.get('etag', '')
-            }
+            if main_content:
+                # Convert to text
+                text = self.converter.handle(str(main_content))
+                return text
             
-            return clean_text
+            return None
             
-        except requests.RequestException as e:
-            print(f"Error fetching {url}: {e}")
+        except Exception as e:
+            print(f"❌ Error fetching {url}: {e}")
             return None
     
-    def _extract_sections(self, content: str) -> Dict[str, str]:
+    def _refresh_cache(self):
         """
-        Extract logical sections from content
+        Fetch fresh content from all URLs
         """
-        sections = {}
+        print("\n🔄 Refreshing cache...")
         
-        # Look for headings and their content
-        lines = content.split('\n')
-        current_section = 'general'
-        section_content = []
-        
-        for line in lines:
-            # Check if line looks like a heading
-            if line.strip() and not line[0].isspace() and len(line.strip()) < 100:
-                if section_content:
-                    sections[current_section] = '\n'.join(section_content)
-                current_section = line.strip().lower().replace(' ', '_').replace('#', '')
-                section_content = []
+        for name, url in self.urls.items():
+            print(f"  Fetching {name}...")
+            content = self._fetch_url(url)
+            
+            if content:
+                # Clean and format the content
+                clean_content = self._format_as_natural_language(content)
+                
+                self.cache['content'][name] = {
+                    'url': url,
+                    'raw': content,
+                    'clean': clean_content,
+                    'fetched_at': datetime.now().isoformat()
+                }
+                print(f"  ✅ Cached {len(clean_content)} chars from {name}")
             else:
-                section_content.append(line)
+                print(f"  ❌ Failed to fetch {name}")
         
-        # Add last section
-        if section_content:
-            sections[current_section] = '\n'.join(section_content)
-        
-        return sections
+        self.cache['last_fetch'] = datetime.now()
+        print("✅ Cache refresh complete\n")
     
-    def _search_content(self, query: str, content: str) -> List[Dict]:
+    def _search_content(self, query: str) -> List[Dict]:
         """
-        Search for relevant content based on query
+        Search for relevant content
         """
-        query_words = set(query.lower().split())
+        query_lower = query.lower()
         results = []
         
-        # Split into paragraphs
-        paragraphs = content.split('\n\n')
-        
-        for para in paragraphs:
-            if len(para.strip()) < 20:  # Skip short paragraphs
-                continue
+        for source_name, source_data in self.cache['content'].items():
+            clean_text = source_data.get('clean', '')
             
-            para_lower = para.lower()
+            # Split into sections
+            sections = re.split(r'\n\s*\n', clean_text)
             
-            # Calculate relevance score
-            score = 0
-            matched_words = []
-            
-            for word in query_words:
-                if len(word) < 3:  # Skip very short words
+            for section in sections:
+                if len(section) < 30:
                     continue
-                if word in para_lower:
-                    score += 1
-                    matched_words.append(word)
-            
-            # Bonus for exact phrase matches
-            if query.lower() in para_lower:
-                score += 5
-            
-            if score > 0:
-                results.append({
-                    'content': para.strip(),
-                    'score': score,
-                    'matched': matched_words
-                })
+                
+                section_lower = section.lower()
+                score = 0
+                
+                # Check for keywords
+                keywords = {
+                    'account': ['account', 'sign up', 'register', 'create', 'password', 'login', 'verify'],
+                    'payment': ['payment', 'pay', 'money', 'transaction', 'fee', 'cost', 'price', 'subscription'],
+                    'help': ['help', 'support', 'contact', 'assistance', 'guide', 'tutorial'],
+                    'service': ['service', 'provider', 'client', 'book', 'booking', 'hire']
+                }
+                
+                for category, words in keywords.items():
+                    for word in words:
+                        if word in section_lower and word in query_lower:
+                            score += 2
+                        elif word in section_lower:
+                            score += 1
+                
+                # Bonus for exact phrase match
+                if query_lower in section_lower:
+                    score += 5
+                
+                if score > 0:
+                    results.append({
+                        'source': source_name,
+                        'content': section,
+                        'score': score,
+                        'url': source_data['url']
+                    })
         
         # Sort by score
         results.sort(key=lambda x: x['score'], reverse=True)
-        return results[:3]  # Return top 3
-    
-    def _get_best_response(self, query: str) -> Optional[str]:
-        """
-        Get the best response by searching across all sources
-        """
-        all_results = []
-        
-        # Fetch from all sources
-        for source_name, url in self.urls.items():
-            content = self._fetch_url(url)
-            if content:
-                results = self._search_content(query, content)
-                for r in results:
-                    r['source'] = source_name
-                    r['source_url'] = url
-                    all_results.append(r)
-        
-        if not all_results:
-            return None
-        
-        # Sort by score
-        all_results.sort(key=lambda x: x['score'], reverse=True)
-        best = all_results[0]
-        
-        # Format response
-        response = best['content']
-        
-        # Add source attribution
-        if best['score'] > 2:  # Only add source if reasonably confident
-            source_names = {
-                'main': 'strobid.com',
-                'netra': 'netra.strobid.com',
-                'help': 'help center'
-            }
-            source = source_names.get(best['source'], best['source'])
-            response += f"\n\n📌 *Source: {source}*"
-        
-        return response
-    
-    def _generate_suggestions(self, query: str) -> List[str]:
-        """
-        Generate follow-up suggestions based on common help topics
-        """
-        # Common help topics from the help center
-        suggestions = [
-            "How to create a Netra account",
-            "How to verify my account",
-            "Reset my password",
-            "Delete my account",
-            "How payments work",
-            "Manage subscriptions",
-            "Notification settings",
-            "Contact support"
-        ]
-        
-        # Randomly select 4 suggestions
-        return random.sample(suggestions, 4)
+        return results
     
     def process_query(self, message: str, user_id: str = None) -> Dict[str, Any]:
         """
-        Process user query by fetching and searching website content
+        Process user query and return natural language response
         """
         try:
-            # First, check if it's a general greeting
-            greetings = ['hi', 'hello', 'hey', 'greetings']
+            # Check cache
+            if (self.cache['last_fetch'] is None or 
+                datetime.now() - self.cache['last_fetch'] > self.cache_duration):
+                self._refresh_cache()
+            
+            # Handle greetings
+            greetings = ['hi', 'hello', 'hey', 'good morning', 'good afternoon', 'good evening']
             if any(g in message.lower() for g in greetings):
                 return {
-                    'response': "Hello! 👋 I'm your Netra assistant. I can help you with anything about Netra - accounts, payments, settings, and more. What would you like to know?",
-                    'suggestions': self._generate_suggestions(''),
-                    'confidence': 95,
-                    'engine_used': 'netra_engine_dynamic',
+                    'response': "Hello! 👋 I'm your Netra assistant. I can help you with accounts, payments, subscriptions, and more. What would you like to know?",
+                    'suggestions': [
+                        "How do I create an account?",
+                        "How do payments work?",
+                        "How do I contact support?"
+                    ],
+                    'confidence': 100,
+                    'engine_used': 'netra_engine',
                     'help_center_url': self.urls['help'],
                     'timestamp': datetime.now().isoformat()
                 }
             
-            # Get best response from website content
-            response = self._get_best_response(message)
+            # Search for relevant content
+            results = self._search_content(message)
             
-            if response:
-                # Add random opener
-                opener = random.choice(self.conversation_starters)
-                response = opener + response
+            if results and results[0]['score'] > 2:
+                best = results[0]
                 
-                # Add random closer (30% chance)
-                if random.random() > 0.7:
-                    response += random.choice(self.friendly_closers)
+                # Format response naturally
+                response = best['content']
                 
-                confidence = 90
-                suggestions = self._generate_suggestions(message)
+                # Add source attribution naturally
+                source_names = {
+                    'main': 'our main website',
+                    'netra': 'the Netra website',
+                    'help': 'our help center'
+                }
+                source = source_names.get(best['source'], best['source'])
+                
+                # Build natural response
+                natural_response = f"{response}\n\n(I found this information in {source}. You can visit {self.urls['help']} for more details.)"
+                
+                return {
+                    'response': natural_response,
+                    'suggestions': [
+                        "How do I reset my password?",
+                        "How do payments work?",
+                        "How do I contact support?",
+                        "How do I delete my account?"
+                    ],
+                    'confidence': min(95, 70 + best['score']),
+                    'engine_used': 'netra_engine',
+                    'help_center_url': self.urls['help'],
+                    'timestamp': datetime.now().isoformat()
+                }
             else:
-                # Fallback response
-                response = f"I couldn't find specific information about that in our help center. You might want to check {self.urls['help']} directly, or try asking about:\n\n• Creating an account\n• Payments and subscriptions\n• Account settings\n• Contacting support"
-                confidence = 60
-                suggestions = self._generate_suggestions('general')
-            
-            return {
-                'response': response,
-                'suggestions': suggestions,
-                'confidence': confidence,
-                'engine_used': 'netra_engine_dynamic',
-                'help_center_url': self.urls['help'],
-                'timestamp': datetime.now().isoformat()
-            }
-            
+                # No good match found
+                return {
+                    'response': f"I couldn't find specific information about '{message}' in our help center. Would you like to know about:\n\n• Creating an account\n• Making payments\n• Managing subscriptions\n• Contacting support\n\nYou can also browse {self.urls['help']} for more information.",
+                    'suggestions': [
+                        "How do I create an account?",
+                        "How do payments work?",
+                        "How do I contact support?",
+                        "How do I reset my password?"
+                    ],
+                    'confidence': 60,
+                    'engine_used': 'netra_engine',
+                    'help_center_url': self.urls['help'],
+                    'timestamp': datetime.now().isoformat()
+                }
+                
         except Exception as e:
-            print(f"Netra Engine error: {e}")
+            print(f"Error in process_query: {e}")
             return {
-                'response': f"I'm having trouble fetching the latest information right now. Please visit our Help Center at {self.urls['help']} for accurate and up-to-date assistance.",
+                'response': f"I'm having trouble accessing information right now. Please visit our Help Center at {self.urls['help']} for assistance, or try asking about:\n\n• Creating an account\n• Making payments\n• Contacting support",
                 'suggestions': [
-                    "How to create an account",
-                    "Payment methods",
-                    "Contact support"
+                    "How do I create an account?",
+                    "How do payments work?",
+                    "How do I contact support?"
                 ],
-                'confidence': 70,
-                'engine_used': 'netra_engine_dynamic',
+                'confidence': 50,
+                'engine_used': 'netra_engine',
                 'help_center_url': self.urls['help'],
                 'timestamp': datetime.now().isoformat()
             }
