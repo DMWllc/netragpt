@@ -121,7 +121,10 @@ def route_to_engine(message):
     return 'general'
 
 def format_netra_response(engine_response):
-    """Format Netra engine response for the chat"""
+    """
+    Format Netra engine response for the chat
+    NEVER adds help center links - that's handled by the engine itself only when requested
+    """
     if not engine_response:
         return None
     
@@ -130,17 +133,9 @@ def format_netra_response(engine_response):
     suggestions = engine_response.get('suggestions', [])
     confidence = engine_response.get('confidence', 95)
     
-    # Add help center reference if available
-    help_url = engine_response.get('help_center_url', 'https://netra.strobid.com/help')
-    
-    # Format the response with proper structure
-    formatted_response = response
-    
-    # Add help center reference if not already included
-    if help_url and 'help' not in response.lower():
-        formatted_response += f"\n\n📚 For more details, visit our Help Center: {help_url}"
-    
-    return formatted_response
+    # Return the response EXACTLY as the engine formatted it
+    # The engine itself decides when to include links (only when user asks for them)
+    return response
 
 def format_science_response(engine_response, engine_type):
     """Format science engine responses"""
@@ -249,7 +244,7 @@ def chat():
                     
             except Exception as e:
                 print(f"Netra Engine error: {e}")
-                ai_response = "I'm here to help with Netra! While I'm having a quick technical moment, you can always visit our Help Center at https://netra.strobid.com/help for immediate assistance. What would you like to know?"
+                ai_response = "I'm here to help with Netra! Let me know what you'd like to know about accounts, payments, or settings."
                 suggestions = [
                     "How to create a Netra account",
                     "How payments work on Netra",
@@ -314,10 +309,6 @@ def chat():
             if engine_type == 'netra' and suggestions:
                 response_data["suggestions"] = suggestions
             
-            # Add help center link for Netra
-            if engine_type == 'netra':
-                response_data["help_center"] = "https://netra.strobid.com/help"
-            
             # Add session warning if needed
             if session_warning:
                 response_data["session_warning"] = session_warning
@@ -327,7 +318,7 @@ def chat():
         
         # Ultimate fallback response
         fallback_responses = [
-            "I'm here to help! For Netra-specific questions, you can visit https://netra.strobid.com/help or let me know what you'd like to know about Netra.",
+            "I'm here to help! For Netra-specific questions, let me know what you'd like to know about Netra.",
             "I'd be happy to assist you with Netra! What would you like to know? You can ask about accounts, payments, features, or how to get started.",
             "I'm your Netra assistant! Feel free to ask me anything about the Netra app - from creating an account to managing payments."
         ]
@@ -352,8 +343,8 @@ def chat():
     except Exception as e:
         print(f"Chat error: {e}")
         error_responses = [
-            "I'm experiencing some technical difficulties right now. For Netra support, please visit https://netra.strobid.com/help directly! 🔄",
-            "My services seem to be temporarily unavailable. You can visit https://netra.strobid.com/help for Netra information! 🌐",
+            "I'm experiencing some technical difficulties right now. Please try again in a moment! 🔄",
+            "My services seem to be temporarily unavailable. Please try again later! 🌐",
         ]
         return jsonify({"reply": random.choice(error_responses)})
 
@@ -414,7 +405,6 @@ def get_ai_response(message, conversation_context, user_session=None):
         - Location: Kampala, Uganda, East Africa
         - Timezone: East Africa Time (EAT, UTC+3)
         - Website: https://strobid.com
-        - Netra Help Center: https://netra.strobid.com/help
 
         YOUR CAPABILITIES:
         - Primary role: Netra customer service and support
@@ -433,7 +423,7 @@ def get_ai_response(message, conversation_context, user_session=None):
         {diverse_context}
 
         RESPONSE GUIDELINES:
-        - For Netra/service queries: Provide specific, accurate information using the official help center at https://netra.strobid.com/help
+        - For Netra/service queries: Provide specific, accurate information
         - For calculations: Show step-by-step working and final result in code blocks
         - For code: Format code properly using markdown code blocks with language specification
         - For mathematical expressions: Use LaTeX formatting for complex equations
@@ -490,7 +480,7 @@ def get_ai_response(message, conversation_context, user_session=None):
         
     except Exception as e:
         print(f"AI response error: {e}")
-        return "I'm having trouble accessing information right now. For Netra-specific questions, please visit https://netra.strobid.com/help directly."
+        return "I'm having trouble accessing information right now. Please try again in a moment."
 
 @app.route("/session_status", methods=["GET"])
 def session_status():
