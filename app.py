@@ -43,15 +43,45 @@ def route_to_engine(message):
     """Determine which engine to use based on message content"""
     message_lower = message.lower()
     
-    # Customer service queries (Netra) - HIGHEST PRIORITY
-    customer_keywords = [
-        'support', 'help', 'service', 'issue', 'problem', 'ticket',
-        'netra', 'strobid', 'technical', 'billing', 'invoice',
-        'not working', 'broken', 'error', 'urgent', 'netra',
-        'customer', 'complaint', 'request', 'assistance'
+    # EXPANDED Netra keywords for better detection
+    netra_keywords = [
+        # App name and company
+        'netra', 'strobid', 'jovira',
+        
+        # Account related
+        'account', 'password', 'login', 'signup', 'register', 'sign up', 'log in',
+        'create account', 'new account', 'delete account', 'close account',
+        'verify', 'verification', 'otp', 'code', 'confirm',
+        'forgot password', 'reset password', 'change password',
+        
+        # Support related
+        'support', 'help', 'assist', 'customer service', 'contact',
+        'issue', 'problem', 'ticket', 'complaint', 'not working',
+        'broken', 'error', 'urgent', 'help desk',
+        
+        # Payment related
+        'payment', 'pay', 'billing', 'invoice', 'subscription',
+        'subscribe', 'premium', 'plan', 'upgrade', 'downgrade',
+        'refund', 'money', 'transaction', 'charge',
+        
+        # Features
+        'notification', 'alert', 'setting', 'preference',
+        'profile', 'photo', 'picture', 'avatar',
+        'message', 'chat', 'conversation',
+        
+        # Service related
+        'provider', 'client', 'service', 'book', 'booking',
+        'hire', 'review', 'rating', 'feedback',
+        
+        # How-to questions
+        'how to', 'how do i', 'can i', 'where do i',
+        'what is netra', 'tell me about netra',
+        'netra app', 'about netra'
     ]
     
-    if any(keyword in message_lower for keyword in customer_keywords):
+    # Check for Netra-related queries (HIGHEST PRIORITY)
+    if any(keyword in message_lower for keyword in netra_keywords):
+        print(f"🔍 Routing to Netra Engine: {message[:50]}...")
         return 'netra'
     
     # Physics queries
@@ -87,68 +117,65 @@ def route_to_engine(message):
     if any(keyword in message_lower for keyword in biology_keywords):
         return 'biology'
     
-    # Default to general AI (your existing OpenAI flow)
+    # Default to general AI
     return 'general'
 
-def format_engine_response(engine_response, engine_type):
-    """Format engine responses into a consistent chat format"""
+def format_netra_response(engine_response):
+    """Format Netra engine response for the chat"""
     if not engine_response:
         return None
     
-    if engine_type == 'netra':
-        # Format Netra customer service response
-        response_parts = []
-        
-        if 'greeting' in engine_response:
-            response_parts.append(f"👋 {engine_response['greeting']}")
-        
-        if 'immediate_assistance' in engine_response:
-            response_parts.extend(engine_response['immediate_assistance'])
-        
-        if 'next_steps' in engine_response:
-            response_parts.append("\n**Next Steps:**")
-            response_parts.extend([f"• {step}" for step in engine_response['next_steps']])
-        
-        if 'ticket_number' in engine_response:
-            response_parts.append(f"\n🎫 **Ticket Number**: {engine_response['ticket_number']}")
-        
-        if 'farewell' in engine_response:
-            response_parts.append(f"\n{engine_response['farewell']}")
-        
-        return "\n\n".join(response_parts)
+    # Extract response parts
+    response = engine_response.get('response', '')
+    suggestions = engine_response.get('suggestions', [])
+    confidence = engine_response.get('confidence', 95)
     
-    elif engine_type in ['physics', 'chemistry', 'biology']:
-        # Format science engine responses
-        response_parts = []
-        
-        # Add visualizations if available
-        if 'visualizations' in engine_response and engine_response['visualizations']:
-            for viz in engine_response['visualizations']:
-                response_parts.append(f"📊 **{viz['type'].replace('_', ' ').title()} Diagram**")
-                # In a real implementation, you'd serve the image via a separate endpoint
-                response_parts.append(f"*[Scientific visualization generated for {viz['type']}]*")
-        
-        # Add calculations if available
-        if 'calculations' in engine_response and engine_response['calculations']:
-            response_parts.append("🧮 **Calculations:**")
-            for calc in engine_response['calculations']:
+    # Add help center reference if available
+    help_url = engine_response.get('help_center_url', 'https://netra.strobid.com/help')
+    
+    # Format the response with proper structure
+    formatted_response = response
+    
+    # Add help center reference if not already included
+    if help_url and 'help' not in response.lower():
+        formatted_response += f"\n\n📚 For more details, visit our Help Center: {help_url}"
+    
+    return formatted_response
+
+def format_science_response(engine_response, engine_type):
+    """Format science engine responses"""
+    if not engine_response:
+        return None
+    
+    response_parts = []
+    
+    # Add visualizations if available
+    if 'visualizations' in engine_response and engine_response['visualizations']:
+        for viz in engine_response['visualizations']:
+            response_parts.append(f"📊 **{viz.get('type', 'Diagram').replace('_', ' ').title()}**")
+    
+    # Add calculations if available
+    if 'calculations' in engine_response and engine_response['calculations']:
+        response_parts.append("🧮 **Calculations:**")
+        for calc in engine_response['calculations']:
+            if isinstance(calc, dict):
                 for key, value in calc.items():
                     response_parts.append(f"• {key.replace('_', ' ').title()}: {value}")
-        
-        # Add explanations if available
-        if 'explanations' in engine_response and engine_response['explanations']:
-            response_parts.append("📚 **Explanation:**")
-            response_parts.extend(engine_response['explanations'])
-        
-        # Add predictions if available
-        if 'predictions' in engine_response and engine_response['predictions']:
-            for pred in engine_response['predictions']:
-                response_parts.append(f"🔮 **Prediction**: {pred.get('prediction', '')}")
-                if 'explanation' in pred:
-                    response_parts.append(f"*{pred['explanation']}*")
-        
-        if response_parts:
-            return "\n\n".join(response_parts)
+    
+    # Add explanations if available
+    if 'explanations' in engine_response and engine_response['explanations']:
+        response_parts.append("📚 **Explanation:**")
+        response_parts.extend(engine_response['explanations'])
+    
+    # Add predictions if available
+    if 'predictions' in engine_response and engine_response['predictions']:
+        for pred in engine_response['predictions']:
+            response_parts.append(f"🔮 **Prediction**: {pred.get('prediction', '')}")
+            if 'explanation' in pred:
+                response_parts.append(f"*{pred['explanation']}*")
+    
+    if response_parts:
+        return "\n\n".join(response_parts)
     
     return None
 
@@ -193,30 +220,78 @@ def chat():
         # ROUTE TO APPROPRIATE ENGINE
         engine_type = route_to_engine(message)
         engine_response = None
+        ai_response = None
+        
+        print(f"🎯 Engine selected: {engine_type}")
         
         if engine_type == 'netra':
             # Use Netra Engine for customer service
-            engine_response = netra_engine.process_customer_query(message)
-            ai_response = format_engine_response(engine_response, 'netra')
+            try:
+                engine_response = netra_engine.process_query(
+                    message=message, 
+                    user_id=session.get('user_id', 'anonymous')
+                )
+                
+                if engine_response and engine_response.get('response'):
+                    ai_response = format_netra_response(engine_response)
+                    
+                    # Store suggestions for frontend
+                    suggestions = engine_response.get('suggestions', [])
+                else:
+                    # Fallback if engine returns empty
+                    ai_response = "I'd be happy to help you with Netra! What specific information are you looking for? You can ask about creating an account, payments, notifications, or contact support."
+                    suggestions = [
+                        "How to create a Netra account",
+                        "How payments work on Netra",
+                        "Contact Netra support",
+                        "Reset my password"
+                    ]
+                    
+            except Exception as e:
+                print(f"Netra Engine error: {e}")
+                ai_response = "I'm here to help with Netra! While I'm having a quick technical moment, you can always visit our Help Center at https://netra.strobid.com/help for immediate assistance. What would you like to know?"
+                suggestions = [
+                    "How to create a Netra account",
+                    "How payments work on Netra",
+                    "Contact Netra support"
+                ]
             
         elif engine_type == 'physics':
             # Use Physics Engine
-            engine_response = physics_engine.process_physics_query(message)
-            ai_response = format_engine_response(engine_response, 'physics')
+            try:
+                engine_response = physics_engine.process_physics_query(message)
+                ai_response = format_science_response(engine_response, 'physics')
+            except Exception as e:
+                print(f"Physics Engine error: {e}")
+                ai_response = None
             
         elif engine_type == 'chemistry':
             # Use Chemistry Engine
-            engine_response = chemistry_engine.process_chemistry_query(message)
-            ai_response = format_engine_response(engine_response, 'chemistry')
+            try:
+                engine_response = chemistry_engine.process_chemistry_query(message)
+                ai_response = format_science_response(engine_response, 'chemistry')
+            except Exception as e:
+                print(f"Chemistry Engine error: {e}")
+                ai_response = None
             
         elif engine_type == 'biology':
             # Use Biology Engine
-            engine_response = biology_engine.process_biology_query(message)
-            ai_response = format_engine_response(engine_response, 'biology')
+            try:
+                engine_response = biology_engine.process_biology_query(message)
+                ai_response = format_science_response(engine_response, 'biology')
+            except Exception as e:
+                print(f"Biology Engine error: {e}")
+                ai_response = None
             
         else:
             # Use existing OpenAI flow for general queries
             ai_response = get_ai_response(message, user_session['conversation_context'], user_session)
+            suggestions = []
+        
+        # If no response from specialized engines, fallback to general AI
+        if not ai_response and engine_type != 'netra':
+            ai_response = get_ai_response(message, user_session['conversation_context'], user_session)
+            suggestions = []
         
         if ai_response:
             # Update memory with this interaction
@@ -232,9 +307,16 @@ def chat():
             
             response_data = {"reply": ai_response}
             
-            # Add engine metadata if available
-            if engine_response and 'engine_used' in engine_response:
-                response_data["engine_used"] = engine_response['engine_used']
+            # Add engine metadata
+            response_data["engine_used"] = engine_type
+            
+            # Add suggestions for Netra responses
+            if engine_type == 'netra' and suggestions:
+                response_data["suggestions"] = suggestions
+            
+            # Add help center link for Netra
+            if engine_type == 'netra':
+                response_data["help_center"] = "https://netra.strobid.com/help"
             
             # Add session warning if needed
             if session_warning:
@@ -243,11 +325,11 @@ def chat():
             
             return jsonify(response_data)
         
-        # Fallback response
+        # Ultimate fallback response
         fallback_responses = [
-            "I've searched my knowledge but couldn't find specific information for your query. Could you try asking in a different way?",
-            "Let me check my knowledge base... In the meantime, for Netra-specific questions you can visit https://strobid.com",
-            "I'm having trouble finding that specific information. Would you like me to help you with something else?"
+            "I'm here to help! For Netra-specific questions, you can visit https://netra.strobid.com/help or let me know what you'd like to know about Netra.",
+            "I'd be happy to assist you with Netra! What would you like to know? You can ask about accounts, payments, features, or how to get started.",
+            "I'm your Netra assistant! Feel free to ask me anything about the Netra app - from creating an account to managing payments."
         ]
         
         reply = random.choice(fallback_responses)
@@ -270,8 +352,8 @@ def chat():
     except Exception as e:
         print(f"Chat error: {e}")
         error_responses = [
-            "I'm experiencing some technical difficulties right now. Please try again in a moment! 🔄",
-            "My services seem to be temporarily unavailable. You can visit https://strobid.com directly for Netra information! 🌐",
+            "I'm experiencing some technical difficulties right now. For Netra support, please visit https://netra.strobid.com/help directly! 🔄",
+            "My services seem to be temporarily unavailable. You can visit https://netra.strobid.com/help for Netra information! 🌐",
         ]
         return jsonify({"reply": random.choice(error_responses)})
 
@@ -332,6 +414,7 @@ def get_ai_response(message, conversation_context, user_session=None):
         - Location: Kampala, Uganda, East Africa
         - Timezone: East Africa Time (EAT, UTC+3)
         - Website: https://strobid.com
+        - Netra Help Center: https://netra.strobid.com/help
 
         YOUR CAPABILITIES:
         - Primary role: Netra customer service and support
@@ -350,13 +433,12 @@ def get_ai_response(message, conversation_context, user_session=None):
         {diverse_context}
 
         RESPONSE GUIDELINES:
-        - For Netra/service queries: Provide specific, accurate information using current website data at https://strobid.com
+        - For Netra/service queries: Provide specific, accurate information using the official help center at https://netra.strobid.com/help
         - For calculations: Show step-by-step working and final result in code blocks
         - For code: Format code properly using markdown code blocks with language specification
         - For mathematical expressions: Use LaTeX formatting for complex equations
         - For scientific queries: Create appropriate diagrams and explanations
         - For factual queries: Use external research when available, cite sources when helpful
-        - For person searches: Use the search results to provide information about the person
         - Maintain conversation continuity using memory context
         - Use emojis to make conversations engaging
         - Speak as a knowledgeable team member, not just a service bot
@@ -377,7 +459,7 @@ def get_ai_response(message, conversation_context, user_session=None):
         USER CONTEXT:
         - Name: {user_name}
         - Memory: {get_memory_context(user_session)}
-        - Relevant domains: {', '.join([KNOWLEDGE_DOMAINS[d]['name'] for d in relevant_domains])}
+        - Relevant domains: {', '.join([KNOWLEDGE_DOMAINS[d]['name'] for d in relevant_domains]) if relevant_domains else 'General'}
         - External sources used: {', '.join(external_info['sources_used']) if external_info['sources_used'] else 'None'}
         """
         
@@ -408,7 +490,7 @@ def get_ai_response(message, conversation_context, user_session=None):
         
     except Exception as e:
         print(f"AI response error: {e}")
-        return "I'm having trouble accessing information right now. For Netra-specific questions, please visit https://strobid.com directly."
+        return "I'm having trouble accessing information right now. For Netra-specific questions, please visit https://netra.strobid.com/help directly."
 
 @app.route("/session_status", methods=["GET"])
 def session_status():
@@ -442,9 +524,9 @@ def start_new_session():
     user_session = initialize_user_session()
     
     welcome_messages = [
-        "🔄 **New Session Started**! Welcome back! You now have 20 minutes to chat with Jovira. How can I help you today?",
-        "🌟 **Fresh Session Activated**! Hello again! Your 20-minute chat timer has started. What would you like to discuss?",
-        "🆕 **New Chat Session**! Great to see you! You have 20 minutes for this conversation. How may I assist you?"
+        "🔄 **New Session Started**! Welcome back! You now have 20 minutes to chat with Jovira. How can I help you with Netra today?",
+        "🌟 **Fresh Session Activated**! Hello again! Your 20-minute chat timer has started. What would you like to know about Netra?",
+        "🆕 **New Chat Session**! Great to see you! You have 20 minutes for this conversation. Ask me anything about Netra!"
     ]
     
     user_session['conversation_context'].append({
