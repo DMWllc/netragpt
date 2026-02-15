@@ -1,7 +1,5 @@
 """
-Netra Engine - Final Version
-Shows links ONLY when user asks for them
-Provides direct links to exact pages when requested
+Netra Engine - Final Version with NO LINKS unless explicitly requested
 """
 
 import random
@@ -11,7 +9,7 @@ from datetime import datetime
 
 class HumanizedNetraEngine:
     """
-    Netra AI Assistant - Links only shown on request
+    Netra AI Assistant - NO LINKS in responses unless user asks for them
     """
     
     def __init__(self):
@@ -22,8 +20,8 @@ class HumanizedNetraEngine:
         self.articles = {
             'what_is_netra': {
                 'title': 'What is Netra?',
-                'summary': 'Netra is Africa\'s trusted service marketplace connecting skilled professionals with clients.',
-                'details': [
+                'content': [
+                    'Netra is Africa\'s trusted service marketplace connecting skilled professionals with clients.',
                     'Netra is a professional social app that connects service providers with clients in their community.',
                     'Service providers can showcase their work and clients can find reliable services - from plumbing to music lessons.',
                     'The app features service bookings, ratings, music streaming, and professional reels.',
@@ -35,7 +33,6 @@ class HumanizedNetraEngine:
             },
             'create_account': {
                 'title': 'How to create a Netra account',
-                'summary': 'Creating a Netra account is quick and easy. Follow these steps to get started.',
                 'steps': [
                     'Download the Netra app from the Google Play Store',
                     'Open the app and tap "Create Account"',
@@ -50,7 +47,6 @@ class HumanizedNetraEngine:
             },
             'verify_account': {
                 'title': 'How to verify your account',
-                'summary': 'Account verification helps build trust in the Netra community.',
                 'steps': [
                     'Log in to your Netra account',
                     'Go to Settings > Account > Verification',
@@ -65,7 +61,6 @@ class HumanizedNetraEngine:
             },
             'reset_password': {
                 'title': 'How to reset your password',
-                'summary': "Forgot your password? Here's how to reset it safely.",
                 'steps': [
                     'Open the Netra app',
                     'Tap "Forgot Password" on the login screen',
@@ -80,7 +75,6 @@ class HumanizedNetraEngine:
             },
             'delete_account': {
                 'title': 'How to delete your Netra account',
-                'summary': 'Step-by-step guide to permanently remove your account.',
                 'steps': [
                     'Open the Netra app and log in',
                     'Go to Settings > Account > Delete Account',
@@ -89,14 +83,13 @@ class HumanizedNetraEngine:
                     'Select a reason for leaving (optional)',
                     'Tap "Permanently Delete"'
                 ],
-                'warnings': ['This action is PERMANENT and cannot be undone'],
+                'warnings': ['⚠️ This action is PERMANENT and cannot be undone'],
                 'keywords': ['delete account', 'remove account', 'close account', 'cancel account', 'deactivate', 'delete netra account'],
                 'topic': 'account',
                 'url': 'https://netra.strobid.com/help/delete-account.html'
             },
             'payments': {
                 'title': 'How payments work on Netra',
-                'summary': 'Understand how to make, track, and manage payments.',
                 'steps': [
                     'See the total price when booking a service',
                     'Choose your payment method (card, mobile money, cash)',
@@ -116,7 +109,6 @@ class HumanizedNetraEngine:
             },
             'subscriptions': {
                 'title': 'Manage subscriptions & billing',
-                'summary': 'Learn how to subscribe, cancel, or update your plan.',
                 'steps': [
                     'Go to Settings > Subscription',
                     'Browse available plans (Free, Pro, Business)',
@@ -131,11 +123,10 @@ class HumanizedNetraEngine:
             },
             'notifications': {
                 'title': 'Manage notifications',
-                'summary': 'Turn on/off alerts and notifications in Netra.',
                 'steps': [
                     'Open Netra app',
                     'Go to Settings > Notifications',
-                    'Toggle each notification type on/off',
+                    'Toggle each notification type on/off:',
                     '• Message notifications',
                     '• Booking updates',
                     '• Payment notifications',
@@ -147,7 +138,6 @@ class HumanizedNetraEngine:
             },
             'contact_support': {
                 'title': 'Contact Netra support',
-                'summary': 'Reach out to our support team for personalized help.',
                 'details': [
                     'Email: support@strobid.com',
                     'In-app chat: Settings > Help & Support',
@@ -178,7 +168,8 @@ class HumanizedNetraEngine:
             'link', 'url', 'website', 'page', 'webpage', 'site',
             'where can i find', 'where do i go', 'take me to',
             'link to', 'url for', 'website for', 'page for',
-            'online', 'on the web', 'internet page'
+            'online', 'on the web', 'internet page',
+            'send me the link', 'give me the link', 'provide link'
         ]
         return any(keyword in query_lower for keyword in link_keywords)
     
@@ -187,18 +178,29 @@ class HumanizedNetraEngine:
         query_lower = query.lower()
         
         # Remove link-related words
-        for word in ['link', 'url', 'website', 'page', 'to', 'for', 'the', 'give', 'send', 'provide', 'need']:
+        link_words = ['link', 'url', 'website', 'page', 'to', 'for', 'the', 'give', 'send', 'provide', 'need', 'me', 'get', 'find', 'where', 'can', 'i']
+        for word in link_words:
             query_lower = query_lower.replace(word, '')
         
         query_lower = query_lower.strip()
         
+        # If query is too short after cleaning, return None
+        if len(query_lower) < 3:
+            return None
+        
         # Match against article keywords
+        best_match = None
+        best_score = 0
+        
         for article_id, article in self.articles.items():
             for keyword in article.get('keywords', []):
                 if keyword in query_lower:
-                    return article_id
+                    score = len(keyword)
+                    if score > best_score:
+                        best_score = score
+                        best_match = article_id
         
-        return None
+        return best_match
     
     def _find_best_article(self, query: str, user_id: str = None) -> Optional[Dict]:
         """Find the best matching article based on keywords"""
@@ -215,11 +217,21 @@ class HumanizedNetraEngine:
                 if keyword in query_lower:
                     score += 10
             
-            # Check for exact matches
+            # Check for exact matches in title
             if query_lower in article['title'].lower():
                 score += 15
             
-            # Use context
+            # Boost score for very specific queries
+            if 'delete' in query_lower and 'delete' in article['title'].lower():
+                score += 20
+            if 'create' in query_lower and 'create' in article['title'].lower():
+                score += 20
+            if 'verify' in query_lower and 'verify' in article['title'].lower():
+                score += 20
+            if 'reset' in query_lower and 'reset' in article['title'].lower():
+                score += 20
+            
+            # Use context from previous conversation
             if user_id and user_id in self.context:
                 prev_topic = self.context[user_id].get('last_topic')
                 if prev_topic and prev_topic == article['topic']:
@@ -230,40 +242,38 @@ class HumanizedNetraEngine:
                 best_match = article
         
         # If no good match, check for general help
-        if best_score < 5 and any(word in query_lower for word in ['help', 'support', 'question']):
+        if best_score < 5 and any(word in query_lower for word in ['help', 'support', 'question', 'assist']):
             return self.articles.get('contact_support')
         
         return best_match
     
-    def _format_article_response(self, article: Dict, include_link: bool = False) -> str:
-        """Format article into natural response, optionally including link"""
+    def _format_article_response(self, article: Dict) -> str:
+        """Format article into natural response - NO LINKS INCLUDED"""
         response_parts = []
         
         # Title
         response_parts.append(f"**{article['title']}**")
         
-        # Summary
-        if article.get('summary'):
-            response_parts.append(article['summary'])
+        # Content (either from 'content' field or build from steps/details)
+        if 'content' in article:
+            # For 'what is' type articles
+            response_parts.extend(article['content'])
+        else:
+            # For 'how to' type articles with steps
+            if article.get('steps'):
+                for step in article['steps']:
+                    response_parts.append(step)
+            
+            # Add any additional details
+            if article.get('details'):
+                response_parts.extend(article['details'])
+            
+            # Add warnings at the end
+            if article.get('warnings'):
+                response_parts.append('')
+                response_parts.extend(article['warnings'])
         
-        # Steps
-        if article.get('steps'):
-            response_parts.append("\n**Here's how:**")
-            for i, step in enumerate(article['steps'], 1):
-                response_parts.append(f"{i}. {step}")
-        
-        # Details
-        if article.get('details') and not article.get('steps'):
-            response_parts.append("\n" + '\n'.join(article['details']))
-        
-        # Warnings
-        if article.get('warnings'):
-            response_parts.append(f"\n⚠️ **Important:** {article['warnings'][0]}")
-        
-        # Add link ONLY if explicitly requested
-        if include_link and article.get('url'):
-            response_parts.append(f"\n🔗 You can find more details here: {article['url']}")
-        
+        # Join with newlines - NO LINK ADDED
         return '\n'.join(response_parts)
     
     def _format_link_response(self, article: Dict) -> str:
@@ -276,39 +286,53 @@ class HumanizedNetraEngine:
             'general': [
                 "What is Netra?",
                 "How do I create an account?",
-                "How do payments work?",
-                "How do I contact support?"
+                "How do payments work?"
             ],
             'account': [
                 "How do I verify my account?",
                 "How do I reset my password?",
-                "How do I delete my account?",
-                "What is Netra?"
+                "How do I delete my account?"
             ],
             'payment': [
                 "How do payments work?",
                 "What payment methods are accepted?",
-                "How do I get a refund?",
                 "How do subscriptions work?"
             ],
             'settings': [
                 "How do I manage notifications?",
                 "How do I change my profile?",
-                "Privacy settings",
-                "Contact support"
+                "Privacy settings"
             ],
             'support': [
                 "How do I contact support?",
                 "What are your support hours?",
-                "Email support",
-                "Help Center"
+                "Email support"
             ]
         }
         
-        # If we have a current article, add "link" suggestion
+        # Get base suggestions for the topic
         suggestions = suggestion_map.get(topic, suggestion_map['general'])[:3]
+        
+        # Add link suggestion if we have a current article
         if current_article:
-            suggestions.append(f"Get link for {current_article['title']}")
+            # Extract the main action word from the article title
+            title = current_article['title'].lower()
+            if 'create' in title:
+                suggestions.append("Link for creating account")
+            elif 'delete' in title:
+                suggestions.append("Link for deleting account")
+            elif 'verify' in title:
+                suggestions.append("Link for account verification")
+            elif 'reset' in title:
+                suggestions.append("Link for password reset")
+            elif 'payment' in title:
+                suggestions.append("Link for payments")
+            elif 'notification' in title:
+                suggestions.append("Link for notifications")
+            elif 'support' in title:
+                suggestions.append("Link for support")
+            else:
+                suggestions.append(f"Get link for {current_article['title']}")
         
         return suggestions
     
@@ -320,9 +344,25 @@ class HumanizedNetraEngine:
             # Handle greetings
             greetings = ['hi', 'hello', 'hey', 'good morning', 'good afternoon', 'good evening']
             if any(g in message.lower() for g in greetings):
+                # Check if it's a repeat greeting
+                if user_id and user_id in self.context and self.context[user_id].get('last_greeting'):
+                    greeting_response = "Hello again! How can I assist you today?"
+                else:
+                    greeting_response = "Hello! How can I assist you today?"
+                
+                # Store greeting context
+                if user_id:
+                    if user_id not in self.context:
+                        self.context[user_id] = {}
+                    self.context[user_id]['last_greeting'] = True
+                
                 return {
-                    'response': "Hello! 👋 I'm your Netra assistant. I can help you with accounts, payments, settings, and more. What would you like to know?",
-                    'suggestions': self._get_suggestions('general'),
+                    'response': greeting_response,
+                    'suggestions': [
+                        "What is Netra?",
+                        "How do I create an account?",
+                        "How do payments work?"
+                    ],
                     'confidence': 100,
                     'engine_used': 'netra_engine',
                     'timestamp': datetime.now().isoformat()
@@ -333,7 +373,11 @@ class HumanizedNetraEngine:
             if any(t in message.lower() for t in thanks):
                 return {
                     'response': "You're welcome! 😊 If you have any more questions, feel free to ask.",
-                    'suggestions': self._get_suggestions('general'),
+                    'suggestions': [
+                        "What is Netra?",
+                        "How do I create an account?",
+                        "How do payments work?"
+                    ],
                     'confidence': 100,
                     'engine_used': 'netra_engine',
                     'timestamp': datetime.now().isoformat()
@@ -345,10 +389,17 @@ class HumanizedNetraEngine:
             if is_link_request:
                 # Extract what they want a link for
                 topic_id = self._extract_requested_topic(message)
+                
                 if topic_id and topic_id in self.articles:
                     article = self.articles[topic_id]
                     response = self._format_link_response(article)
-                    suggestions = self._get_suggestions(article['topic'], article)
+                    
+                    # Suggestions after giving a link
+                    suggestions = [
+                        f"Tell me about {article['title']}",
+                        "What is Netra?",
+                        "How do payments work?"
+                    ]
                     
                     return {
                         'response': response,
@@ -378,8 +429,10 @@ class HumanizedNetraEngine:
             if article:
                 print(f"✅ Found: {article['title']}")
                 
-                # Format response WITHOUT link
-                response = self._format_article_response(article, include_link=False)
+                # Format response WITHOUT any link
+                response = self._format_article_response(article)
+                
+                # Get suggestions including link option
                 suggestions = self._get_suggestions(article.get('topic', 'general'), article)
                 
                 # Store context
@@ -387,6 +440,7 @@ class HumanizedNetraEngine:
                     if user_id not in self.context:
                         self.context[user_id] = {}
                     self.context[user_id]['last_topic'] = article.get('topic', 'general')
+                    self.context[user_id]['last_article'] = article['title']
                 
                 return {
                     'response': response,
@@ -404,7 +458,11 @@ class HumanizedNetraEngine:
                 
                 return {
                     'response': response,
-                    'suggestions': self._get_suggestions('general'),
+                    'suggestions': [
+                        "What is Netra?",
+                        "How do I create an account?",
+                        "How do payments work?"
+                    ],
                     'confidence': 80,
                     'engine_used': 'netra_engine',
                     'timestamp': datetime.now().isoformat()
@@ -417,8 +475,7 @@ class HumanizedNetraEngine:
                 'suggestions': [
                     "What is Netra?",
                     "How do I create an account?",
-                    "How do payments work?",
-                    "Link for support"
+                    "How do payments work?"
                 ],
                 'confidence': 70,
                 'engine_used': 'netra_engine',
