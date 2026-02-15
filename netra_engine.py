@@ -1,6 +1,5 @@
 """
-Netra Engine - Complete Web Crawler for Netra Sites
-Crawls: netra.strobid.com, netra.strobid.com/help, and follows all article links
+Netra Engine - Fixed version that correctly identifies help articles
 """
 
 import requests
@@ -15,38 +14,29 @@ import hashlib
 
 class HumanizedNetraEngine:
     """
-    AI Engine that crawls all Netra websites to get REAL information.
-    It reads pages, follows links, and extracts actual content.
+    AI Engine that correctly identifies and reads help articles
     """
     
     def __init__(self):
-        # Base URLs to crawl
         self.help_center_url = "https://netra.strobid.com/help"
         self.base_url = "https://netra.strobid.com"
         self.main_site_url = "https://strobid.com"
         self.netra_site_url = "https://netra.strobid.com"
         
-        # Track crawled URLs to avoid duplicates
-        self.crawled_urls: Set[str] = set()
-        self.url_queue: List[str] = []
-        
-        # Knowledge base built by crawling
+        # Knowledge base
         self.knowledge_base = {
-            'articles': {},      # Individual help articles
-            'pages': {},          # General pages
-            'faqs': [],           # Frequently asked questions
-            'topics': {},         # Organized by topic
-            'site_structure': {}  # Map of URLs to topics
+            'help_articles': {},  # Only actual help articles
+            'other_pages': {},    # Other pages (privacy, terms, etc.)
+            'topics': {}
         }
         
-        # Cache settings
         self.cache = {
             'last_crawl': None,
             'pages': {}
         }
         self.cache_duration = timedelta(hours=6)
         
-        # Start crawling on initialization
+        # Start crawling
         self._crawl_all_sites()
     
     def _fetch_page(self, url: str) -> Optional[BeautifulSoup]:
@@ -54,87 +44,116 @@ class HumanizedNetraEngine:
         try:
             print(f"🌐 Crawling: {url}")
             headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.5',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             }
             response = requests.get(url, headers=headers, timeout=15)
             response.raise_for_status()
-            
-            # Check if we got meaningful content
-            content_length = len(response.text)
-            if content_length < 500:
-                print(f"  ⚠️ Page seems small ({content_length} bytes)")
-            
             return BeautifulSoup(response.text, 'html.parser')
         except requests.exceptions.RequestException as e:
-            print(f"  ❌ Failed to fetch {url}: {e}")
+            print(f"  ❌ Failed: {e}")
             return None
     
-    def _extract_links(self, soup: BeautifulSoup, base_url: str) -> List[str]:
-        """Extract all internal links from a page"""
-        links = []
-        parsed_base = urlparse(base_url)
-        base_domain = f"{parsed_base.scheme}://{parsed_base.netloc}"
+    def _is_help_article(self, url: str, link_text: str, soup: BeautifulSoup) -> bool:
+        """
+        Determine if a page is actually a help article
+        """
+        url_lower = url.lower()
+        text_lower = link_text.lower()
+        
+        # Check URL patterns - help articles should be in /help/ directory
+        if '/help/' not in url_lower and not url_lower.endswith('.html'):
+            return False
+        
+        # Skip obvious non-help pages
+        skip_patterns = ['privacy', 'terms', 'cookie', 'legal', 'contact', 'about']
+        if any(pattern in url_lower for pattern in skip_patterns):
+            return False
+        
+        # Check link text - help articles have descriptive titles
+        help_keywords = ['how to', 'create', 'verify', 'reset', 'delete', 'manage', 
+                        'account', 'payment', 'subscription', 'notification']
+        
+        if not any(keyword in text_lower for keyword in help_keywords):
+            return False
+        
+        # Check page content - help articles typically have step-by-step instructions
+        if soup:
+            # Look for numbered lists (steps)
+            lists = soup.find_all(['ol', 'ul'])
+            if lists:
+                for lst in lists:
+                    items = lst.find_all('li')
+                    if len(items) >= 2:  # Has multiple steps
+                        return True
+            
+            # Look for instructional language
+            text = soup.get_text().lower()
+            instruction_words = ['step', 'first', 'then', 'next', 'finally', 'follow']
+            if any(word in text for word in instruction_words):
+                return True
+        
+        return False
+    
+    def _extract_help_articles(self, soup: BeautifulSoup, base_url: str) -> List[Dict]:
+        """
+        Extract only actual help articles from the help center
+        """
+        articles = []
         
         for link in soup.find_all('a', href=True):
-            href = link['href'].strip()
+            href = link['href']
+            text = link.get_text().strip()
             
-            # Skip empty, anchors, and external links
-            if not href or href.startswith('#') or href.startswith('javascript:'):
+            # Skip empty links
+            if not text or len(text) < 5:
                 continue
             
-            # Make absolute URL
+            # Make full URL
             if href.startswith('/'):
-                full_url = urljoin(base_domain, href)
+                full_url = urljoin(base_url, href)
             elif href.startswith('http'):
-                # Only include netra.strobid.com and strobid.com
-                if 'netra.strobid.com' in href or 'strobid.com' in href:
-                    full_url = href
-                else:
+                if 'netra.strobid.com' not in href:
                     continue
+                full_url = href
             else:
                 full_url = urljoin(base_url, href)
             
-            # Remove fragments
-            full_url = full_url.split('#')[0]
+            # Skip non-help URLs
+            if any(skip in full_url.lower() for skip in ['privacy', 'terms', 'contact', 'about']):
+                continue
             
-            if full_url not in self.crawled_urls and full_url not in links:
-                links.append(full_url)
+            # Only include if it looks like a help article
+            if any(keyword in text.lower() for keyword in ['how to', 'create', 'verify', 'reset', 'delete', 'manage']):
+                articles.append({
+                    'title': text,
+                    'url': full_url,
+                    'link_text': text
+                })
         
-        return links
+        # Remove duplicates
+        unique = {}
+        for article in articles:
+            if article['url'] not in unique:
+                unique[article['url']] = article
+        
+        return list(unique.values())
     
-    def _extract_page_content(self, soup: BeautifulSoup, url: str) -> Dict:
+    def _extract_article_content(self, soup: BeautifulSoup, url: str, title: str) -> Dict:
         """
-        Extract all meaningful content from a page
+        Extract the actual step-by-step content from a help article
         """
         content = {
+            'title': title,
             'url': url,
-            'title': '',
             'summary': '',
-            'headings': [],
-            'paragraphs': [],
-            'lists': [],
             'steps': [],
-            'tips': [],
-            'warnings': [],
-            'faqs': [],
-            'metadata': {}
+            'details': [],
+            'notes': []
         }
         
-        # Get title
-        title_tag = soup.find('title')
-        if title_tag:
-            content['title'] = title_tag.get_text().strip()
-        
-        # Get meta description
-        meta_desc = soup.find('meta', attrs={'name': 'description'})
-        if meta_desc and meta_desc.get('content'):
-            content['metadata']['description'] = meta_desc['content']
-        
-        # Find main content area
+        # Find main content
         main_content = None
-        for selector in ['main', 'article', '.content', '#content', '.main-content', '.help-content', 'body']:
+        for selector in ['main', 'article', '.content', '#content', '.help-content', 'body']:
             main_content = soup.select_one(selector)
             if main_content:
                 break
@@ -144,363 +163,268 @@ class HumanizedNetraEngine:
         
         if main_content:
             # Remove unwanted elements
-            for element in main_content.find_all(['script', 'style', 'nav', 'footer', 'header', 'aside']):
+            for element in main_content.find_all(['script', 'style', 'nav', 'footer', 'header']):
                 element.decompose()
             
-            # Extract headings (for structure)
-            for heading in main_content.find_all(['h1', 'h2', 'h3']):
-                text = heading.get_text().strip()
-                if text:
-                    content['headings'].append({
-                        'level': heading.name,
-                        'text': text
-                    })
+            # Get title
+            h1 = main_content.find('h1')
+            if h1:
+                content['title'] = h1.get_text().strip()
             
-            # Extract paragraphs
-            for p in main_content.find_all('p'):
-                text = p.get_text().strip()
-                if text and len(text) > 20:
-                    content['paragraphs'].append(text)
+            # Get summary (first paragraph)
+            first_p = main_content.find('p')
+            if first_p:
+                content['summary'] = first_p.get_text().strip()
             
-            # Set summary from first paragraph
-            if content['paragraphs']:
-                content['summary'] = content['paragraphs'][0]
+            # Extract steps from ordered lists
+            for ol in main_content.find_all('ol'):
+                steps = []
+                for li in ol.find_all('li'):
+                    step_text = li.get_text().strip()
+                    if step_text:
+                        steps.append(step_text)
+                if steps:
+                    content['steps'].extend(steps)
             
-            # Extract lists (potential steps)
-            for list_elem in main_content.find_all(['ol', 'ul']):
-                items = []
-                for li in list_elem.find_all('li'):
-                    item_text = li.get_text().strip()
-                    if item_text:
-                        items.append(item_text)
-                
-                if items:
-                    # Check if it's a numbered list (steps)
-                    if list_elem.name == 'ol' or any(item[0].isdigit() for item in items if item):
+            # If no ordered lists, look for bullet points that might be steps
+            if not content['steps']:
+                for ul in main_content.find_all('ul'):
+                    items = []
+                    for li in ul.find_all('li'):
+                        item_text = li.get_text().strip()
+                        if item_text:
+                            items.append(item_text)
+                    if items and len(items) >= 2:
                         content['steps'].extend(items)
-                    else:
-                        content['lists'].extend(items)
             
-            # Look for warnings
-            for warning in main_content.find_all(['div', 'p'], class_=re.compile(r'warning|alert|caution|important|note', re.I)):
-                text = warning.get_text().strip()
+            # Get other paragraphs as details
+            for p in main_content.find_all('p')[1:3]:  # Next few paragraphs
+                text = p.get_text().strip()
+                if text and len(text) > 30:
+                    content['details'].append(text)
+            
+            # Look for notes/warnings
+            for note in main_content.find_all(['div', 'p'], class_=re.compile(r'note|warning|important', re.I)):
+                text = note.get_text().strip()
                 if text:
-                    content['warnings'].append(text)
-            
-            # Look for tips
-            for tip in main_content.find_all(['div', 'p'], class_=re.compile(r'tip|hint|pro|best', re.I)):
-                text = tip.get_text().strip()
-                if text:
-                    content['tips'].append(text)
-            
-            # Look for FAQ sections
-            faq_heading = main_content.find(['h2', 'h3', 'h4'], string=re.compile(r'faq|frequently asked|common questions', re.I))
-            if faq_heading:
-                current = faq_heading.next_sibling
-                faq_items = []
-                while current and current.name not in ['h2', 'h3', 'h4']:
-                    if current.name in ['div', 'p', 'li']:
-                        text = current.get_text().strip()
-                        if text and len(text) > 20:
-                            faq_items.append(text)
-                    current = current.next_sibling
-                if faq_items:
-                    content['faqs'].extend(faq_items)
+                    content['notes'].append(text)
         
         return content
     
-    def _determine_topic(self, url: str, content: Dict) -> str:
-        """Determine the topic of a page based on URL and content"""
-        url_lower = url.lower()
-        text = content['title'].lower() + ' ' + content['summary'].lower()
-        
-        # Check URL first
-        if 'account' in url_lower or any(word in url_lower for word in ['signup', 'register', 'login', 'password']):
-            return 'account'
-        elif 'payment' in url_lower or any(word in url_lower for word in ['pay', 'subscription', 'billing']):
-            return 'payment'
-        elif 'setting' in url_lower or 'notification' in url_lower:
-            return 'settings'
-        elif 'support' in url_lower or 'contact' in url_lower or 'help' in url_lower:
-            return 'support'
-        elif 'service' in url_lower or 'provider' in url_lower or 'client' in url_lower:
-            return 'service'
-        
-        # Check content
-        topics = {
-            'account': ['account', 'sign up', 'register', 'login', 'password', 'verify'],
-            'payment': ['payment', 'pay', 'subscription', 'billing', 'refund', 'money'],
-            'settings': ['setting', 'notification', 'alert', 'preference', 'privacy'],
-            'support': ['support', 'help', 'contact', 'assist', 'faq'],
-            'service': ['service', 'provider', 'client', 'book', 'hire']
-        }
-        
-        max_score = 0
-        best_topic = 'general'
-        
-        for topic, keywords in topics.items():
-            score = 0
-            for keyword in keywords:
-                if keyword in text:
-                    score += 1
-            if score > max_score:
-                max_score = score
-                best_topic = topic
-        
-        return best_topic
-    
-    def _crawl_site(self, start_url: str, max_pages: int = 50):
-        """Crawl a site starting from a URL"""
-        print(f"\n📚 STARTING CRAWL OF: {start_url}")
+    def _crawl_help_center(self):
+        """Crawl help center and read all actual help articles"""
+        print("\n" + "="*60)
+        print("📚 CRAWLING HELP CENTER")
         print("="*60)
         
-        self.url_queue = [start_url]
+        # Fetch main help page
+        soup = self._fetch_page(self.help_center_url)
+        if not soup:
+            print("❌ Could not fetch help center")
+            return
         
-        while self.url_queue and len(self.crawled_urls) < max_pages:
-            url = self.url_queue.pop(0)
+        # Extract article links
+        articles = self._extract_help_articles(soup, self.help_center_url)
+        print(f"📋 Found {len(articles)} help articles")
+        
+        # Read each article
+        for i, article in enumerate(articles, 1):
+            print(f"\n📄 Reading: {article['title']}")
             
-            if url in self.crawled_urls:
-                continue
-            
-            # Fetch page
-            soup = self._fetch_page(url)
-            if not soup:
-                self.crawled_urls.add(url)
+            article_soup = self._fetch_page(article['url'])
+            if not article_soup:
                 continue
             
             # Extract content
-            content = self._extract_page_content(soup, url)
+            content = self._extract_article_content(article_soup, article['url'], article['title'])
             
             # Store in knowledge base
-            page_id = hashlib.md5(url.encode()).hexdigest()[:8]
+            article_id = hashlib.md5(article['url'].encode()).hexdigest()[:8]
             
-            # Determine if it's an article or general page
-            if '/help/' in url or any(keyword in url for keyword in ['account', 'payment', 'subscription']):
-                self.knowledge_base['articles'][page_id] = {
-                    'url': url,
-                    'title': content['title'] or url.split('/')[-1].replace('.html', '').replace('-', ' ').title(),
-                    'content': content
-                }
-                print(f"  ✅ Stored as article: {content['title']}")
-            else:
-                self.knowledge_base['pages'][page_id] = {
-                    'url': url,
-                    'title': content['title'] or 'Netra Page',
-                    'content': content
-                }
-                print(f"  ✅ Stored as page: {url}")
-            
-            # Determine topic
-            topic = self._determine_topic(url, content)
-            if topic not in self.knowledge_base['topics']:
-                self.knowledge_base['topics'][topic] = []
-            self.knowledge_base['topics'][topic].append(page_id)
-            
-            # Store site structure
-            self.knowledge_base['site_structure'][url] = {
-                'topic': topic,
-                'title': content['title'],
-                'page_id': page_id
+            self.knowledge_base['help_articles'][article_id] = {
+                'title': article['title'],
+                'url': article['url'],
+                'content': content
             }
             
-            # Extract new links to crawl
-            new_links = self._extract_links(soup, url)
-            for link in new_links:
-                if link not in self.crawled_urls and link not in self.url_queue:
-                    self.url_queue.append(link)
+            # Determine topic
+            topic = self._determine_topic(article['title'])
+            if topic not in self.knowledge_base['topics']:
+                self.knowledge_base['topics'][topic] = []
+            self.knowledge_base['topics'][topic].append(article_id)
             
-            self.crawled_urls.add(url)
+            # Show what we found
+            print(f"  ✅ Loaded")
+            if content['steps']:
+                print(f"  📋 Found {len(content['steps'])} steps")
+            if content['summary']:
+                print(f"  📝 Summary: {content['summary'][:100]}...")
             
-            # Be nice to the server
             time.sleep(0.5)
     
+    def _crawl_other_pages(self):
+        """Crawl other pages (privacy, terms, etc.) but don't confuse them with help"""
+        print("\n" + "="*60)
+        print("📑 CRAWLING OTHER PAGES")
+        print("="*60)
+        
+        other_urls = [
+            "https://netra.strobid.com/privacy.php",
+            "https://netra.strobid.com/terms.php",
+            "https://netra.strobid.com/about.php",
+            "https://strobid.com"
+        ]
+        
+        for url in other_urls:
+            print(f"\n📄 Reading: {url}")
+            soup = self._fetch_page(url)
+            if not soup:
+                continue
+            
+            # Store but mark as non-help
+            page_id = hashlib.md5(url.encode()).hexdigest()[:8]
+            title = soup.find('title')
+            title_text = title.get_text().strip() if title else url.split('/')[-1]
+            
+            self.knowledge_base['other_pages'][page_id] = {
+                'title': title_text,
+                'url': url,
+                'type': 'other',
+                'content': soup.get_text()[:500]  # Store preview
+            }
+            print(f"  ✅ Stored as reference")
+    
+    def _determine_topic(self, text: str) -> str:
+        """Determine topic from title"""
+        text_lower = text.lower()
+        
+        if 'account' in text_lower or any(word in text_lower for word in ['create', 'verify', 'reset', 'delete']):
+            return 'account'
+        elif 'payment' in text_lower or 'subscription' in text_lower or 'billing' in text_lower:
+            return 'payment'
+        elif 'notification' in text_lower or 'setting' in text_lower:
+            return 'settings'
+        elif 'support' in text_lower or 'contact' in text_lower:
+            return 'support'
+        elif 'service' in text_lower or 'provider' in text_lower:
+            return 'service'
+        else:
+            return 'general'
+    
     def _crawl_all_sites(self):
-        """Crawl all Netra sites"""
+        """Crawl everything, keeping help articles separate"""
         print("\n" + "🚀"*10)
-        print("🚀 STARTING FULL SITE CRAWL")
+        print("🚀 STARTING CRAWL")
         print("🚀"*10)
         
-        # Clear previous crawl data
-        self.crawled_urls = set()
+        # Clear previous data
         self.knowledge_base = {
-            'articles': {},
-            'pages': {},
-            'faqs': [],
-            'topics': {},
-            'site_structure': {}
+            'help_articles': {},
+            'other_pages': {},
+            'topics': {}
         }
         
-        # Crawl netra.strobid.com
-        self._crawl_site(self.netra_site_url, max_pages=30)
+        # Crawl help center first (most important)
+        self._crawl_help_center()
         
-        # Crawl help center (if different from main site)
-        if self.help_center_url != self.netra_site_url:
-            self._crawl_site(self.help_center_url, max_pages=30)
-        
-        # Crawl main strobid.com
-        self._crawl_site(self.main_site_url, max_pages=20)
+        # Crawl other pages for reference
+        self._crawl_other_pages()
         
         self.cache['last_crawl'] = datetime.now()
         
-        # Print summary
-        self._print_crawl_summary()
-    
-    def _print_crawl_summary(self):
-        """Print summary of what was crawled"""
+        # Summary
         print("\n" + "="*60)
         print("📊 CRAWL SUMMARY")
         print("="*60)
-        print(f"📚 Total pages crawled: {len(self.crawled_urls)}")
-        print(f"📄 Articles stored: {len(self.knowledge_base['articles'])}")
-        print(f"📑 General pages: {len(self.knowledge_base['pages'])}")
-        print("\n📋 Topics covered:")
-        for topic, pages in self.knowledge_base['topics'].items():
-            print(f"   • {topic.capitalize()}: {len(pages)} pages")
+        print(f"📚 Help articles: {len(self.knowledge_base['help_articles'])}")
+        print(f"📑 Reference pages: {len(self.knowledge_base['other_pages'])}")
+        for topic, articles in self.knowledge_base['topics'].items():
+            print(f"   • {topic.capitalize()}: {len(articles)} articles")
         print("="*60)
     
-    def _search_knowledge_base(self, query: str) -> List[Dict]:
-        """Search the knowledge base for relevant information"""
+    def _search_help_articles(self, query: str) -> List[Dict]:
+        """Search only help articles (not other pages)"""
         query_lower = query.lower()
-        query_words = set(query_lower.split())
         results = []
         
-        # Search through articles (prioritize these)
-        for article_id, article in self.knowledge_base['articles'].items():
+        for article_id, article in self.knowledge_base['help_articles'].items():
             content = article['content']
             
-            # Combine all text for searching
-            searchable_text = (
-                article['title'].lower() + ' ' +
-                content['summary'].lower() + ' ' +
-                ' '.join(content['paragraphs']).lower() + ' ' +
-                ' '.join(content['steps']).lower() + ' ' +
-                ' '.join(content['lists']).lower()
-            )
-            
-            # Calculate relevance
+            # Calculate score
             score = 0
+            title_lower = article['title'].lower()
             
-            # Exact phrase match
-            if query_lower in searchable_text:
-                score += 20
+            # Title match (highest priority)
+            if any(word in title_lower for word in query_lower.split()):
+                score += 10
             
-            # Word matches
-            for word in query_words:
-                if len(word) > 2 and word in searchable_text:
-                    score += 3
-            
-            # Title match bonus
-            if any(word in article['title'].lower() for word in query_words):
+            # Summary match
+            if any(word in content.get('summary', '').lower() for word in query_lower.split()):
                 score += 5
+            
+            # Steps match
+            steps_text = ' '.join(content.get('steps', [])).lower()
+            if any(word in steps_text for word in query_lower.split()):
+                score += 8
             
             if score > 0:
                 results.append({
-                    'type': 'article',
-                    'id': article_id,
-                    'title': article['title'],
+                    'article': article,
                     'content': content,
                     'score': score,
-                    'url': article['url']
+                    'title': article['title']
                 })
         
-        # Search through general pages
-        for page_id, page in self.knowledge_base['pages'].items():
-            content = page['content']
-            searchable_text = (
-                page['title'].lower() + ' ' +
-                content['summary'].lower() + ' ' +
-                ' '.join(content['paragraphs']).lower()
-            )
-            
-            score = 0
-            if query_lower in searchable_text:
-                score += 10
-            
-            for word in query_words:
-                if len(word) > 2 and word in searchable_text:
-                    score += 2
-            
-            if score > 5:  # Only include reasonably relevant pages
-                results.append({
-                    'type': 'page',
-                    'id': page_id,
-                    'title': page['title'],
-                    'content': content,
-                    'score': score,
-                    'url': page['url']
-                })
-        
-        # Sort by score
         results.sort(key=lambda x: x['score'], reverse=True)
         return results
     
-    def _format_response(self, result: Dict, query: str) -> str:
-        """Format search result into a natural response"""
-        content = result['content']
+    def _format_article_response(self, article: Dict, query: str) -> str:
+        """Format help article into natural response"""
+        content = article['content']
         response_parts = []
         
         # Add title
-        if result['title']:
-            response_parts.append(f"**{result['title']}**")
+        response_parts.append(f"**{content['title']}**")
         
         # Add summary if available
         if content.get('summary'):
             response_parts.append(content['summary'])
         
-        # Add steps if available
+        # Add steps (most important)
         if content.get('steps'):
             response_parts.append("\n**Here's how:**")
-            for i, step in enumerate(content['steps'][:5], 1):
+            for i, step in enumerate(content['steps'], 1):
                 response_parts.append(f"{i}. {step}")
         
-        # Add key paragraphs if no steps
-        elif content.get('paragraphs'):
-            # Get paragraphs that contain query words
-            relevant_paras = []
-            query_words = set(query.lower().split())
-            for para in content['paragraphs'][:3]:
-                if any(word in para.lower() for word in query_words):
-                    relevant_paras.append(para)
-            
-            if relevant_paras:
-                response_parts.append("\n" + '\n\n'.join(relevant_paras))
-            else:
-                response_parts.append("\n" + '\n\n'.join(content['paragraphs'][:2]))
-        
-        # Add warnings if relevant
-        if content.get('warnings'):
-            response_parts.append(f"\n⚠️ **Important:** {content['warnings'][0]}")
-        
-        # Add tips if available
-        if content.get('tips'):
-            response_parts.append(f"\n💡 **Tip:** {content['tips'][0]}")
+        # Add any notes/warnings
+        if content.get('notes'):
+            response_parts.append(f"\n💡 **Note:** {content['notes'][0]}")
         
         # Add source
-        response_parts.append(f"\n📌 *Source: {result['url']}*")
+        response_parts.append(f"\n📌 *Source: Netra Help Center*")
         
         return '\n'.join(response_parts)
     
     def process_query(self, message: str, user_id: str = None) -> Dict[str, Any]:
-        """Process user query by searching crawled content"""
+        """Process user query"""
         try:
-            print(f"\n🤔 Processing query: {message}")
+            print(f"\n🤔 Processing: {message}")
             
-            # Check if we need to re-crawl
+            # Check cache
             if (self.cache['last_crawl'] is None or 
                 datetime.now() - self.cache['last_crawl'] > self.cache_duration):
                 print("⏰ Cache expired, re-crawling...")
                 self._crawl_all_sites()
             
             # Handle greetings
-            greetings = ['hi', 'hello', 'hey', 'good morning', 'good afternoon', 'good evening']
+            greetings = ['hi', 'hello', 'hey', 'good morning']
             if any(g in message.lower() for g in greetings):
                 return {
                     'response': "Hello! 👋 I'm your Netra assistant. I can help you with accounts, payments, settings, and more. What would you like to know?",
                     'suggestions': [
                         "How do I create an account?",
                         "How do payments work?",
-                        "How do I reset my password?",
-                        "How do I contact support?"
+                        "How do I reset my password?"
                     ],
                     'confidence': 100,
                     'engine_used': 'netra_engine',
@@ -508,21 +432,17 @@ class HumanizedNetraEngine:
                     'timestamp': datetime.now().isoformat()
                 }
             
-            # Search knowledge base
-            results = self._search_knowledge_base(message)
+            # Search ONLY help articles
+            results = self._search_help_articles(message)
             
             if results:
                 best = results[0]
-                print(f"✅ Found match: {best['title']} (score: {best['score']})")
+                print(f"✅ Found: {best['title']} (score: {best['score']})")
                 
-                # Format response
-                response = self._format_response(best, message)
+                response = self._format_article_response(best, message)
                 
-                # Calculate confidence
-                confidence = min(95, 70 + best['score'])
-                
-                # Generate suggestions based on topic
-                topic = self._determine_topic(best.get('url', ''), best['content'])
+                # Get topic-based suggestions
+                topic = self._determine_topic(best['title'])
                 suggestions_map = {
                     'account': [
                         "How do I verify my account?",
@@ -536,18 +456,11 @@ class HumanizedNetraEngine:
                     ],
                     'settings': [
                         "How do I manage notifications?",
-                        "How do I change my profile?",
-                        "Privacy settings"
+                        "How do I change my profile?"
                     ],
                     'support': [
                         "How do I contact support?",
-                        "What are your support hours?",
-                        "Email support"
-                    ],
-                    'service': [
-                        "How do I become a provider?",
-                        "How do I book a service?",
-                        "How do reviews work?"
+                        "What are your support hours?"
                     ]
                 }
                 
@@ -560,22 +473,20 @@ class HumanizedNetraEngine:
                 return {
                     'response': response,
                     'suggestions': suggestions[:4],
-                    'confidence': confidence,
+                    'confidence': min(95, 70 + best['score']),
                     'engine_used': 'netra_engine',
                     'help_center_url': self.help_center_url,
                     'timestamp': datetime.now().isoformat()
                 }
             else:
-                print("❌ No relevant content found")
-                
-                # Show available topics
+                # Show available help topics
                 topics = list(self.knowledge_base['topics'].keys())
-                response = f"I couldn't find specific information about '{message}'. Here are the topics I can help with:\n\n"
+                response = f"I couldn't find specific information about '{message}'. Here are the help topics available:\n\n"
                 
                 for topic in topics[:5]:
                     response += f"• {topic.capitalize()}\n"
                 
-                response += f"\nYou can also visit {self.help_center_url} for more information."
+                response += f"\nYou can visit {self.help_center_url} for more information."
                 
                 return {
                     'response': response,
@@ -591,12 +502,9 @@ class HumanizedNetraEngine:
                 }
                 
         except Exception as e:
-            print(f"❌ Error in process_query: {e}")
-            import traceback
-            traceback.print_exc()
-            
+            print(f"❌ Error: {e}")
             return {
-                'response': f"I'm having trouble accessing information right now. Please visit our Help Center at {self.help_center_url} for assistance.",
+                'response': f"I'm having trouble accessing information. Please visit our Help Center at {self.help_center_url} for assistance.",
                 'suggestions': [
                     "How do I create an account?",
                     "How do payments work?",
